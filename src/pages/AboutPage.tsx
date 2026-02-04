@@ -1,13 +1,19 @@
 import { BookOpen, Target, Award, Users, GraduationCap, Heart, Star, CheckCircle, MapPin, Mail, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
 import chairmanImage from '@/assets/chairman-sanjay.jpg';
-
 const fadeInUp = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 }
+  initial: {
+    opacity: 0,
+    y: 20
+  },
+  animate: {
+    opacity: 1,
+    y: 0
+  },
+  transition: {
+    duration: 0.5
+  }
 };
-
 const stagger = {
   animate: {
     transition: {
@@ -15,44 +21,35 @@ const stagger = {
     }
   }
 };
-
-const values = [
-  {
-    icon: Target,
-    title: 'Our Mission',
-    description: 'To provide quality education that builds strong conceptual foundations and prepares students for academic excellence.',
-  },
-  {
-    icon: Award,
-    title: 'Our Vision',
-    description: 'To be a trusted coaching center recognized for producing disciplined, knowledgeable, and successful students.',
-  },
-  {
-    icon: Heart,
-    title: 'Our Values',
-    description: 'Integrity, dedication, discipline, and personalized attention to every student who walks through our doors.',
-  },
-];
-
-const highlights = [
-  'Focus on conceptual clarity over rote learning',
-  'Regular tests and performance tracking',
-  'Both offline and online learning support',
-  'Personalized attention to each student',
-  'Comprehensive study materials and notes',
-  'Disciplined and structured learning environment',
-];
-
-const stats = [
-  { value: '500+', label: 'Students Taught' },
-  { value: '90%', label: 'Success Rate' },
-  { value: '10+', label: 'Years Experience' },
-  { value: '6-12', label: 'Classes Covered' },
-];
-
+const values = [{
+  icon: Target,
+  title: 'Our Mission',
+  description: 'To provide quality education that builds strong conceptual foundations and prepares students for academic excellence.'
+}, {
+  icon: Award,
+  title: 'Our Vision',
+  description: 'To be a trusted coaching center recognized for producing disciplined, knowledgeable, and successful students.'
+}, {
+  icon: Heart,
+  title: 'Our Values',
+  description: 'Integrity, dedication, discipline, and personalized attention to every student who walks through our doors.'
+}];
+const highlights = ['Focus on conceptual clarity over rote learning', 'Regular tests and performance tracking', 'Both offline and online learning support', 'Personalized attention to each student', 'Comprehensive study materials and notes', 'Disciplined and structured learning environment'];
+const stats = [{
+  value: '500+',
+  label: 'Students Taught'
+}, {
+  value: '90%',
+  label: 'Success Rate'
+}, {
+  value: '10+',
+  label: 'Years Experience'
+}, {
+  value: '6-12',
+  label: 'Classes Covered'
+}];
 export default function AboutPage() {
-  return (
-    <div className="overflow-hidden">
+  return <div className="overflow-hidden">
       {/* Hero Section */}
       <section className="relative bg-primary py-20 md:py-28 overflow-hidden">
         <div className="absolute inset-0 overflow-hidden">
@@ -61,18 +58,24 @@ export default function AboutPage() {
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center max-w-3xl mx-auto"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6 border border-white/20"
-            >
+          <motion.div initial={{
+          opacity: 0,
+          y: 20
+        }} animate={{
+          opacity: 1,
+          y: 0
+        }} transition={{
+          duration: 0.5
+        }} className="text-center max-w-3xl mx-auto">
+            <motion.div initial={{
+            opacity: 0,
+            scale: 0.9
+          }} animate={{
+            opacity: 1,
+            scale: 1
+          }} transition={{
+            delay: 0.2
+          }} className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6 border border-white/20">
               <GraduationCap className="w-4 h-4 text-white" />
               <span className="text-sm font-medium text-white">About Us</span>
             </motion.div>
@@ -88,7 +91,7 @@ export default function AboutPage() {
 
         <div className="absolute bottom-0 left-0 right-0">
           <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
-            <path d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="hsl(var(--background))"/>
+            <path d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="hsl(var(--background))" />
           </svg>
         </div>
       </section>
@@ -96,12 +99,15 @@ export default function AboutPage() {
       {/* Chairman Section - At the TOP after hero */}
       <section className="py-16 bg-background">
         <div className="container mx-auto px-4">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="max-w-4xl mx-auto"
-          >
+          <motion.div initial={{
+          opacity: 0,
+          y: 20
+        }} whileInView={{
+          opacity: 1,
+          y: 0
+        }} viewport={{
+          once: true
+        }} className="max-w-4xl mx-auto">
             <div className="text-center mb-10">
               <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground">
                 Message from the Chairman
@@ -113,11 +119,7 @@ export default function AboutPage() {
                 {/* Photo */}
                 <div className="flex-shrink-0">
                   <div className="w-36 h-48 md:w-44 md:h-56 rounded-xl overflow-hidden bg-muted shadow-lg">
-                    <img 
-                      src={chairmanImage} 
-                      alt="Mr. Sanjay Singhania - Chairman of Shiva Study Center" 
-                      className="w-full h-full object-cover object-top"
-                    />
+                    <img src={chairmanImage} alt="Mr. Sanjay Singhania - Chairman of Shiva Study Center" className="w-full h-full object-cover object-top" />
                   </div>
                 </div>
 
@@ -126,9 +128,7 @@ export default function AboutPage() {
                   <div className="mb-1">
                     <span className="text-sm font-medium text-primary">Chairman – Shiva Study Center (SSC)</span>
                   </div>
-                  <h3 className="text-xl md:text-2xl font-display font-bold text-foreground mb-4">
-                    Mr. Sanjay Singhania
-                  </h3>
+                  <h3 className="text-xl md:text-2xl font-display font-bold text-foreground mb-4">Mr. Sanjay Singhania(M.SC&B.ED)</h3>
                   <p className="text-muted-foreground leading-relaxed mb-4">
                     Mr. Sanjay Singhania, Chairman of Shiva Study Center, provides academic leadership and guidance 
                     to ensure a disciplined, focused, and student-centric learning environment. Under his vision, 
@@ -149,31 +149,26 @@ export default function AboutPage() {
       {/* Stats Section */}
       <section className="py-12 bg-accent/30">
         <div className="container mx-auto px-4">
-          <motion.div 
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="grid grid-cols-2 md:grid-cols-4 gap-6"
-          >
-            {stats.map((stat, index) => (
-              <motion.div 
-                key={stat.label} 
-                variants={fadeInUp}
-                className="text-center p-4"
-              >
-                <motion.div 
-                  className="text-3xl md:text-4xl font-display font-bold text-primary mb-1"
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  whileInView={{ scale: 1, opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1, type: 'spring' }}
-                >
+          <motion.div initial="initial" whileInView="animate" viewport={{
+          once: true
+        }} variants={stagger} className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {stats.map((stat, index) => <motion.div key={stat.label} variants={fadeInUp} className="text-center p-4">
+                <motion.div className="text-3xl md:text-4xl font-display font-bold text-primary mb-1" initial={{
+              scale: 0.5,
+              opacity: 0
+            }} whileInView={{
+              scale: 1,
+              opacity: 1
+            }} viewport={{
+              once: true
+            }} transition={{
+              delay: index * 0.1,
+              type: 'spring'
+            }}>
                   {stat.value}
                 </motion.div>
                 <div className="text-muted-foreground text-sm font-medium">{stat.label}</div>
-              </motion.div>
-            ))}
+              </motion.div>)}
           </motion.div>
         </div>
       </section>
@@ -181,12 +176,15 @@ export default function AboutPage() {
       {/* Story Section */}
       <section className="py-16 bg-background">
         <div className="container mx-auto px-4">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="max-w-3xl mx-auto"
-          >
+          <motion.div initial={{
+          opacity: 0,
+          y: 20
+        }} whileInView={{
+          opacity: 1,
+          y: 0
+        }} viewport={{
+          once: true
+        }} className="max-w-3xl mx-auto">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <BookOpen className="w-6 h-6 text-primary" />
@@ -220,12 +218,15 @@ export default function AboutPage() {
       {/* Why Choose Us Section */}
       <section className="py-16 bg-accent/30">
         <div className="container mx-auto px-4">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
+          <motion.div initial={{
+          opacity: 0,
+          y: 20
+        }} whileInView={{
+          opacity: 1,
+          y: 0
+        }} viewport={{
+          once: true
+        }} className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-3">
               Why Choose Us
             </h2>
@@ -234,23 +235,13 @@ export default function AboutPage() {
             </p>
           </motion.div>
 
-          <motion.div 
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto"
-          >
-            {highlights.map((highlight, index) => (
-              <motion.div 
-                key={index} 
-                variants={fadeInUp}
-                className="flex items-start gap-3 bg-card p-4 rounded-xl border border-border"
-              >
+          <motion.div initial="initial" whileInView="animate" viewport={{
+          once: true
+        }} variants={stagger} className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
+            {highlights.map((highlight, index) => <motion.div key={index} variants={fadeInUp} className="flex items-start gap-3 bg-card p-4 rounded-xl border border-border">
                 <CheckCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                 <span className="text-foreground text-sm">{highlight}</span>
-              </motion.div>
-            ))}
+              </motion.div>)}
           </motion.div>
         </div>
       </section>
@@ -258,12 +249,15 @@ export default function AboutPage() {
       {/* Values Section */}
       <section className="py-16 bg-background">
         <div className="container mx-auto px-4">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
+          <motion.div initial={{
+          opacity: 0,
+          y: 20
+        }} whileInView={{
+          opacity: 1,
+          y: 0
+        }} viewport={{
+          once: true
+        }} className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-3">
               What Drives Us
             </h2>
@@ -272,19 +266,10 @@ export default function AboutPage() {
             </p>
           </motion.div>
 
-          <motion.div 
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto"
-          >
-            {values.map((value) => (
-              <motion.div 
-                key={value.title} 
-                variants={fadeInUp}
-                className="bg-card p-6 rounded-xl border border-border text-center"
-              >
+          <motion.div initial="initial" whileInView="animate" viewport={{
+          once: true
+        }} variants={stagger} className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {values.map(value => <motion.div key={value.title} variants={fadeInUp} className="bg-card p-6 rounded-xl border border-border text-center">
                 <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                   <value.icon className="w-7 h-7 text-primary" />
                 </div>
@@ -294,8 +279,7 @@ export default function AboutPage() {
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   {value.description}
                 </p>
-              </motion.div>
-            ))}
+              </motion.div>)}
           </motion.div>
         </div>
       </section>
@@ -303,12 +287,15 @@ export default function AboutPage() {
       {/* Contact Info Section */}
       <section className="py-16 bg-accent/30">
         <div className="container mx-auto px-4">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="max-w-2xl mx-auto text-center"
-          >
+          <motion.div initial={{
+          opacity: 0,
+          y: 20
+        }} whileInView={{
+          opacity: 1,
+          y: 0
+        }} viewport={{
+          once: true
+        }} className="max-w-2xl mx-auto text-center">
             <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-6">
               Visit Us
             </h2>
@@ -331,6 +318,5 @@ export default function AboutPage() {
           </motion.div>
         </div>
       </section>
-    </div>
-  );
+    </div>;
 }
