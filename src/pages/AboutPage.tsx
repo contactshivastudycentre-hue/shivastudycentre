@@ -1,4 +1,4 @@
-import { BookOpen, Target, Award, Users, GraduationCap, Heart, Star, CheckCircle } from 'lucide-react';
+import { BookOpen, Target, Award, Users, GraduationCap, Heart, Star, CheckCircle, MapPin, Mail, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const fadeInUp = {
@@ -286,6 +286,38 @@ export default function AboutPage() {
                 </p>
               </motion.div>
             ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Contact Info Section */}
+      <section className="py-16 bg-accent/30">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-2xl mx-auto text-center"
+          >
+            <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-6">
+              Visit Us
+            </h2>
+            <div className="bg-card p-6 rounded-xl border border-border">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-center gap-3 text-foreground">
+                  <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
+                  <span>Krishna Chowk, Desari, Vaishali, Bihar</span>
+                </div>
+                <div className="flex items-center justify-center gap-3 text-foreground">
+                  <Mail className="w-5 h-5 text-primary flex-shrink-0" />
+                  <span>contact.shivastudycentre@gmail.com</span>
+                </div>
+                <div className="flex items-center justify-center gap-3 text-foreground">
+                  <Phone className="w-5 h-5 text-primary flex-shrink-0" />
+                  <span>+91 98765 43210</span>
+                </div>
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>

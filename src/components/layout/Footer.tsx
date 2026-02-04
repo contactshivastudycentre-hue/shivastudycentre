@@ -68,15 +68,15 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-start gap-2 text-muted-foreground text-sm">
                 <MapPin className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                <span>Shiva Study Center, Your City</span>
+                <span>Krishna Chowk, Desari,<br />Vaishali, Bihar</span>
               </li>
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Phone className="w-4 h-4 text-primary flex-shrink-0" />
                 <span>+91 98765 43210</span>
               </li>
-              <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Mail className="w-4 h-4 text-primary flex-shrink-0" />
-                <span>info@shivastudycenter.com</span>
+              <li className="flex items-start gap-2 text-muted-foreground text-sm">
+                <Mail className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                <span>contact.shivastudycentre@gmail.com</span>
               </li>
             </ul>
           </div>
