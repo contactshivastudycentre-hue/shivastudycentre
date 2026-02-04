@@ -3,7 +3,7 @@ import { Navigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, ArrowLeft, Shield, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Shield, KeyRound, LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
@@ -22,7 +22,7 @@ export default function AdminAuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSetupMode, setIsSetupMode] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { user, isAdmin, isLoading: authLoading, signIn, refreshProfile } = useAuth();
+  const { user, isAdmin, isLoading: authLoading, signIn, signOut, refreshProfile } = useAuth();
   const { toast } = useToast();
 
   // Redirect if already logged in as admin
@@ -30,7 +30,7 @@ export default function AdminAuthPage() {
     return <Navigate to="/admin" replace />;
   }
 
-  // If logged in but not admin, show error
+  // If logged in but not admin, show error with logout option
   if (user && !authLoading && !isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col">
@@ -52,14 +52,26 @@ export default function AdminAuthPage() {
             <h1 className="text-2xl font-display font-bold text-white mb-3">
               Access Denied
             </h1>
-            <p className="text-slate-400 mb-6">
-              You do not have admin privileges. Please login with an admin account.
+            <p className="text-slate-400 mb-4">
+              You are logged in as a non-admin account. Please sign out and login with the admin account.
             </p>
-            <Link to="/student-login">
-              <Button variant="outline" className="w-full border-slate-600 text-white hover:bg-slate-700">
-                Go to Student Login
+            <p className="text-xs text-slate-500 mb-6">
+              Admin Email: {ADMIN_EMAIL}
+            </p>
+            <div className="space-y-3">
+              <Button 
+                onClick={signOut}
+                className="w-full bg-primary hover:bg-primary/90"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out & Login as Admin
               </Button>
-            </Link>
+              <Link to="/student-login">
+                <Button variant="outline" className="w-full border-slate-600 text-white hover:bg-slate-700">
+                  Go to Student Login
+                </Button>
+              </Link>
+            </div>
           </motion.div>
         </div>
       </div>
