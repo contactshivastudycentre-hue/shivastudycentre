@@ -19,6 +19,14 @@ export function Header() {
 
   const isActive = (path: string) => location.pathname === path;
 
+  // Determine logo destination based on auth state
+  const getLogoDestination = () => {
+    if (!user) return '/';
+    if (isAdmin) return '/admin';
+    if (profile?.status === 'approved') return '/dashboard';
+    return '/'; // Pending/inactive users go to landing
+  };
+
   const handleSignOut = async () => {
     await signOut();
     setMobileMenuOpen(false);
@@ -32,8 +40,8 @@ export function Header() {
       className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border/50"
     >
       <nav className="container mx-auto px-4 h-20 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/">
+        {/* Logo - redirects based on auth state */}
+        <Link to={getLogoDestination()}>
           <Logo size="md" />
         </Link>
 
