@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ClipboardList, Clock, ArrowRight, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { CardSkeletonGrid } from '@/components/skeletons/CardSkeleton';
 
 interface Test {
   id: string;
@@ -64,8 +65,12 @@ export default function TestsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-pulse text-muted-foreground">Loading tests...</div>
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-foreground">Tests</h1>
+          <p className="text-muted-foreground">Attempt MCQ tests and track your progress</p>
+        </div>
+        <CardSkeletonGrid count={3} variant="test" />
       </div>
     );
   }
@@ -77,11 +82,11 @@ export default function TestsPage() {
         <p className="text-muted-foreground">Attempt MCQ tests and track your progress</p>
       </div>
 
-      {tests.length === 0 ? (
+{tests.length === 0 ? (
         <div className="dashboard-card text-center py-12">
           <ClipboardList className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-foreground mb-2">No Tests Available</h3>
-          <p className="text-muted-foreground">Check back later for new tests.</p>
+          <p className="text-muted-foreground">Tests will appear here once published by admin.</p>
         </div>
       ) : (
         <div className="grid gap-4">

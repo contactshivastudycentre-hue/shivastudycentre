@@ -4,17 +4,18 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 }
+  transition: { duration: 0.4 }
 };
 
 const stagger = {
   animate: {
     transition: {
-      staggerChildren: 0.1
+      staggerChildren: 0.08
     }
   }
 };
@@ -44,9 +45,9 @@ const quickLinks = [
 ];
 
 export default function StudentDashboard() {
-  const { profile, user } = useAuth();
+  const { profile, user, isLoading } = useAuth();
 
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['student-stats', user?.id],
     queryFn: async () => {
       const [tests, attempts] = await Promise.all([
@@ -65,7 +66,13 @@ export default function StudentDashboard() {
       };
     },
     enabled: !!user?.id,
+    staleTime: 30000, // Cache for 30 seconds
   });
+
+  // Show skeleton while loading
+  if (isLoading || (statsLoading && !stats)) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className="space-y-8">
