@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -13,21 +14,50 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { ArrowLeft, Plus, Edit, Trash2, HelpCircle } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ArrowLeft, Plus, Edit, Trash2, HelpCircle, CheckCircle, FileText, AlignLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+type QuestionType = 'mcq_single' | 'mcq_multiple' | 'true_false' | 'short_answer' | 'long_answer';
 
 interface Question {
   id: string;
   test_id: string;
   question_text: string;
+  question_type: QuestionType;
   options: string[];
   correct_option_index: number;
+  correct_answers: number[];
+  marks: number;
 }
 
 interface Test {
   id: string;
   title: string;
+  total_marks: number;
 }
+
+const questionTypeLabels: Record<QuestionType, string> = {
+  mcq_single: 'MCQ (Single Correct)',
+  mcq_multiple: 'MCQ (Multiple Correct)',
+  true_false: 'True / False',
+  short_answer: 'Short Answer',
+  long_answer: 'Long Answer',
+};
+
+const questionTypeIcons: Record<QuestionType, React.ReactNode> = {
+  mcq_single: <CheckCircle className="w-4 h-4" />,
+  mcq_multiple: <CheckCircle className="w-4 h-4" />,
+  true_false: <CheckCircle className="w-4 h-4" />,
+  short_answer: <FileText className="w-4 h-4" />,
+  long_answer: <AlignLeft className="w-4 h-4" />,
+};
 
 export default function AdminQuestionsPage() {
   const { testId } = useParams<{ testId: string }>();
@@ -41,8 +71,10 @@ export default function AdminQuestionsPage() {
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [formData, setFormData] = useState({
     question_text: '',
+    question_type: 'mcq_single' as QuestionType,
     options: ['', '', '', ''],
-    correct_option_index: 0,
+    correct_answers: [] as number[],
+    marks: 1,
   });
 
   useEffect(() => {
@@ -54,7 +86,7 @@ export default function AdminQuestionsPage() {
   const fetchTestAndQuestions = async () => {
     const { data: testData } = await supabase
       .from('tests')
-      .select('id, title')
+      .select('id, title, total_marks')
       .eq('id', testId)
       .single();
 
@@ -74,7 +106,9 @@ export default function AdminQuestionsPage() {
     if (questionsData) {
       setQuestions(questionsData.map(q => ({
         ...q,
-        options: q.options as string[]
+        options: (q.options as string[]) || [],
+        correct_answers: (q.correct_answers as number[]) || [],
+        question_type: (q.question_type as QuestionType) || 'mcq_single',
       })));
     }
 
@@ -84,20 +118,40 @@ export default function AdminQuestionsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate all options are filled
-    if (formData.options.some((opt) => !opt.trim())) {
-      toast({ title: 'Error', description: 'All options must be filled.', variant: 'destructive' });
+    // Validate based on question type
+    if (['mcq_single', 'mcq_multiple'].includes(formData.question_type)) {
+      if (formData.options.some((opt) => !opt.trim())) {
+        toast({ title: 'Error', description: 'All options must be filled.', variant: 'destructive' });
+        return;
+      }
+      if (formData.correct_answers.length === 0) {
+        toast({ title: 'Error', description: 'Please select correct answer(s).', variant: 'destructive' });
+        return;
+      }
+    }
+
+    if (formData.question_type === 'true_false' && formData.correct_answers.length === 0) {
+      toast({ title: 'Error', description: 'Please select the correct answer.', variant: 'destructive' });
       return;
     }
+
+    const questionData = {
+      question_text: formData.question_text,
+      question_type: formData.question_type,
+      options: ['mcq_single', 'mcq_multiple'].includes(formData.question_type) 
+        ? formData.options 
+        : formData.question_type === 'true_false' 
+          ? ['True', 'False'] 
+          : [],
+      correct_answers: formData.correct_answers,
+      correct_option_index: formData.correct_answers[0] ?? 0,
+      marks: formData.marks,
+    };
 
     if (editingQuestion) {
       const { error } = await supabase
         .from('questions')
-        .update({
-          question_text: formData.question_text,
-          options: formData.options,
-          correct_option_index: formData.correct_option_index,
-        })
+        .update(questionData)
         .eq('id', editingQuestion.id);
 
       if (error) {
@@ -110,9 +164,7 @@ export default function AdminQuestionsPage() {
     } else {
       const { error } = await supabase.from('questions').insert({
         test_id: testId,
-        question_text: formData.question_text,
-        options: formData.options,
-        correct_option_index: formData.correct_option_index,
+        ...questionData,
       });
 
       if (error) {
@@ -139,8 +191,10 @@ export default function AdminQuestionsPage() {
   const resetForm = () => {
     setFormData({
       question_text: '',
+      question_type: 'mcq_single',
       options: ['', '', '', ''],
-      correct_option_index: 0,
+      correct_answers: [],
+      marks: 1,
     });
     setEditingQuestion(null);
     setIsDialogOpen(false);
@@ -150,8 +204,10 @@ export default function AdminQuestionsPage() {
     setEditingQuestion(question);
     setFormData({
       question_text: question.question_text,
-      options: question.options,
-      correct_option_index: question.correct_option_index,
+      question_type: question.question_type,
+      options: question.options.length > 0 ? question.options : ['', '', '', ''],
+      correct_answers: question.correct_answers,
+      marks: question.marks,
     });
     setIsDialogOpen(true);
   };
@@ -160,6 +216,32 @@ export default function AdminQuestionsPage() {
     const newOptions = [...formData.options];
     newOptions[index] = value;
     setFormData({ ...formData, options: newOptions });
+  };
+
+  const toggleCorrectAnswer = (index: number) => {
+    if (formData.question_type === 'mcq_single' || formData.question_type === 'true_false') {
+      setFormData({ ...formData, correct_answers: [index] });
+    } else {
+      const newAnswers = formData.correct_answers.includes(index)
+        ? formData.correct_answers.filter(a => a !== index)
+        : [...formData.correct_answers, index];
+      setFormData({ ...formData, correct_answers: newAnswers });
+    }
+  };
+
+  const handleTypeChange = (type: QuestionType) => {
+    let options = formData.options;
+    let correct_answers: number[] = [];
+    
+    if (type === 'true_false') {
+      options = ['True', 'False'];
+    } else if (['short_answer', 'long_answer'].includes(type)) {
+      options = [];
+    } else if (options.length === 0 || options.length === 2) {
+      options = ['', '', '', ''];
+    }
+    
+    setFormData({ ...formData, question_type: type, options, correct_answers });
   };
 
   if (isLoading) {
@@ -183,7 +265,7 @@ export default function AdminQuestionsPage() {
             {test?.title}
           </h1>
           <p className="text-muted-foreground">
-            {questions.length} question{questions.length !== 1 ? 's' : ''}
+            {questions.length} question{questions.length !== 1 ? 's' : ''} • Total: {test?.total_marks || 0} marks
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -193,13 +275,51 @@ export default function AdminQuestionsPage() {
               Add Question
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingQuestion ? 'Edit Question' : 'Add New Question'}
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Question Type */}
+              <div className="space-y-2">
+                <Label>Question Type</Label>
+                <Select
+                  value={formData.question_type}
+                  onValueChange={(value) => handleTypeChange(value as QuestionType)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(questionTypeLabels).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        <span className="flex items-center gap-2">
+                          {questionTypeIcons[value as QuestionType]}
+                          {label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Marks */}
+              <div className="space-y-2">
+                <Label htmlFor="marks">Marks</Label>
+                <Input
+                  id="marks"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={formData.marks}
+                  onChange={(e) => setFormData({ ...formData, marks: parseInt(e.target.value) || 1 })}
+                  required
+                />
+              </div>
+
+              {/* Question Text */}
               <div className="space-y-2">
                 <Label htmlFor="question">Question</Label>
                 <Textarea
@@ -211,30 +331,85 @@ export default function AdminQuestionsPage() {
                 />
               </div>
 
-              <div className="space-y-3">
-                <Label>Options (select correct answer)</Label>
-                <RadioGroup
-                  value={formData.correct_option_index.toString()}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, correct_option_index: parseInt(value) })
-                  }
-                >
-                  {formData.options.map((option, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <RadioGroupItem value={index.toString()} id={`option-${index}`} />
-                      <Input
-                        value={option}
-                        onChange={(e) => updateOption(index, e.target.value)}
-                        placeholder={`Option ${index + 1}`}
-                        className="flex-1"
-                        required
-                      />
+              {/* MCQ Options */}
+              {['mcq_single', 'mcq_multiple'].includes(formData.question_type) && (
+                <div className="space-y-3">
+                  <Label>
+                    Options {formData.question_type === 'mcq_multiple' && '(select all correct)'}
+                  </Label>
+                  {formData.question_type === 'mcq_single' ? (
+                    <RadioGroup
+                      value={formData.correct_answers[0]?.toString() || ''}
+                      onValueChange={(value) => setFormData({ ...formData, correct_answers: [parseInt(value)] })}
+                    >
+                      {formData.options.map((option, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <RadioGroupItem value={index.toString()} id={`option-${index}`} />
+                          <Input
+                            value={option}
+                            onChange={(e) => updateOption(index, e.target.value)}
+                            placeholder={`Option ${index + 1}`}
+                            className="flex-1"
+                            required
+                          />
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  ) : (
+                    <div className="space-y-3">
+                      {formData.options.map((option, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <Checkbox
+                            checked={formData.correct_answers.includes(index)}
+                            onCheckedChange={() => toggleCorrectAnswer(index)}
+                            id={`option-${index}`}
+                          />
+                          <Input
+                            value={option}
+                            onChange={(e) => updateOption(index, e.target.value)}
+                            placeholder={`Option ${index + 1}`}
+                            className="flex-1"
+                            required
+                          />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </RadioGroup>
-              </div>
+                  )}
+                </div>
+              )}
 
-              <div className="flex gap-3">
+              {/* True/False Options */}
+              {formData.question_type === 'true_false' && (
+                <div className="space-y-3">
+                  <Label>Correct Answer</Label>
+                  <RadioGroup
+                    value={formData.correct_answers[0]?.toString() || ''}
+                    onValueChange={(value) => setFormData({ ...formData, correct_answers: [parseInt(value)] })}
+                  >
+                    <div className="flex items-center gap-3 p-3 rounded-lg border">
+                      <RadioGroupItem value="0" id="true" />
+                      <Label htmlFor="true" className="cursor-pointer flex-1">True</Label>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 rounded-lg border">
+                      <RadioGroupItem value="1" id="false" />
+                      <Label htmlFor="false" className="cursor-pointer flex-1">False</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+
+              {/* Short/Long Answer Info */}
+              {['short_answer', 'long_answer'].includes(formData.question_type) && (
+                <div className="bg-muted rounded-lg p-4 text-sm text-muted-foreground">
+                  <p>
+                    {formData.question_type === 'short_answer' 
+                      ? 'Students will provide a short text answer (2-3 lines). This will require manual evaluation.'
+                      : 'Students will provide a detailed answer. This will require manual evaluation.'}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
                 <Button type="submit" className="flex-1">
                   {editingQuestion ? 'Update Question' : 'Add Question'}
                 </Button>
@@ -259,10 +434,20 @@ export default function AdminQuestionsPage() {
             <div key={question.id} className="dashboard-card">
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium">
+                  <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium text-sm">
                     {index + 1}
                   </span>
-                  <p className="font-medium text-foreground pt-1">{question.question_text}</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-accent text-accent-foreground">
+                        {questionTypeLabels[question.question_type]}
+                      </span>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                        {question.marks} mark{question.marks !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <p className="font-medium text-foreground">{question.question_text}</p>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="icon" onClick={() => openEditDialog(question)}>
@@ -278,23 +463,36 @@ export default function AdminQuestionsPage() {
                   </Button>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-11">
-                {question.options.map((option, optIndex) => (
-                  <div
-                    key={optIndex}
-                    className={`px-4 py-2 rounded-lg text-sm ${
-                      optIndex === question.correct_option_index
-                        ? 'bg-success/10 text-success border border-success/20'
-                        : 'bg-secondary text-secondary-foreground'
-                    }`}
-                  >
-                    {option}
-                    {optIndex === question.correct_option_index && (
-                      <span className="ml-2 text-xs">✓ Correct</span>
-                    )}
-                  </div>
-                ))}
-              </div>
+              
+              {/* Show options for MCQ/True-False */}
+              {['mcq_single', 'mcq_multiple', 'true_false'].includes(question.question_type) && question.options.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-11">
+                  {question.options.map((option, optIndex) => (
+                    <div
+                      key={optIndex}
+                      className={`px-4 py-2 rounded-lg text-sm ${
+                        question.correct_answers.includes(optIndex)
+                          ? 'bg-success/10 text-success border border-success/20'
+                          : 'bg-secondary text-secondary-foreground'
+                      }`}
+                    >
+                      {option}
+                      {question.correct_answers.includes(optIndex) && (
+                        <span className="ml-2 text-xs">✓</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Info for descriptive questions */}
+              {['short_answer', 'long_answer'].includes(question.question_type) && (
+                <div className="pl-11">
+                  <span className="text-xs text-muted-foreground italic">
+                    Requires manual evaluation
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </div>

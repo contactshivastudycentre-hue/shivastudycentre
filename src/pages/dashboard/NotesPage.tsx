@@ -17,7 +17,7 @@ interface Note {
 export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<{ subject?: string; class?: string }>({});
+  const [filterSubject, setFilterSubject] = useState<string | null>(null);
   const [viewingNote, setViewingNote] = useState<Note | null>(null);
 
   useEffect(() => {
@@ -25,6 +25,7 @@ export default function NotesPage() {
   }, []);
 
   const fetchNotes = async () => {
+    // RLS automatically filters by student's class
     const { data } = await supabase
       .from('notes')
       .select('*')
@@ -37,11 +38,9 @@ export default function NotesPage() {
   };
 
   const uniqueSubjects = [...new Set(notes.map((n) => n.subject))];
-  const uniqueClasses = [...new Set(notes.map((n) => n.class))];
 
   const filteredNotes = notes.filter((note) => {
-    if (filter.subject && note.subject !== filter.subject) return false;
-    if (filter.class && note.class !== filter.class) return false;
+    if (filterSubject && note.subject !== filterSubject) return false;
     return true;
   });
 
@@ -72,34 +71,24 @@ export default function NotesPage() {
         <p className="text-muted-foreground">Download study materials organized by subject</p>
       </div>
 
-      {/* Filters */}
-      {notes.length > 0 && (
+      {/* Subject Filters */}
+      {notes.length > 0 && uniqueSubjects.length > 1 && (
         <div className="flex flex-wrap gap-2">
           <Button
-            variant={!filter.subject && !filter.class ? 'default' : 'outline'}
+            variant={!filterSubject ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setFilter({})}
+            onClick={() => setFilterSubject(null)}
           >
-            All
+            All Subjects
           </Button>
           {uniqueSubjects.map((subject) => (
             <Button
               key={subject}
-              variant={filter.subject === subject ? 'default' : 'outline'}
+              variant={filterSubject === subject ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setFilter({ ...filter, subject: filter.subject === subject ? undefined : subject })}
+              onClick={() => setFilterSubject(filterSubject === subject ? null : subject)}
             >
               {subject}
-            </Button>
-          ))}
-          {uniqueClasses.map((cls) => (
-            <Button
-              key={cls}
-              variant={filter.class === cls ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter({ ...filter, class: filter.class === cls ? undefined : cls })}
-            >
-              {cls}
             </Button>
           ))}
         </div>
