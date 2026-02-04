@@ -18,14 +18,14 @@ const contactInfo = [
   {
     icon: Mail,
     title: 'Email',
-    value: 'info@shivastudycenter.com',
+    value: 'contact.shivastudycentre@gmail.com',
     description: 'We reply within 24 hours',
   },
   {
     icon: MapPin,
     title: 'Address',
-    value: 'Shiva Study Center',
-    description: 'Your Local Area, City',
+    value: 'Krishna Chowk, Desari',
+    description: 'Vaishali, Bihar',
   },
   {
     icon: Clock,

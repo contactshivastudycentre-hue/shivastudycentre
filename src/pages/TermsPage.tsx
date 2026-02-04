@@ -81,9 +81,9 @@ Students and parents are advised to maintain their own backup of important mater
     title: 'Contact Information',
     content: `For any queries regarding these terms or our services, please contact us:
 
-• Email: info@shivastudycenter.com
+• Email: contact.shivastudycentre@gmail.com
 • Phone: Available during institute hours
-• Visit: Shiva Study Center premises
+• Visit: Krishna Chowk, Desari, Vaishali, Bihar
 
 We encourage students and parents to reach out with any concerns or clarifications needed.`
   }
