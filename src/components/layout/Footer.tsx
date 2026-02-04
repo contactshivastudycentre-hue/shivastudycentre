@@ -87,8 +87,17 @@ export function Footer() {
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} Shiva Study Center. All rights reserved.
           </p>
-          <div className="flex gap-4 text-xs text-muted-foreground">
+          <div className="flex gap-4 items-center text-xs text-muted-foreground">
             <Link to="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link>
+            <span className="text-border">|</span>
+            <a 
+              href="https://kairaux.online" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-primary transition-colors"
+            >
+              Powered by KAIRAUX
+            </a>
           </div>
         </div>
       </div>

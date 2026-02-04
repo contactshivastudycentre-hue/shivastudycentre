@@ -1,5 +1,6 @@
 import { BookOpen, Target, Award, Users, GraduationCap, Heart, Star, CheckCircle, MapPin, Mail, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
+import chairmanImage from '@/assets/chairman-sanjay.jpg';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -92,8 +93,61 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* Chairman Section - At the TOP after hero */}
+      <section className="py-16 bg-background">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-4xl mx-auto"
+          >
+            <div className="text-center mb-10">
+              <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground">
+                Message from the Chairman
+              </h2>
+            </div>
+
+            <div className="bg-card rounded-2xl p-8 md:p-10 border border-border">
+              <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+                {/* Photo */}
+                <div className="flex-shrink-0">
+                  <div className="w-36 h-48 md:w-44 md:h-56 rounded-xl overflow-hidden bg-muted shadow-lg">
+                    <img 
+                      src={chairmanImage} 
+                      alt="Mr. Sanjay Singhania - Chairman of Shiva Study Center" 
+                      className="w-full h-full object-cover object-top"
+                    />
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 text-center md:text-left">
+                  <div className="mb-1">
+                    <span className="text-sm font-medium text-primary">Chairman – Shiva Study Center (SSC)</span>
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-display font-bold text-foreground mb-4">
+                    Mr. Sanjay Singhania
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed mb-4">
+                    Mr. Sanjay Singhania, Chairman of Shiva Study Center, provides academic leadership and guidance 
+                    to ensure a disciplined, focused, and student-centric learning environment. Under his vision, 
+                    SSC is committed to quality education, conceptual clarity, and consistent academic growth.
+                  </p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    With a strong belief in nurturing young minds through structured learning and individual attention, 
+                    he has dedicated his efforts to creating an institution where every student can realize their 
+                    full potential and achieve academic excellence.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Stats Section */}
-      <section className="py-12 bg-background">
+      <section className="py-12 bg-accent/30">
         <div className="container mx-auto px-4">
           <motion.div 
             initial="initial"
@@ -120,50 +174,6 @@ export default function AboutPage() {
                 <div className="text-muted-foreground text-sm font-medium">{stat.label}</div>
               </motion.div>
             ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Teacher Section */}
-      <section className="py-16 bg-accent/30">
-        <div className="container mx-auto px-4">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="max-w-4xl mx-auto"
-          >
-            <div className="bg-card rounded-2xl p-8 md:p-10 shadow-sm border border-border">
-              <div className="flex flex-col md:flex-row gap-8 items-start">
-                <motion.div 
-                  className="w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  <GraduationCap className="w-12 h-12 md:w-16 md:h-16 text-primary" />
-                </motion.div>
-                
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Star className="w-5 h-5 text-primary fill-primary" />
-                    <span className="text-sm font-medium text-primary">Lead Educator</span>
-                  </div>
-                  
-                  <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-4">
-                    Sanjay Singhania Sir
-                  </h2>
-                  <p className="text-muted-foreground text-sm mb-4">
-                    M.Sc & B.Ed
-                  </p>
-                  
-                  <p className="text-muted-foreground leading-relaxed">
-                    Sanjay Singhania Sir, an experienced and dedicated educator, leads Shiva Study Center 
-                    with a strong focus on conceptual understanding, disciplined learning, and student success. 
-                    With over a decade of teaching experience, he has helped hundreds of students build strong 
-                    academic foundations and achieve their educational goals.
-                  </p>
-                </div>
-              </div>
-            </div>
           </motion.div>
         </div>
       </section>
