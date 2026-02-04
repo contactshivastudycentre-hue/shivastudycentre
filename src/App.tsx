@@ -3,24 +3,82 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { AuthProvider } from "@/lib/auth";
+
+// Layouts
+import { PublicLayout } from "@/components/layout/PublicLayout";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { AdminLayout } from "@/components/layout/AdminLayout";
+
+// Public Pages
+import LandingPage from "@/pages/LandingPage";
+import AboutPage from "@/pages/AboutPage";
+import ContactPage from "@/pages/ContactPage";
+import AuthPage from "@/pages/AuthPage";
+import NotFound from "@/pages/NotFound";
+
+// Student Dashboard
+import StudentDashboard from "@/pages/dashboard/StudentDashboard";
+import TestsPage from "@/pages/dashboard/TestsPage";
+import TestAttemptPage from "@/pages/dashboard/TestAttemptPage";
+import NotesPage from "@/pages/dashboard/NotesPage";
+import VideosPage from "@/pages/dashboard/VideosPage";
+import ProfilePage from "@/pages/dashboard/ProfilePage";
+
+// Admin Dashboard
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminStudentsPage from "@/pages/admin/AdminStudentsPage";
+import AdminTestsPage from "@/pages/admin/AdminTestsPage";
+import AdminQuestionsPage from "@/pages/admin/AdminQuestionsPage";
+import AdminNotesPage from "@/pages/admin/AdminNotesPage";
+import AdminVideosPage from "@/pages/admin/AdminVideosPage";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Public Routes */}
+            <Route element={<PublicLayout />}>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+            </Route>
+            
+            {/* Auth */}
+            <Route path="/auth" element={<AuthPage />} />
+
+            {/* Student Dashboard */}
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route index element={<StudentDashboard />} />
+              <Route path="tests" element={<TestsPage />} />
+              <Route path="tests/:testId" element={<TestAttemptPage />} />
+              <Route path="notes" element={<NotesPage />} />
+              <Route path="videos" element={<VideosPage />} />
+              <Route path="profile" element={<ProfilePage />} />
+            </Route>
+
+            {/* Admin Dashboard */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="students" element={<AdminStudentsPage />} />
+              <Route path="tests" element={<AdminTestsPage />} />
+              <Route path="tests/:testId/questions" element={<AdminQuestionsPage />} />
+              <Route path="notes" element={<AdminNotesPage />} />
+              <Route path="videos" element={<AdminVideosPage />} />
+            </Route>
+
+            {/* 404 */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
