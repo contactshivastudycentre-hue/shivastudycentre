@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpen, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
+import { Logo } from '@/components/Logo';
+import { motion } from 'framer-motion';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -144,49 +146,81 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Back Link */}
-      <div className="p-4">
-        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Home
-        </Link>
+    <div className="min-h-screen mesh-gradient flex flex-col relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div 
+          className="absolute top-20 right-20 w-96 h-96 rounded-full bg-primary/10 blur-3xl"
+          animate={{ scale: [1, 1.2, 1], x: [0, 30, 0] }}
+          transition={{ duration: 8, repeat: Infinity }}
+        />
+        <motion.div 
+          className="absolute bottom-20 left-20 w-80 h-80 rounded-full bg-accent-gradient/10 blur-3xl"
+          animate={{ scale: [1.2, 1, 1.2], y: [0, -30, 0] }}
+          transition={{ duration: 10, repeat: Infinity }}
+        />
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md">
+      {/* Back Link */}
+      <motion.div 
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="p-6 relative z-10"
+      >
+        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group">
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          Back to Home
+        </Link>
+      </motion.div>
+
+      <div className="flex-1 flex items-center justify-center px-4 py-8 relative z-10">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="w-full max-w-md"
+        >
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="w-8 h-8 text-primary-foreground" />
+            <div className="flex justify-center mb-4">
+              <Logo size="lg" showText={false} />
             </div>
-            <h1 className="text-2xl font-display font-bold text-foreground">
-              Shiva Study Center
+            <h1 className="text-3xl font-display font-bold text-foreground">
+              Welcome to SSC
             </h1>
             <p className="text-muted-foreground mt-2">
-              Welcome! Please login or create an account.
+              Login or create an account to continue
             </p>
           </div>
 
           {/* Auth Tabs */}
-          <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+            className="glass-card p-8"
+          >
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6 rounded-xl h-12">
+                <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  Login
+                </TabsTrigger>
+                <TabsTrigger value="signup" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  Sign Up
+                </TabsTrigger>
               </TabsList>
 
               {/* Login Form */}
               <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
+                    <Label htmlFor="login-email" className="text-foreground">Email</Label>
                     <Input
                       id="login-email"
                       name="email"
                       type="email"
                       placeholder="your@email.com"
-                      className="input-focus"
+                      className="input-focus h-12 rounded-xl"
                       required
                     />
                     {errors.email && (
@@ -195,26 +229,22 @@ export default function AuthPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
+                    <Label htmlFor="login-password" className="text-foreground">Password</Label>
                     <div className="relative">
                       <Input
                         id="login-password"
                         name="password"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="••••••••"
-                        className="input-focus pr-10"
+                        className="input-focus pr-12 h-12 rounded-xl"
                         required
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         onClick={() => setShowPassword(!showPassword)}
                       >
-                        {showPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
                     {errors.password && (
@@ -222,7 +252,7 @@ export default function AuthPage() {
                     )}
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full btn-gradient h-12 rounded-xl text-base" disabled={isLoading}>
                     {isLoading ? 'Logging in...' : 'Login'}
                   </Button>
                 </form>
@@ -232,12 +262,12 @@ export default function AuthPage() {
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
+                    <Label htmlFor="fullName" className="text-foreground">Full Name</Label>
                     <Input
                       id="fullName"
                       name="fullName"
                       placeholder="Your full name"
-                      className="input-focus"
+                      className="input-focus h-12 rounded-xl"
                       required
                     />
                     {errors.fullName && (
@@ -246,13 +276,13 @@ export default function AuthPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="mobile">Mobile Number</Label>
+                    <Label htmlFor="mobile" className="text-foreground">Mobile Number</Label>
                     <Input
                       id="mobile"
                       name="mobile"
                       type="tel"
                       placeholder="+91 98765 43210"
-                      className="input-focus"
+                      className="input-focus h-12 rounded-xl"
                       required
                     />
                     {errors.mobile && (
@@ -261,23 +291,23 @@ export default function AuthPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="studentClass">Class (Optional)</Label>
+                    <Label htmlFor="studentClass" className="text-foreground">Class (Optional)</Label>
                     <Input
                       id="studentClass"
                       name="studentClass"
                       placeholder="e.g., Class 10, Class 12"
-                      className="input-focus"
+                      className="input-focus h-12 rounded-xl"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email" className="text-foreground">Email</Label>
                     <Input
                       id="signup-email"
                       name="email"
                       type="email"
                       placeholder="your@email.com"
-                      className="input-focus"
+                      className="input-focus h-12 rounded-xl"
                       required
                     />
                     {errors.email && (
@@ -286,26 +316,22 @@ export default function AuthPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password" className="text-foreground">Password</Label>
                     <div className="relative">
                       <Input
                         id="signup-password"
                         name="password"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Minimum 6 characters"
-                        className="input-focus pr-10"
+                        className="input-focus pr-12 h-12 rounded-xl"
                         required
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         onClick={() => setShowPassword(!showPassword)}
                       >
-                        {showPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
                     {errors.password && (
@@ -313,18 +339,21 @@ export default function AuthPage() {
                     )}
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full btn-gradient h-12 rounded-xl text-base" disabled={isLoading}>
                     {isLoading ? 'Creating Account...' : 'Create Account'}
                   </Button>
 
-                  <p className="text-xs text-center text-muted-foreground">
-                    After registration, your account will be reviewed by the admin. You'll be able to access the dashboard once approved.
-                  </p>
+                  <div className="flex items-center gap-2 p-3 bg-accent rounded-xl">
+                    <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+                    <p className="text-xs text-muted-foreground">
+                      After registration, your account will be reviewed by the admin.
+                    </p>
+                  </div>
                 </form>
               </TabsContent>
             </Tabs>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );

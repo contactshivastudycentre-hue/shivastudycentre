@@ -1,8 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, Menu, X, LogIn, LogOut, User } from 'lucide-react';
+import { Menu, X, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
+import { Logo } from '@/components/Logo';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const publicLinks = [
   { name: 'Home', path: '/' },
@@ -23,16 +25,16 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
-      <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
+    <motion.header 
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border/50"
+    >
+      <nav className="container mx-auto px-4 h-20 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-            <BookOpen className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <span className="font-display text-xl font-bold text-foreground">
-            Shiva Study Center
-          </span>
+        <Link to="/">
+          <Logo size="md" />
         </Link>
 
         {/* Desktop Navigation */}
@@ -51,25 +53,25 @@ export function Header() {
             <div className="flex items-center gap-4">
               {isAdmin ? (
                 <Link to="/admin">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="rounded-xl">
                     Admin Panel
                   </Button>
                 </Link>
               ) : profile?.status === 'approved' ? (
                 <Link to="/dashboard">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="rounded-xl">
                     Dashboard
                   </Button>
                 </Link>
               ) : null}
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <Button variant="ghost" size="sm" onClick={handleSignOut} className="rounded-xl">
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
               </Button>
             </div>
           ) : (
             <Link to="/auth">
-              <Button size="sm">
+              <Button size="sm" className="btn-gradient rounded-xl px-6">
                 <LogIn className="w-4 h-4 mr-2" />
                 Login
               </Button>
@@ -78,8 +80,9 @@ export function Header() {
         </div>
 
         {/* Mobile Menu Button */}
-        <button
-          className="md:hidden p-2"
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          className="md:hidden p-2 rounded-xl hover:bg-accent transition-colors"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
           {mobileMenuOpen ? (
@@ -87,55 +90,75 @@ export function Header() {
           ) : (
             <Menu className="w-6 h-6 text-foreground" />
           )}
-        </button>
+        </motion.button>
       </nav>
 
       {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-card border-b border-border animate-fade-in">
-          <div className="container mx-auto px-4 py-4 flex flex-col gap-4">
-            {publicLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`nav-link py-2 ${isActive(link.path) ? 'nav-link-active' : ''}`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {link.name}
-              </Link>
-            ))}
-            
-            {user ? (
-              <>
-                {isAdmin ? (
-                  <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="outline" className="w-full">
-                      Admin Panel
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="md:hidden bg-card border-b border-border overflow-hidden"
+          >
+            <div className="container mx-auto px-4 py-4 flex flex-col gap-2">
+              {publicLinks.map((link, index) => (
+                <motion.div
+                  key={link.path}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Link
+                    to={link.path}
+                    className={`block py-3 px-4 rounded-xl transition-colors ${
+                      isActive(link.path) 
+                        ? 'bg-accent text-primary font-semibold' 
+                        : 'text-foreground hover:bg-accent'
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {link.name}
+                  </Link>
+                </motion.div>
+              ))}
+              
+              <div className="pt-4 mt-2 border-t border-border space-y-2">
+                {user ? (
+                  <>
+                    {isAdmin ? (
+                      <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
+                        <Button variant="outline" className="w-full rounded-xl">
+                          Admin Panel
+                        </Button>
+                      </Link>
+                    ) : profile?.status === 'approved' ? (
+                      <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                        <Button variant="outline" className="w-full rounded-xl">
+                          Dashboard
+                        </Button>
+                      </Link>
+                    ) : null}
+                    <Button variant="ghost" className="w-full justify-start rounded-xl" onClick={handleSignOut}>
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
+                    <Button className="w-full btn-gradient rounded-xl">
+                      <LogIn className="w-4 h-4 mr-2" />
+                      Login
                     </Button>
                   </Link>
-                ) : profile?.status === 'approved' ? (
-                  <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="outline" className="w-full">
-                      Dashboard
-                    </Button>
-                  </Link>
-                ) : null}
-                <Button variant="ghost" className="w-full justify-start" onClick={handleSignOut}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                <Button className="w-full">
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Login
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-    </header>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.header>
   );
 }
