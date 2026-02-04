@@ -24,11 +24,12 @@ interface SubjectSelectProps {
   onChange: (value: string) => void;
   required?: boolean;
   placeholder?: string;
+  disabled?: boolean;
 }
 
-export function SubjectSelect({ value, onChange, required, placeholder = 'Select subject' }: SubjectSelectProps) {
+export function SubjectSelect({ value, onChange, required, placeholder = 'Select subject', disabled }: SubjectSelectProps) {
   return (
-    <Select value={value} onValueChange={onChange} required={required}>
+    <Select value={value} onValueChange={onChange} required={required} disabled={disabled}>
       <SelectTrigger>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

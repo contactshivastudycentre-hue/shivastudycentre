@@ -21,11 +21,12 @@ interface ClassSelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   required?: boolean;
+  disabled?: boolean;
 }
 
-export function ClassSelect({ value, onChange, placeholder = 'Select class', required }: ClassSelectProps) {
+export function ClassSelect({ value, onChange, placeholder = 'Select class', required, disabled }: ClassSelectProps) {
   return (
-    <Select value={value} onValueChange={onChange} required={required}>
+    <Select value={value} onValueChange={onChange} required={required} disabled={disabled}>
       <SelectTrigger className="h-12 rounded-xl bg-background">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

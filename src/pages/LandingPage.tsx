@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ClipboardList, FileText, Play, Users, ArrowRight, Sparkles, GraduationCap, Target, Award, Zap, Shield, UserCircle, ExternalLink } from 'lucide-react';
 import swaritImage from '@/assets/swarit-roy.jpg';
+import { PWAInstallButton } from '@/components/PWAInstallButton';
+
 const fadeInUp = {
   initial: {
     opacity: 0,
@@ -488,5 +490,8 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* PWA Install Button - Mobile Only */}
+      <PWAInstallButton />
     </div>;
 }

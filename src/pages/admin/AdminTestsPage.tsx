@@ -1,17 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -26,11 +15,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ClipboardList, Plus, MoreVertical, Edit, Trash2, Eye, Clock, List } from 'lucide-react';
+import { ClipboardList, Plus, MoreVertical, Edit, Trash2, Clock, List, Loader2, Rocket } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/lib/auth';
-import { ClassSelect } from '@/components/ClassSelect';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface Test {
   id: string;
@@ -40,24 +27,15 @@ interface Test {
   subject: string;
   class: string;
   is_published: boolean;
+  total_marks: number | null;
   created_at: string;
 }
 
 export default function AdminTestsPage() {
   const [tests, setTests] = useState<Test[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingTest, setEditingTest] = useState<Test | null>(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    duration_minutes: 30,
-    subject: '',
-    class: '',
-    is_published: false,
-  });
   const { toast } = useToast();
-  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchTests();
@@ -73,37 +51,6 @@ export default function AdminTestsPage() {
       setTests(data);
     }
     setIsLoading(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (editingTest) {
-      const { error } = await supabase
-        .from('tests')
-        .update(formData)
-        .eq('id', editingTest.id);
-
-      if (error) {
-        toast({ title: 'Error', description: 'Failed to update test.', variant: 'destructive' });
-      } else {
-        toast({ title: 'Success', description: 'Test updated successfully.' });
-        fetchTests();
-        resetForm();
-      }
-    } else {
-      const { error } = await supabase
-        .from('tests')
-        .insert({ ...formData, created_by: user?.id });
-
-      if (error) {
-        toast({ title: 'Error', description: 'Failed to create test.', variant: 'destructive' });
-      } else {
-        toast({ title: 'Success', description: 'Test created successfully.' });
-        fetchTests();
-        resetForm();
-      }
-    }
   };
 
   const deleteTest = async (id: string) => {
@@ -126,40 +73,18 @@ export default function AdminTestsPage() {
     if (error) {
       toast({ title: 'Error', description: 'Failed to update test.', variant: 'destructive' });
     } else {
+      toast({
+        title: test.is_published ? 'Unpublished' : 'Published',
+        description: test.is_published ? 'Test is now a draft.' : 'Test is now live for students.',
+      });
       fetchTests();
     }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      duration_minutes: 30,
-      subject: '',
-      class: '',
-      is_published: false,
-    });
-    setEditingTest(null);
-    setIsDialogOpen(false);
-  };
-
-  const openEditDialog = (test: Test) => {
-    setEditingTest(test);
-    setFormData({
-      title: test.title,
-      description: test.description || '',
-      duration_minutes: test.duration_minutes,
-      subject: test.subject,
-      class: test.class,
-      is_published: test.is_published,
-    });
-    setIsDialogOpen(true);
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-pulse text-muted-foreground">Loading tests...</div>
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -169,95 +94,23 @@ export default function AdminTestsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Tests</h1>
-          <p className="text-muted-foreground">Create and manage MCQ tests</p>
+          <p className="text-muted-foreground">Create and manage tests for students</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => resetForm()}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Test
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{editingTest ? 'Edit Test' : 'Create New Test'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
-                  <Input
-                    id="subject"
-                    value={formData.subject}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Class</Label>
-                  <ClassSelect
-                    value={formData.class}
-                    onChange={(value) => setFormData({ ...formData, class: value })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="duration">Duration (minutes)</Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  min="5"
-                  max="180"
-                  value={formData.duration_minutes}
-                  onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) })}
-                  required
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="published">Published</Label>
-                <Switch
-                  id="published"
-                  checked={formData.is_published}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_published: checked })}
-                />
-              </div>
-              <div className="flex gap-3">
-                <Button type="submit" className="flex-1">
-                  {editingTest ? 'Update Test' : 'Create Test'}
-                </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => navigate('/admin/tests/new/builder')}>
+          <Plus className="w-4 h-4 mr-2" />
+          Create Test
+        </Button>
       </div>
 
       {tests.length === 0 ? (
         <div className="dashboard-card text-center py-12">
           <ClipboardList className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-foreground mb-2">No Tests Yet</h3>
-          <p className="text-muted-foreground">Create your first test to get started.</p>
+          <p className="text-muted-foreground mb-4">Create your first test to get started.</p>
+          <Button onClick={() => navigate('/admin/tests/new/builder')}>
+            <Plus className="w-4 h-4 mr-2" />
+            Create First Test
+          </Button>
         </div>
       ) : (
         <div className="dashboard-card p-0 overflow-hidden">
@@ -269,6 +122,7 @@ export default function AdminTestsPage() {
                   <TableHead>Subject</TableHead>
                   <TableHead>Class</TableHead>
                   <TableHead>Duration</TableHead>
+                  <TableHead>Marks</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -285,11 +139,14 @@ export default function AdminTestsPage() {
                         {test.duration_minutes}m
                       </span>
                     </TableCell>
+                    <TableCell>{test.total_marks || 0}</TableCell>
                     <TableCell>
                       <button
                         onClick={() => togglePublish(test)}
-                        className={`text-xs font-medium px-2 py-1 rounded-full cursor-pointer ${
-                          test.is_published ? 'status-approved' : 'status-inactive'
+                        className={`text-xs font-medium px-2 py-1 rounded-full cursor-pointer transition-colors ${
+                          test.is_published 
+                            ? 'bg-success/10 text-success hover:bg-success/20' 
+                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
                         }`}
                       >
                         {test.is_published ? 'Published' : 'Draft'}
@@ -304,14 +161,20 @@ export default function AdminTestsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link to={`/admin/tests/${test.id}/questions`}>
-                              <List className="w-4 h-4 mr-2" />
-                              Manage Questions
+                            <Link to={`/admin/tests/${test.id}/builder`}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit Test
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEditDialog(test)}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
+                          <DropdownMenuItem asChild>
+                            <Link to={`/admin/tests/${test.id}/questions`}>
+                              <List className="w-4 h-4 mr-2" />
+                              Quick Edit Questions
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => togglePublish(test)}>
+                            <Rocket className="w-4 h-4 mr-2" />
+                            {test.is_published ? 'Unpublish' : 'Publish'}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => deleteTest(test.id)}
