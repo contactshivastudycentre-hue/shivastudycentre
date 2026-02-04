@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Play } from 'lucide-react';
 import { CardSkeletonGrid } from '@/components/skeletons/CardSkeleton';
-import { VideoPlayer } from '@/components/VideoPlayer';
 import { SearchInput } from '@/components/SearchInput';
 
 interface Video {
@@ -17,11 +17,11 @@ interface Video {
 }
 
 export default function VideosPage() {
+  const navigate = useNavigate();
   const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterSubject, setFilterSubject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeVideo, setActiveVideo] = useState<Video | null>(null);
 
   useEffect(() => {
     fetchVideos();
@@ -119,16 +119,7 @@ export default function VideosPage() {
         </div>
       )}
 
-      {/* Video Player Modal */}
-      {activeVideo && (
-        <VideoPlayer
-          url={activeVideo.video_url}
-          title={activeVideo.title}
-          subject={activeVideo.subject}
-          className={activeVideo.class}
-          onClose={() => setActiveVideo(null)}
-        />
-      )}
+      {/* Video Player Modal - Removed, using dedicated page now */}
 
       {filteredVideos.length === 0 ? (
         <div className="dashboard-card text-center py-12">
@@ -148,7 +139,7 @@ export default function VideosPage() {
               <div
                 key={video.id}
                 className="dashboard-card group cursor-pointer hover:shadow-md transition-all duration-200"
-                onClick={() => setActiveVideo(video)}
+                onClick={() => navigate(`/dashboard/videos/${video.id}`)}
               >
                 <div className="aspect-video rounded-xl overflow-hidden bg-secondary mb-4 relative">
                   {thumbnail ? (

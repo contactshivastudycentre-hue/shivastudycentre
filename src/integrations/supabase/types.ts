@@ -47,6 +47,42 @@ export type Database = {
         }
         Relationships: []
       }
+      password_reset_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          email: string | null
+          id: string
+          mobile: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          mobile?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          mobile?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           class: string | null
@@ -240,11 +276,80 @@ export type Database = {
         }
         Relationships: []
       }
+      video_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_approved: boolean
+          updated_at: string
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_approved?: boolean
+          updated_at?: string
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_approved?: boolean
+          updated_at?: string
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_comments_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_likes: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_likes_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       videos: {
         Row: {
           class: string
+          comments_enabled: boolean
           created_at: string
           created_by: string | null
+          description: string | null
           id: string
           subject: string
           thumbnail_url: string | null
@@ -254,8 +359,10 @@ export type Database = {
         }
         Insert: {
           class: string
+          comments_enabled?: boolean
           created_at?: string
           created_by?: string | null
+          description?: string | null
           id?: string
           subject: string
           thumbnail_url?: string | null
@@ -265,8 +372,10 @@ export type Database = {
         }
         Update: {
           class?: string
+          comments_enabled?: boolean
           created_at?: string
           created_by?: string | null
+          description?: string | null
           id?: string
           subject?: string
           thumbnail_url?: string | null
@@ -285,9 +394,14 @@ export type Database = {
         Args: { check_user_id?: string }
         Returns: Database["public"]["Enums"]["student_status"]
       }
+      get_video_like_count: { Args: { video_uuid: string }; Returns: number }
       is_admin: { Args: { check_user_id?: string }; Returns: boolean }
       is_student_approved: {
         Args: { check_user_id?: string }
+        Returns: boolean
+      }
+      user_has_liked_video: {
+        Args: { check_user_id?: string; video_uuid: string }
         Returns: boolean
       }
     }

@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { Logo } from '@/components/Logo';
 import { motion } from 'framer-motion';
 import { ClassSelect } from '@/components/ClassSelect';
+import { ForgotPasswordModal } from '@/components/ForgotPasswordModal';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -30,6 +31,7 @@ export default function StudentAuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [studentClass, setStudentClass] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { user, profile, isAdmin, signIn, signUp } = useAuth();
   const { toast } = useToast();
 
@@ -305,6 +307,13 @@ export default function StudentAuthPage() {
                     {errors.password && (
                       <p className="text-sm text-destructive">{errors.password}</p>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotPassword(true)}
+                      className="text-sm text-primary hover:underline mt-1"
+                    >
+                      Forgot Password?
+                    </button>
                   </div>
 
                   <Button type="submit" className="w-full h-12 rounded-xl text-base bg-primary hover:bg-primary/90" disabled={isLoading}>
@@ -413,6 +422,12 @@ export default function StudentAuthPage() {
           </motion.div>
         </motion.div>
       </div>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal 
+        open={showForgotPassword} 
+        onOpenChange={setShowForgotPassword} 
+      />
     </div>
   );
 }
