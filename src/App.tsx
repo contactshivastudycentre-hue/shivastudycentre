@@ -35,6 +35,7 @@ import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminStudentsPage from "@/pages/admin/AdminStudentsPage";
 import AdminTestsPage from "@/pages/admin/AdminTestsPage";
 import AdminQuestionsPage from "@/pages/admin/AdminQuestionsPage";
+import TestBuilder from "@/components/admin/TestBuilder";
 import AdminNotesPage from "@/pages/admin/AdminNotesPage";
 import AdminVideosPage from "@/pages/admin/AdminVideosPage";
 import AdminPasswordResetPage from "@/pages/admin/AdminPasswordResetPage";
@@ -80,6 +81,7 @@ const App = () => (
               <Route path="students" element={<AdminStudentsPage />} />
               <Route path="tests" element={<AdminTestsPage />} />
               <Route path="tests/:testId/questions" element={<AdminQuestionsPage />} />
+              <Route path="tests/:testId/builder" element={<TestBuilder />} />
               <Route path="notes" element={<AdminNotesPage />} />
               <Route path="videos" element={<AdminVideosPage />} />
               <Route path="password-resets" element={<AdminPasswordResetPage />} />

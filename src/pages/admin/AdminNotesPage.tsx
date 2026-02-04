@@ -24,11 +24,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { FileText, Plus, MoreVertical, Edit, Trash2, ExternalLink } from 'lucide-react';
+import { FileText, Plus, MoreVertical, Edit, Trash2, ExternalLink, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ClassSelect } from '@/components/ClassSelect';
 import { SubjectSelect } from '@/components/SubjectSelect';
 import { useAuth } from '@/lib/auth';
+import { FileUploader } from '@/components/admin/FileUploader';
 
 interface Note {
   id: string;
@@ -50,6 +51,7 @@ export default function AdminNotesPage() {
     class: '',
     pdf_url: '',
   });
+  const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -71,6 +73,11 @@ export default function AdminNotesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.pdf_url) {
+      toast({ title: 'Error', description: 'Please upload a PDF file or enter a URL.', variant: 'destructive' });
+      return;
+    }
 
     if (editingNote) {
       const { error } = await supabase
@@ -115,6 +122,7 @@ export default function AdminNotesPage() {
     setFormData({ title: '', subject: '', class: '', pdf_url: '' });
     setEditingNote(null);
     setIsDialogOpen(false);
+    setUploadMode('file');
   };
 
   const openEditDialog = (note: Note) => {
@@ -125,13 +133,14 @@ export default function AdminNotesPage() {
       class: note.class,
       pdf_url: note.pdf_url,
     });
+    setUploadMode('url'); // Show existing URL when editing
     setIsDialogOpen(true);
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-pulse text-muted-foreground">Loading notes...</div>
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -150,7 +159,7 @@ export default function AdminNotesPage() {
               Add Note
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingNote ? 'Edit Note' : 'Add New Note'}</DialogTitle>
             </DialogHeader>
@@ -183,22 +192,61 @@ export default function AdminNotesPage() {
                   />
                 </div>
               </div>
+              
+              {/* Upload Mode Toggle */}
               <div className="space-y-2">
-                <Label htmlFor="pdf_url">PDF URL (Google Drive or Direct Link)</Label>
-                <Input
-                  id="pdf_url"
-                  type="url"
-                  value={formData.pdf_url}
-                  onChange={(e) => setFormData({ ...formData, pdf_url: e.target.value })}
-                  placeholder="https://drive.google.com/file/d/..."
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Use Google Drive share link or any direct PDF URL
-                </p>
+                <Label>PDF Source</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={uploadMode === 'file' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setUploadMode('file')}
+                  >
+                    Upload File
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={uploadMode === 'url' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setUploadMode('url')}
+                  >
+                    Enter URL
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-3">
-                <Button type="submit" className="flex-1">
+
+              {/* File Upload */}
+              {uploadMode === 'file' && (
+                <FileUploader
+                  bucket="notes"
+                  accept=".pdf"
+                  maxSizeMB={10}
+                  onUploadComplete={(url) => setFormData({ ...formData, pdf_url: url })}
+                  existingUrl={formData.pdf_url}
+                />
+              )}
+
+              {/* URL Input */}
+              {uploadMode === 'url' && (
+                <div className="space-y-2">
+                  <Label htmlFor="pdf_url">PDF URL</Label>
+                  <Input
+                    id="pdf_url"
+                    type="url"
+                    value={formData.pdf_url}
+                    onChange={(e) => setFormData({ ...formData, pdf_url: e.target.value })}
+                    placeholder="https://drive.google.com/file/d/..."
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Use Google Drive share link or any direct PDF URL
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <Button type="submit" className="flex-1" disabled={!formData.pdf_url}>
                   {editingNote ? 'Update Note' : 'Add Note'}
                 </Button>
                 <Button type="button" variant="outline" onClick={resetForm}>

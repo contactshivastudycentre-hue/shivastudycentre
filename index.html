@@ -3,29 +3,49 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>SSC</title>
-    <meta name="description" content="SSC">
-    <meta name="author" content="Lovable" />
-
-    <!-- TODO: Update og:title to match your application name -->
+    <title>Shiva Study Center - Excellence in Education</title>
+    <meta name="description" content="Shiva Study Center - Online coaching platform for students. Access video lectures, study notes, and practice tests.">
+    <meta name="author" content="KAIRAUX" />
     
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SSC" />
     
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
+    <meta property="og:title" content="Shiva Study Center">
+    <meta property="og:description" content="Excellence in Education - Online coaching platform">
     <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/5E7hVo5s0Yd40fF4fpLCGOVSVeh1/social-images/social-1770210221811-WhatsApp Image 2026-02-04 at 6.12.40 PM.jpeg">
-
+    
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:site" content="@ShivaStudyCenter" />
+    <meta name="twitter:title" content="Shiva Study Center">
+    <meta name="twitter:description" content="Excellence in Education - Online coaching platform">
     <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/5E7hVo5s0Yd40fF4fpLCGOVSVeh1/social-images/social-1770210221811-WhatsApp Image 2026-02-04 at 6.12.40 PM.jpeg">
-    <meta property="og:title" content="SSC">
-  <meta name="twitter:title" content="SSC">
-  <meta property="og:description" content="SSC">
-  <meta name="twitter:description" content="SSC">
-  <link rel="icon" type="image/png" href="https://storage.googleapis.com/gpt-engineer-file-uploads/5E7hVo5s0Yd40fF4fpLCGOVSVeh1/uploads/1770210217398-kairaux-new logo.png">
-</head>
+    
+    <link rel="icon" type="image/png" href="https://storage.googleapis.com/gpt-engineer-file-uploads/5E7hVo5s0Yd40fF4fpLCGOVSVeh1/uploads/1770210217398-kairaux-new logo.png">
+  </head>
 
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Register service worker for PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('SW registered:', registration.scope);
+            })
+            .catch(error => {
+              console.log('SW registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
