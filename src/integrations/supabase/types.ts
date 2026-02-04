@@ -82,27 +82,36 @@ export type Database = {
       }
       questions: {
         Row: {
+          correct_answers: Json | null
           correct_option_index: number
           created_at: string
           id: string
+          marks: number
           options: Json
           question_text: string
+          question_type: Database["public"]["Enums"]["question_type"]
           test_id: string
         }
         Insert: {
+          correct_answers?: Json | null
           correct_option_index: number
           created_at?: string
           id?: string
+          marks?: number
           options?: Json
           question_text: string
+          question_type?: Database["public"]["Enums"]["question_type"]
           test_id: string
         }
         Update: {
+          correct_answers?: Json | null
           correct_option_index?: number
           created_at?: string
           id?: string
+          marks?: number
           options?: Json
           question_text?: string
+          question_type?: Database["public"]["Enums"]["question_type"]
           test_id?: string
         }
         Relationships: [
@@ -118,7 +127,12 @@ export type Database = {
       test_attempts: {
         Row: {
           answers: Json
+          evaluated_at: string | null
+          evaluated_by: string | null
+          evaluation_status: string | null
           id: string
+          manual_score: number | null
+          mcq_score: number | null
           score: number | null
           started_at: string
           submitted_at: string | null
@@ -127,7 +141,12 @@ export type Database = {
         }
         Insert: {
           answers?: Json
+          evaluated_at?: string | null
+          evaluated_by?: string | null
+          evaluation_status?: string | null
           id?: string
+          manual_score?: number | null
+          mcq_score?: number | null
           score?: number | null
           started_at?: string
           submitted_at?: string | null
@@ -136,7 +155,12 @@ export type Database = {
         }
         Update: {
           answers?: Json
+          evaluated_at?: string | null
+          evaluated_by?: string | null
+          evaluation_status?: string | null
           id?: string
+          manual_score?: number | null
+          mcq_score?: number | null
           score?: number | null
           started_at?: string
           submitted_at?: string | null
@@ -164,6 +188,7 @@ export type Database = {
           is_published: boolean
           subject: string
           title: string
+          total_marks: number | null
           updated_at: string
         }
         Insert: {
@@ -176,6 +201,7 @@ export type Database = {
           is_published?: boolean
           subject: string
           title: string
+          total_marks?: number | null
           updated_at?: string
         }
         Update: {
@@ -188,6 +214,7 @@ export type Database = {
           is_published?: boolean
           subject?: string
           title?: string
+          total_marks?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -266,6 +293,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "student"
+      question_type:
+        | "mcq_single"
+        | "mcq_multiple"
+        | "true_false"
+        | "short_answer"
+        | "long_answer"
       student_status: "pending" | "approved" | "inactive"
     }
     CompositeTypes: {
@@ -395,6 +428,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "student"],
+      question_type: [
+        "mcq_single",
+        "mcq_multiple",
+        "true_false",
+        "short_answer",
+        "long_answer",
+      ],
       student_status: ["pending", "approved", "inactive"],
     },
   },

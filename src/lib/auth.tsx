@@ -49,10 +49,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
-      .eq('role', 'admin')
-      .single();
+      .eq('role', 'admin');
 
-    setIsAdmin(!!roleData);
+    setIsAdmin(roleData && roleData.length > 0);
   };
 
   const refreshProfile = async () => {
