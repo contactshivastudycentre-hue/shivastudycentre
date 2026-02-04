@@ -14,8 +14,11 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import LandingPage from "@/pages/LandingPage";
 import AboutPage from "@/pages/AboutPage";
 import ContactPage from "@/pages/ContactPage";
-import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/NotFound";
+
+// Auth Pages
+import StudentAuthPage from "@/pages/StudentAuthPage";
+import AdminAuthPage from "@/pages/AdminAuthPage";
 
 // Student Dashboard
 import StudentDashboard from "@/pages/dashboard/StudentDashboard";
@@ -50,8 +53,11 @@ const App = () => (
               <Route path="/contact" element={<ContactPage />} />
             </Route>
             
-            {/* Auth */}
-            <Route path="/auth" element={<AuthPage />} />
+            {/* Auth Routes - Separate for Student and Admin */}
+            <Route path="/student-login" element={<StudentAuthPage />} />
+            <Route path="/admin-login" element={<AdminAuthPage />} />
+            {/* Legacy route redirect */}
+            <Route path="/auth" element={<StudentAuthPage />} />
 
             {/* Student Dashboard */}
             <Route path="/dashboard" element={<DashboardLayout />}>

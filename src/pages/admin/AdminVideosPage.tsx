@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Play, Plus, MoreVertical, Edit, Trash2, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ClassSelect } from '@/components/ClassSelect';
 import { useAuth } from '@/lib/auth';
 
 interface Video {
@@ -184,11 +185,10 @@ export default function AdminVideosPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="class">Class</Label>
-                  <Input
-                    id="class"
+                  <Label>Class</Label>
+                  <ClassSelect
                     value={formData.class}
-                    onChange={(e) => setFormData({ ...formData, class: e.target.value })}
+                    onChange={(value) => setFormData({ ...formData, class: value })}
                     required
                   />
                 </div>
