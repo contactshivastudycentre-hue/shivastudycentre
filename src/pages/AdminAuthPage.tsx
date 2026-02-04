@@ -3,23 +3,26 @@ import { Navigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, ArrowLeft, Shield } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Shield, KeyRound } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { Logo } from '@/components/Logo';
 import { motion } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
+const ADMIN_EMAIL = 'contact.shivastudycentre@gmail.com';
+
 export default function AdminAuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSetupMode, setIsSetupMode] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { user, isAdmin, isLoading: authLoading, signIn } = useAuth();
+  const { user, isAdmin, isLoading: authLoading, signIn, refreshProfile } = useAuth();
   const { toast } = useToast();
 
   // Redirect if already logged in as admin
@@ -90,17 +93,98 @@ export default function AdminAuthPage() {
       }
     }
 
+    // Validate admin email
+    if (data.email !== ADMIN_EMAIL) {
+      toast({
+        title: 'Access Denied',
+        description: 'Only authorized admin email can login here.',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
+
     const { error } = await signIn(data.email, data.password);
 
     if (error) {
       let description = error.message;
       if (error.message === 'Invalid login credentials') {
-        description = 'Invalid email or password.';
+        description = 'Invalid password. If this is your first time, click "First Time Setup" below.';
       }
       toast({
         title: 'Login Failed',
         description,
         variant: 'destructive',
+      });
+    } else {
+      // Refresh profile to get admin status
+      await refreshProfile();
+      toast({
+        title: 'Login Successful',
+        description: 'Welcome back, Admin!',
+      });
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleAdminSetup = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setErrors({});
+    setIsLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const password = formData.get('password') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
+
+    if (password.length < 6) {
+      setErrors({ password: 'Password must be at least 6 characters' });
+      setIsLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrors({ confirmPassword: 'Passwords do not match' });
+      setIsLoading(false);
+      return;
+    }
+
+    // Create admin account with the predefined email
+    const { data, error } = await supabase.auth.signUp({
+      email: ADMIN_EMAIL,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/admin`,
+      },
+    });
+
+    if (error) {
+      if (error.message.includes('already registered')) {
+        toast({
+          title: 'Account Exists',
+          description: 'Admin account already exists. Please use Login instead.',
+          variant: 'destructive',
+        });
+        setIsSetupMode(false);
+      } else {
+        toast({
+          title: 'Setup Failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+      setIsLoading(false);
+      return;
+    }
+
+    if (data.user) {
+      // Wait a bit for the trigger to fire
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await refreshProfile();
+      
+      toast({
+        title: 'Admin Account Created!',
+        description: 'You are now logged in as admin.',
       });
     }
 
@@ -132,72 +216,159 @@ export default function AdminAuthPage() {
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
               <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-xl">
-                <Shield className="w-10 h-10 text-white" />
+                {isSetupMode ? (
+                  <KeyRound className="w-10 h-10 text-white" />
+                ) : (
+                  <Shield className="w-10 h-10 text-white" />
+                )}
               </div>
             </div>
             <h1 className="text-3xl font-display font-bold text-white">
-              Admin Login
+              {isSetupMode ? 'Admin Setup' : 'Admin Login'}
             </h1>
             <p className="text-slate-400 mt-2">
-              Authorized personnel only
+              {isSetupMode ? 'Create your admin account' : 'Authorized personnel only'}
             </p>
           </div>
 
-          {/* Login Form */}
+          {/* Login/Setup Form */}
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
             className="bg-slate-800 rounded-2xl p-8 border border-slate-700 shadow-xl"
           >
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-300">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="admin@email.com"
-                  className="h-12 rounded-xl bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-primary"
-                  required
-                />
-                {errors.email && (
-                  <p className="text-sm text-red-400">{errors.email}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-300">Password</Label>
-                <div className="relative">
+            {!isSetupMode ? (
+              // Login Form
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-slate-300">Email</Label>
                   <Input
-                    id="password"
-                    name="password"
+                    id="email"
+                    name="email"
+                    type="email"
+                    defaultValue={ADMIN_EMAIL}
+                    placeholder="admin@email.com"
+                    className="h-12 rounded-xl bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-primary"
+                    required
+                    readOnly
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-red-400">{errors.email}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-slate-300">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      className="pr-12 h-12 rounded-xl bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-primary"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-sm text-red-400">{errors.password}</p>
+                  )}
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 rounded-xl text-base bg-primary hover:bg-primary/90" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Logging in...' : 'Login as Admin'}
+                </Button>
+
+                <div className="pt-4 border-t border-slate-700">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-10 rounded-xl border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+                    onClick={() => setIsSetupMode(true)}
+                  >
+                    <KeyRound className="w-4 h-4 mr-2" />
+                    First Time Setup
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              // Setup Form
+              <form onSubmit={handleAdminSetup} className="space-y-5">
+                <div className="p-3 bg-blue-900/30 border border-blue-700 rounded-xl mb-4">
+                  <p className="text-sm text-blue-300">
+                    <strong>Admin Email:</strong><br />
+                    {ADMIN_EMAIL}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="setup-password" className="text-slate-300">Create Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="setup-password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Minimum 6 characters"
+                      className="pr-12 h-12 rounded-xl bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-primary"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-sm text-red-400">{errors.password}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-slate-300">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    className="pr-12 h-12 rounded-xl bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-primary"
+                    placeholder="Confirm your password"
+                    className="h-12 rounded-xl bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-primary"
                     required
                   />
-                  <button
-                    type="button"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
+                  {errors.confirmPassword && (
+                    <p className="text-sm text-red-400">{errors.confirmPassword}</p>
+                  )}
                 </div>
-                {errors.password && (
-                  <p className="text-sm text-red-400">{errors.password}</p>
-                )}
-              </div>
 
-              <Button 
-                type="submit" 
-                className="w-full h-12 rounded-xl text-base bg-primary hover:bg-primary/90" 
-                disabled={isLoading}
-              >
-                {isLoading ? 'Logging in...' : 'Login as Admin'}
-              </Button>
-            </form>
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 rounded-xl text-base bg-primary hover:bg-primary/90" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Creating Account...' : 'Create Admin Account'}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full h-10 text-slate-400 hover:text-white"
+                  onClick={() => setIsSetupMode(false)}
+                >
+                  Back to Login
+                </Button>
+              </form>
+            )}
           </motion.div>
 
           <p className="text-center text-slate-500 text-sm mt-6">
