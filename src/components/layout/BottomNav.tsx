@@ -1,16 +1,17 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, FileText, Play, ClipboardList, User } from 'lucide-react';
+import { Home, FileText, Play, ClipboardList, LogOut } from 'lucide-react';
+import { useAuth } from '@/lib/auth';
 
 const navItems = [
   { name: 'Home', path: '/dashboard', icon: Home },
   { name: 'Tests', path: '/dashboard/tests', icon: ClipboardList },
   { name: 'Notes', path: '/dashboard/notes', icon: FileText },
   { name: 'Videos', path: '/dashboard/videos', icon: Play },
-  { name: 'Profile', path: '/dashboard/profile', icon: User },
 ];
 
 export function BottomNav() {
   const location = useLocation();
+  const { signOut } = useAuth();
 
   const isActive = (path: string) => {
     if (path === '/dashboard') {
@@ -32,6 +33,13 @@ export function BottomNav() {
             <span className="text-xs font-medium">{item.name}</span>
           </Link>
         ))}
+        <button
+          onClick={signOut}
+          className="bottom-nav-item text-destructive"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="text-xs font-medium">Logout</span>
+        </button>
       </div>
     </nav>
   );
