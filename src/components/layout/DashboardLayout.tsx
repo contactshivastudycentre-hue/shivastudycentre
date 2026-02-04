@@ -3,6 +3,7 @@ import { Home, FileText, Play, ClipboardList, User, LogOut, BookOpen } from 'luc
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { BottomNav } from './BottomNav';
+import { Logo, LogoIcon } from '@/components/Logo';
 
 const sidebarItems = [
   { name: 'Dashboard', path: '/dashboard', icon: Home },
@@ -97,14 +98,9 @@ export function DashboardLayout() {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex-col">
         {/* Logo */}
-        <div className="p-6 border-b border-border">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <span className="font-display text-lg font-bold text-foreground">
-              Shiva Study
-            </span>
+        <div className="p-4 border-b border-border">
+          <Link to="/dashboard" className="block">
+            <Logo size="sm" showText={true} showPoweredBy={true} />
           </Link>
         </div>
 
@@ -144,13 +140,16 @@ export function DashboardLayout() {
 
       {/* Mobile Header */}
       <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-40 flex items-center px-4">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <BookOpen className="w-5 h-5 text-primary-foreground" />
+        <Link to="/dashboard" className="flex items-center gap-2">
+          <LogoIcon size={32} />
+          <div className="flex flex-col">
+            <span className="font-display text-base font-bold text-foreground leading-tight">
+              Shiva Study Center
+            </span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Powered by KAIRAUX
+            </span>
           </div>
-          <span className="font-display text-lg font-bold text-foreground">
-            Shiva Study
-          </span>
         </Link>
       </header>
 

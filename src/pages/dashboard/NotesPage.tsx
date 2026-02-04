@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { FileText, Download, Eye } from 'lucide-react';
 import { PDFViewer } from '@/components/PDFViewer';
 import { CardSkeletonGrid } from '@/components/skeletons/CardSkeleton';
+import { SearchInput } from '@/components/SearchInput';
 
 interface Note {
   id: string;
@@ -18,6 +19,7 @@ export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterSubject, setFilterSubject] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [viewingNote, setViewingNote] = useState<Note | null>(null);
 
   useEffect(() => {
@@ -41,6 +43,13 @@ export default function NotesPage() {
 
   const filteredNotes = notes.filter((note) => {
     if (filterSubject && note.subject !== filterSubject) return false;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        note.title.toLowerCase().includes(query) ||
+        note.subject.toLowerCase().includes(query)
+      );
+    }
     return true;
   });
 
@@ -71,26 +80,37 @@ export default function NotesPage() {
         <p className="text-muted-foreground">Download study materials organized by subject</p>
       </div>
 
-      {/* Subject Filters */}
-      {notes.length > 0 && uniqueSubjects.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={!filterSubject ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilterSubject(null)}
-          >
-            All Subjects
-          </Button>
-          {uniqueSubjects.map((subject) => (
-            <Button
-              key={subject}
-              variant={filterSubject === subject ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterSubject(filterSubject === subject ? null : subject)}
-            >
-              {subject}
-            </Button>
-          ))}
+      {/* Search and Filters */}
+      {notes.length > 0 && (
+        <div className="space-y-3">
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search notes by title..."
+            className="max-w-md"
+          />
+          
+          {uniqueSubjects.length > 1 && (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={!filterSubject ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilterSubject(null)}
+              >
+                All Subjects
+              </Button>
+              {uniqueSubjects.map((subject) => (
+                <Button
+                  key={subject}
+                  variant={filterSubject === subject ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilterSubject(filterSubject === subject ? null : subject)}
+                >
+                  {subject}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
