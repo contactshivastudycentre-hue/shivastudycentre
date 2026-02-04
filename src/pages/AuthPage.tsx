@@ -71,11 +71,15 @@ export default function AuthPage() {
     const { error } = await signIn(data.email, data.password);
 
     if (error) {
+      let description = error.message;
+      if (error.message === 'Invalid login credentials') {
+        description = 'Invalid email or password. If you are new, please sign up first.';
+      } else if (error.message.includes('Email not confirmed')) {
+        description = 'Please check your email and confirm your account first.';
+      }
       toast({
         title: 'Login Failed',
-        description: error.message === 'Invalid login credentials' 
-          ? 'Invalid email or password. Please check your credentials.' 
-          : error.message,
+        description,
         variant: 'destructive',
       });
     }
@@ -138,8 +142,10 @@ export default function AuthPage() {
     } else {
       toast({
         title: 'Registration Successful!',
-        description: 'Please check your email to verify your account, then wait for admin approval.',
+        description: 'Your account has been created. You can now login.',
       });
+      // Reset form and switch to login tab
+      (e.target as HTMLFormElement).reset();
     }
 
     setIsLoading(false);
