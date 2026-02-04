@@ -161,7 +161,7 @@ export default function LandingPage() {
                 </Button>
               </Link>
               <Link to="/admin-login">
-                <Button size="lg" variant="outline" className="btn-ghost-white text-lg px-8 h-14 rounded-xl w-full sm:w-auto">
+                <Button size="lg" className="btn-ghost-white text-lg px-8 h-14 rounded-xl w-full sm:w-auto">
                   <Shield className="w-5 h-5 mr-2" />
                   Admin Login
                 </Button>
@@ -398,7 +398,7 @@ export default function LandingPage() {
                 </Button>
               </Link>
               <Link to="/contact">
-                <Button size="lg" variant="outline" className="btn-ghost-white text-lg px-10 h-14 rounded-xl">
+                <Button size="lg" className="btn-ghost-white text-lg px-10 h-14 rounded-xl">
                   Contact Us
                 </Button>
               </Link>
