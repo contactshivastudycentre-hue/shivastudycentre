@@ -1,69 +1,43 @@
 import { Link } from 'react-router-dom';
 import { Logo } from '@/components/Logo';
-import { motion } from 'framer-motion';
-import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Youtube } from 'lucide-react';
+import { Mail, Phone, MapPin } from 'lucide-react';
 
 const footerLinks = {
   quick: [
     { name: 'Home', path: '/' },
     { name: 'About Us', path: '/about' },
     { name: 'Contact', path: '/contact' },
-    { name: 'Login', path: '/auth' },
+    { name: 'Student Login', path: '/student-login' },
   ],
-  resources: [
-    { name: 'Study Notes', path: '/dashboard/notes' },
-    { name: 'Video Lectures', path: '/dashboard/videos' },
-    { name: 'Online Tests', path: '/dashboard/tests' },
+  legal: [
+    { name: 'Terms & Conditions', path: '/terms' },
+    { name: 'Privacy Policy', path: '/terms' },
   ],
 };
-
-const socialLinks = [
-  { icon: Facebook, href: '#', label: 'Facebook' },
-  { icon: Twitter, href: '#', label: 'Twitter' },
-  { icon: Instagram, href: '#', label: 'Instagram' },
-  { icon: Youtube, href: '#', label: 'YouTube' },
-];
 
 export function Footer() {
   return (
     <footer className="bg-card border-t border-border">
-      <div className="container mx-auto px-4 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="lg:col-span-1">
             <Logo size="md" />
-            <p className="text-muted-foreground mt-4 leading-relaxed">
-              Empowering students with quality education and personalized guidance since 2010.
+            <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
+              Quality education with a focus on conceptual understanding and student success.
             </p>
-            
-            {/* Social Links */}
-            <div className="flex gap-3 mt-6">
-              {socialLinks.map((social) => (
-                <motion.a
-                  key={social.label}
-                  href={social.href}
-                  whileHover={{ scale: 1.1, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label={social.label}
-                >
-                  <social.icon className="w-5 h-5" />
-                </motion.a>
-              ))}
-            </div>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-display font-bold text-foreground mb-5">Quick Links</h4>
-            <ul className="space-y-3">
+            <h4 className="font-display font-bold text-foreground mb-4">Quick Links</h4>
+            <ul className="space-y-2">
               {footerLinks.quick.map((link) => (
                 <li key={link.name}>
                   <Link 
                     to={link.path} 
-                    className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-2 group"
+                    className="text-muted-foreground hover:text-primary transition-colors text-sm"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary/50 group-hover:bg-primary transition-colors" />
                     {link.name}
                   </Link>
                 </li>
@@ -71,17 +45,16 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Resources */}
+          {/* Legal */}
           <div>
-            <h4 className="font-display font-bold text-foreground mb-5">Resources</h4>
-            <ul className="space-y-3">
-              {footerLinks.resources.map((link) => (
+            <h4 className="font-display font-bold text-foreground mb-4">Legal</h4>
+            <ul className="space-y-2">
+              {footerLinks.legal.map((link) => (
                 <li key={link.name}>
                   <Link 
                     to={link.path} 
-                    className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-2 group"
+                    className="text-muted-foreground hover:text-primary transition-colors text-sm"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary/50 group-hover:bg-primary transition-colors" />
                     {link.name}
                   </Link>
                 </li>
@@ -91,18 +64,18 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="font-display font-bold text-foreground mb-5">Contact Us</h4>
-            <ul className="space-y-4">
-              <li className="flex items-start gap-3 text-muted-foreground">
-                <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <span>123 Education Street, Knowledge City, 110001</span>
+            <h4 className="font-display font-bold text-foreground mb-4">Contact Us</h4>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-2 text-muted-foreground text-sm">
+                <MapPin className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                <span>Shiva Study Center, Your City</span>
               </li>
-              <li className="flex items-center gap-3 text-muted-foreground">
-                <Phone className="w-5 h-5 text-primary flex-shrink-0" />
+              <li className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Phone className="w-4 h-4 text-primary flex-shrink-0" />
                 <span>+91 98765 43210</span>
               </li>
-              <li className="flex items-center gap-3 text-muted-foreground">
-                <Mail className="w-5 h-5 text-primary flex-shrink-0" />
+              <li className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Mail className="w-4 h-4 text-primary flex-shrink-0" />
                 <span>info@shivastudycenter.com</span>
               </li>
             </ul>
@@ -110,13 +83,12 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">
+        <div className="mt-10 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} Shiva Study Center. All rights reserved.
           </p>
-          <div className="flex gap-6 text-sm text-muted-foreground">
-            <Link to="#" className="hover:text-primary transition-colors">Privacy Policy</Link>
-            <Link to="#" className="hover:text-primary transition-colors">Terms of Service</Link>
+          <div className="flex gap-4 text-xs text-muted-foreground">
+            <Link to="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link>
           </div>
         </div>
       </div>

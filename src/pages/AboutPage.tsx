@@ -1,10 +1,10 @@
-import { BookOpen, Target, Award, Users, Sparkles, GraduationCap, Heart } from 'lucide-react';
+import { BookOpen, Target, Award, Users, GraduationCap, Heart, Star, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const fadeInUp = {
-  initial: { opacity: 0, y: 30 },
+  initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6 }
+  transition: { duration: 0.5 }
 };
 
 const stagger = {
@@ -18,70 +18,69 @@ const stagger = {
 const values = [
   {
     icon: Target,
-    title: 'Mission',
-    description: 'To provide quality education that empowers students to achieve their academic goals and develop lifelong learning skills.',
-    gradient: 'from-violet-500 to-purple-600',
+    title: 'Our Mission',
+    description: 'To provide quality education that builds strong conceptual foundations and prepares students for academic excellence.',
   },
   {
     icon: Award,
-    title: 'Vision',
-    description: 'To be the leading coaching center recognized for excellence in education and student success.',
-    gradient: 'from-pink-500 to-rose-600',
+    title: 'Our Vision',
+    description: 'To be a trusted coaching center recognized for producing disciplined, knowledgeable, and successful students.',
   },
   {
     icon: Heart,
-    title: 'Values',
-    description: 'Integrity, dedication, and personalized attention to every student who walks through our doors.',
-    gradient: 'from-amber-500 to-orange-600',
+    title: 'Our Values',
+    description: 'Integrity, dedication, discipline, and personalized attention to every student who walks through our doors.',
   },
 ];
 
+const highlights = [
+  'Focus on conceptual clarity over rote learning',
+  'Regular tests and performance tracking',
+  'Both offline and online learning support',
+  'Personalized attention to each student',
+  'Comprehensive study materials and notes',
+  'Disciplined and structured learning environment',
+];
+
 const stats = [
-  { value: '5000+', label: 'Students Taught' },
-  { value: '95%', label: 'Success Rate' },
-  { value: '50+', label: 'Expert Faculty' },
-  { value: '14+', label: 'Years Experience' },
+  { value: '500+', label: 'Students Taught' },
+  { value: '90%', label: 'Success Rate' },
+  { value: '10+', label: 'Years Experience' },
+  { value: '6-12', label: 'Classes Covered' },
 ];
 
 export default function AboutPage() {
   return (
     <div className="overflow-hidden">
       {/* Hero Section */}
-      <section className="relative hero-gradient py-24 md:py-32 overflow-hidden">
+      <section className="relative bg-primary py-20 md:py-28 overflow-hidden">
         <div className="absolute inset-0 overflow-hidden">
-          <motion.div 
-            className="absolute top-20 left-10 w-72 h-72 rounded-full bg-white/10 blur-3xl"
-            animate={{ scale: [1, 1.2, 1], x: [0, 30, 0] }}
-            transition={{ duration: 8, repeat: Infinity }}
-          />
-          <motion.div 
-            className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-white/10 blur-3xl"
-            animate={{ scale: [1.2, 1, 1.2], y: [0, -30, 0] }}
-            transition={{ duration: 10, repeat: Infinity }}
-          />
+          <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-white/5 blur-3xl" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-white/5 blur-3xl" />
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
           <motion.div 
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
             className="text-center max-w-3xl mx-auto"
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-md rounded-full px-5 py-2.5 mb-6 border border-white/20"
+              className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6 border border-white/20"
             >
-              <GraduationCap className="w-4 h-4 text-yellow-300" />
+              <GraduationCap className="w-4 h-4 text-white" />
               <span className="text-sm font-medium text-white">About Us</span>
             </motion.div>
             
-            <h1 className="text-4xl md:text-6xl font-display font-bold mb-6 text-white">
+            <h1 className="text-3xl md:text-5xl font-display font-bold mb-6 text-white">
               About Shiva Study Center
             </h1>
             <p className="text-lg md:text-xl text-white/80">
-              Dedicated to nurturing minds and shaping futures through quality education since 2010.
+              Building strong foundations through conceptual learning and disciplined education.
             </p>
           </motion.div>
         </div>
@@ -94,23 +93,23 @@ export default function AboutPage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-background">
+      <section className="py-12 bg-background">
         <div className="container mx-auto px-4">
           <motion.div 
             initial="initial"
             whileInView="animate"
             viewport={{ once: true }}
             variants={stagger}
-            className="grid grid-cols-2 md:grid-cols-4 gap-8"
+            className="grid grid-cols-2 md:grid-cols-4 gap-6"
           >
             {stats.map((stat, index) => (
               <motion.div 
                 key={stat.label} 
                 variants={fadeInUp}
-                className="text-center"
+                className="text-center p-4"
               >
                 <motion.div 
-                  className="text-4xl md:text-5xl font-display font-bold gradient-text mb-2"
+                  className="text-3xl md:text-4xl font-display font-bold text-primary mb-1"
                   initial={{ scale: 0.5, opacity: 0 }}
                   whileInView={{ scale: 1, opacity: 1 }}
                   viewport={{ once: true }}
@@ -118,67 +117,147 @@ export default function AboutPage() {
                 >
                   {stat.value}
                 </motion.div>
-                <div className="text-muted-foreground font-medium">{stat.label}</div>
+                <div className="text-muted-foreground text-sm font-medium">{stat.label}</div>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* Story Section */}
-      <section className="py-24 mesh-gradient">
+      {/* Teacher Section */}
+      <section className="py-16 bg-accent/30">
         <div className="container mx-auto px-4">
           <motion.div 
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-4xl mx-auto"
+          >
+            <div className="bg-card rounded-2xl p-8 md:p-10 shadow-sm border border-border">
+              <div className="flex flex-col md:flex-row gap-8 items-start">
+                <motion.div 
+                  className="w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <GraduationCap className="w-12 h-12 md:w-16 md:h-16 text-primary" />
+                </motion.div>
+                
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Star className="w-5 h-5 text-primary fill-primary" />
+                    <span className="text-sm font-medium text-primary">Lead Educator</span>
+                  </div>
+                  
+                  <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-4">
+                    Sanjay Singhania Sir
+                  </h2>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    M.Sc & B.Ed
+                  </p>
+                  
+                  <p className="text-muted-foreground leading-relaxed">
+                    Sanjay Singhania Sir, an experienced and dedicated educator, leads Shiva Study Center 
+                    with a strong focus on conceptual understanding, disciplined learning, and student success. 
+                    With over a decade of teaching experience, he has helped hundreds of students build strong 
+                    academic foundations and achieve their educational goals.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Story Section */}
+      <section className="py-16 bg-background">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="max-w-3xl mx-auto"
           >
-            <div className="flex items-center gap-4 mb-8">
-              <motion.div 
-                className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent-gradient flex items-center justify-center shadow-lg"
-                whileHover={{ scale: 1.1, rotate: 5 }}
-              >
-                <BookOpen className="w-7 h-7 text-white" />
-              </motion.div>
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <BookOpen className="w-6 h-6 text-primary" />
+              </div>
+              <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground">
                 Our Story
               </h2>
             </div>
-            <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
+            
+            <div className="space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                Shiva Study Center was founded in 2010 with a simple yet powerful vision: to provide accessible, high-quality education to students aspiring to excel in their academic pursuits.
+                Shiva Study Center was established with a clear purpose: to provide quality education 
+                that focuses on building strong conceptual foundations rather than rote memorization.
               </p>
               <p>
-                What started as a small coaching center with just a handful of students has grown into a trusted institution that has helped over 5,000 students achieve their educational goals.
+                What started as a small coaching center has grown into a trusted institution where 
+                students from classes 6 to 12 receive personalized attention and guidance. Our approach 
+                combines traditional teaching methods with modern learning tools to ensure comprehensive 
+                understanding of every subject.
               </p>
               <p>
-                Our success is built on the foundation of dedicated faculty, comprehensive study materials, and a student-centric approach that focuses on individual growth and development.
-              </p>
-              <p>
-                Today, we continue our mission of educational excellence, embracing technology and innovative teaching methods while maintaining the personal touch that sets us apart.
+                We believe in disciplined learning and consistent practice. Our regular tests, 
+                detailed notes, and video lectures support students both in the classroom and at home, 
+                ensuring they never fall behind in their studies.
               </p>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Values Section */}
-      <section className="py-24 bg-background">
+      {/* Why Choose Us Section */}
+      <section className="py-16 bg-accent/30">
         <div className="container mx-auto px-4">
           <motion.div 
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-12"
           >
-            <span className="inline-block text-sm font-semibold text-primary mb-4 tracking-wider uppercase">
-              Our Core Values
-            </span>
-            <h2 className="text-3xl md:text-5xl font-display font-bold text-foreground mb-6">
-              What <span className="gradient-text">Drives Us</span>
+            <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-3">
+              Why Choose Us
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              What makes Shiva Study Center different from other coaching institutes.
+            </p>
+          </motion.div>
+
+          <motion.div 
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true }}
+            variants={stagger}
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto"
+          >
+            {highlights.map((highlight, index) => (
+              <motion.div 
+                key={index} 
+                variants={fadeInUp}
+                className="flex items-start gap-3 bg-card p-4 rounded-xl border border-border"
+              >
+                <CheckCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <span className="text-foreground text-sm">{highlight}</span>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Values Section */}
+      <section className="py-16 bg-background">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-3">
+              What Drives Us
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
               Our core values guide everything we do at Shiva Study Center.
             </p>
           </motion.div>
@@ -188,26 +267,21 @@ export default function AboutPage() {
             whileInView="animate"
             viewport={{ once: true }}
             variants={stagger}
-            className="grid md:grid-cols-3 gap-8"
+            className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto"
           >
-            {values.map((value, index) => (
+            {values.map((value) => (
               <motion.div 
                 key={value.title} 
                 variants={fadeInUp}
-                whileHover={{ y: -8 }}
-                className="feature-card text-center"
+                className="bg-card p-6 rounded-xl border border-border text-center"
               >
-                <motion.div 
-                  className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${value.gradient} flex items-center justify-center mx-auto mb-6 shadow-xl`}
-                  whileHover={{ rotate: [0, -5, 5, 0], scale: 1.1 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <value.icon className="w-10 h-10 text-white" />
-                </motion.div>
-                <h3 className="text-2xl font-display font-bold text-foreground mb-4">
+                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <value.icon className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="text-lg font-display font-bold text-foreground mb-2">
                   {value.title}
                 </h3>
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-muted-foreground text-sm leading-relaxed">
                   {value.description}
                 </p>
               </motion.div>

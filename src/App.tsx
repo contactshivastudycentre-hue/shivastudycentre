@@ -14,6 +14,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import LandingPage from "@/pages/LandingPage";
 import AboutPage from "@/pages/AboutPage";
 import ContactPage from "@/pages/ContactPage";
+import TermsPage from "@/pages/TermsPage";
 import NotFound from "@/pages/NotFound";
 
 // Auth Pages
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/" element={<LandingPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/terms" element={<TermsPage />} />
             </Route>
             
             {/* Auth Routes - Separate for Student and Admin */}
