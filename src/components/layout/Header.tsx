@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, LogIn, LogOut } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, Shield, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
@@ -70,12 +70,20 @@ export function Header() {
               </Button>
             </div>
           ) : (
-            <Link to="/auth">
-              <Button size="sm" className="btn-gradient rounded-xl px-6">
-                <LogIn className="w-4 h-4 mr-2" />
-                Login
-              </Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link to="/student-login">
+                <Button size="sm" className="bg-primary hover:bg-primary/90 rounded-xl px-5">
+                  <UserCircle className="w-4 h-4 mr-2" />
+                  Student
+                </Button>
+              </Link>
+              <Link to="/admin-login">
+                <Button size="sm" variant="outline" className="rounded-xl px-5">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Admin
+                </Button>
+              </Link>
+            </div>
           )}
         </div>
 
@@ -147,12 +155,20 @@ export function Header() {
                     </Button>
                   </>
                 ) : (
-                  <Link to="/auth" onClick={() => setMobileMenuOpen(false)}>
-                    <Button className="w-full btn-gradient rounded-xl">
-                      <LogIn className="w-4 h-4 mr-2" />
-                      Login
-                    </Button>
-                  </Link>
+                  <div className="space-y-2">
+                    <Link to="/student-login" onClick={() => setMobileMenuOpen(false)}>
+                      <Button className="w-full bg-primary hover:bg-primary/90 rounded-xl">
+                        <UserCircle className="w-4 h-4 mr-2" />
+                        Student Login
+                      </Button>
+                    </Link>
+                    <Link to="/admin-login" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full rounded-xl">
+                        <Shield className="w-4 h-4 mr-2" />
+                        Admin Login
+                      </Button>
+                    </Link>
+                  </div>
                 )}
               </div>
             </div>

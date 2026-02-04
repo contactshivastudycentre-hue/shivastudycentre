@@ -6,13 +6,14 @@ import {
   FileText, 
   Play, 
   Users, 
-  CheckCircle, 
   ArrowRight, 
   Sparkles,
   GraduationCap,
   Target,
   Award,
-  Zap
+  Zap,
+  Shield,
+  UserCircle
 } from 'lucide-react';
 
 const fadeInUp = {
@@ -63,13 +64,6 @@ const benefits = [
   { icon: Sparkles, text: 'Doubt clearing sessions' },
   { icon: Zap, text: 'Progress tracking dashboard' },
   { icon: Award, text: 'Flexible learning schedule' },
-];
-
-const stats = [
-  { value: '500+', label: 'Students' },
-  { value: '50+', label: 'Tests' },
-  { value: '100+', label: 'Video Lectures' },
-  { value: '95%', label: 'Success Rate' },
 ];
 
 export default function LandingPage() {
@@ -146,15 +140,17 @@ export default function LandingPage() {
               Join Shiva Study Center and unlock your potential with our comprehensive coaching program, expert faculty, and personalized learning approach.
             </motion.p>
 
+            {/* Login Buttons */}
             <motion.div 
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center"
+              className="flex flex-col sm:flex-row gap-4 justify-center mb-6"
             >
-              <Link to="/auth">
-                <Button size="lg" className="btn-hero text-lg px-8 h-14 rounded-xl group">
-                  Get Started
+              <Link to="/student-login">
+                <Button size="lg" className="btn-hero text-lg px-8 h-14 rounded-xl group w-full sm:w-auto">
+                  <UserCircle className="w-5 h-5 mr-2" />
+                  Student Login
                   <motion.span
                     className="ml-2"
                     animate={{ x: [0, 4, 0] }}
@@ -164,34 +160,22 @@ export default function LandingPage() {
                   </motion.span>
                 </Button>
               </Link>
-              <Link to="/about">
-                <Button size="lg" variant="outline" className="btn-ghost-white text-lg px-8 h-14 rounded-xl">
-                  Learn More
+              <Link to="/admin-login">
+                <Button size="lg" variant="outline" className="btn-ghost-white text-lg px-8 h-14 rounded-xl w-full sm:w-auto">
+                  <Shield className="w-5 h-5 mr-2" />
+                  Admin Login
                 </Button>
               </Link>
             </motion.div>
 
-            {/* Stats */}
-            <motion.div 
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.8 }}
-              className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 pt-10 border-t border-white/20"
             >
-              {stats.map((stat, index) => (
-                <motion.div 
-                  key={stat.label}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 1 + index * 0.1 }}
-                  className="text-center"
-                >
-                  <div className="text-3xl md:text-4xl font-display font-bold text-white mb-1">
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-white/70">{stat.label}</div>
-                </motion.div>
-              ))}
+              <Link to="/about" className="text-white/70 hover:text-white transition-colors underline underline-offset-4">
+                Learn more about us
+              </Link>
             </motion.div>
           </div>
         </div>
@@ -272,7 +256,7 @@ export default function LandingPage() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-24 mesh-gradient relative overflow-hidden">
+      <section className="py-24 bg-accent/30 relative overflow-hidden">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <motion.div
@@ -321,10 +305,10 @@ export default function LandingPage() {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="relative"
             >
-              <div className="glass-card p-8 md:p-10">
-                <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent-gradient blur-2xl opacity-50" />
+              <div className="bg-card rounded-2xl p-8 md:p-10 shadow-xl border border-border">
+                <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-gradient-to-br from-primary to-primary/50 blur-2xl opacity-50" />
                 <div className="relative">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent-gradient flex items-center justify-center mb-6 shadow-lg">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center mb-6 shadow-lg">
                     <GraduationCap className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-4">
@@ -333,9 +317,9 @@ export default function LandingPage() {
                   <p className="text-muted-foreground mb-8 leading-relaxed">
                     Register now and join thousands of successful students who have achieved their goals with us.
                   </p>
-                  <Link to="/auth">
-                    <Button className="w-full btn-gradient h-14 text-lg rounded-xl group">
-                      Register Now
+                  <Link to="/student-login">
+                    <Button className="w-full h-14 text-lg rounded-xl bg-primary hover:bg-primary/90 group">
+                      Register as Student
                       <motion.span
                         className="ml-2"
                         animate={{ x: [0, 4, 0] }}
@@ -408,7 +392,7 @@ export default function LandingPage() {
               Don't wait to achieve your dreams. Join Shiva Study Center and take the first step towards success.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/auth">
+              <Link to="/student-login">
                 <Button size="lg" className="btn-hero text-lg px-10 h-14 rounded-xl">
                   Get Started Free
                 </Button>

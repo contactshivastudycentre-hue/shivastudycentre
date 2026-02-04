@@ -29,6 +29,7 @@ import {
 import { ClipboardList, Plus, MoreVertical, Edit, Trash2, Eye, Clock, List } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth';
+import { ClassSelect } from '@/components/ClassSelect';
 import { Link } from 'react-router-dom';
 
 interface Test {
@@ -211,11 +212,10 @@ export default function AdminTestsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="class">Class</Label>
-                  <Input
-                    id="class"
+                  <Label>Class</Label>
+                  <ClassSelect
                     value={formData.class}
-                    onChange={(e) => setFormData({ ...formData, class: e.target.value })}
+                    onChange={(value) => setFormData({ ...formData, class: value })}
                     required
                   />
                 </div>
