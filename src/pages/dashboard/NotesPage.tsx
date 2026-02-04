@@ -5,6 +5,7 @@ import { FileText, Download, Eye } from 'lucide-react';
 import { PDFViewer } from '@/components/PDFViewer';
 import { CardSkeletonGrid } from '@/components/skeletons/CardSkeleton';
 import { SearchInput } from '@/components/SearchInput';
+import { useToast } from '@/hooks/use-toast';
 
 interface Note {
   id: string;
@@ -21,6 +22,7 @@ export default function NotesPage() {
   const [filterSubject, setFilterSubject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingNote, setViewingNote] = useState<Note | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchNotes();
@@ -53,12 +55,46 @@ export default function NotesPage() {
     return true;
   });
 
-  const handleDownload = (note: Note) => {
-    const link = document.createElement('a');
-    link.href = note.pdf_url;
-    link.download = note.title;
-    link.target = '_blank';
-    link.click();
+  const handleDownload = async (note: Note) => {
+    try {
+      // Extract file path from the URL
+      let filePath = note.pdf_url;
+      if (note.pdf_url.includes('storage/v1/object/public/notes/')) {
+        filePath = note.pdf_url.split('storage/v1/object/public/notes/')[1];
+      }
+      filePath = decodeURIComponent(filePath);
+
+      // Download the file from Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('notes')
+        .download(filePath);
+
+      if (error || !data) {
+        throw new Error('Failed to download file');
+      }
+
+      // Create download link
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${note.title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Download Started',
+        description: `${note.title} is being downloaded.`,
+      });
+    } catch (err) {
+      console.error('Download error:', err);
+      toast({
+        title: 'Download Failed',
+        description: 'Could not download the file. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   if (isLoading) {
@@ -175,8 +211,10 @@ export default function NotesPage() {
       {/* PDF Viewer Modal */}
       {viewingNote && (
         <PDFViewer
-          url={viewingNote.pdf_url}
+          storagePath={viewingNote.pdf_url}
           title={viewingNote.title}
+          subject={viewingNote.subject}
+          className={viewingNote.class}
           onClose={() => setViewingNote(null)}
         />
       )}
