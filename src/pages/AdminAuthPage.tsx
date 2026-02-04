@@ -16,6 +16,8 @@ const loginSchema = z.object({
 });
 
 const ADMIN_EMAIL = 'contact.shivastudycentre@gmail.com';
+// Master password for admin creation authorization
+const ADMIN_CREATION_PASSWORD = 'sscshivastudycentre987704ssc';
 
 export default function AdminAuthPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -146,8 +148,21 @@ export default function AdminAuthPage() {
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
+    const authorizationPassword = formData.get('authorizationPassword') as string;
     const password = formData.get('password') as string;
     const confirmPassword = formData.get('confirmPassword') as string;
+
+    // Verify authorization password first
+    if (authorizationPassword !== ADMIN_CREATION_PASSWORD) {
+      toast({
+        title: 'Unauthorized Action',
+        description: 'Invalid authorization password. Admin creation is not allowed.',
+        variant: 'destructive',
+      });
+      setErrors({ authorizationPassword: 'Invalid authorization password' });
+      setIsLoading(false);
+      return;
+    }
 
     if (password.length < 6) {
       setErrors({ password: 'Password must be at least 6 characters' });
@@ -315,7 +330,7 @@ export default function AdminAuthPage() {
                 </div>
               </form>
             ) : (
-              // Setup Form
+              // Setup Form with Authorization Password
               <form onSubmit={handleAdminSetup} className="space-y-5">
                 <div className="p-3 bg-blue-900/30 border border-blue-700 rounded-xl mb-4">
                   <p className="text-sm text-blue-300">
@@ -324,32 +339,55 @@ export default function AdminAuthPage() {
                   </p>
                 </div>
 
+                {/* Authorization Password - Required for admin creation */}
                 <div className="space-y-2">
-                  <Label htmlFor="setup-password" className="text-slate-300">Create Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="setup-password"
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Minimum 6 characters"
-                      className="pr-12 h-12 rounded-xl bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-primary"
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                  {errors.password && (
-                    <p className="text-sm text-red-400">{errors.password}</p>
+                  <Label htmlFor="authorizationPassword" className="text-amber-400 font-semibold">
+                    Authorization Password *
+                  </Label>
+                  <Input
+                    id="authorizationPassword"
+                    name="authorizationPassword"
+                    type="password"
+                    placeholder="Enter admin creation password"
+                    className="h-12 rounded-xl bg-slate-900 border-amber-600 text-white placeholder:text-slate-500 focus:border-amber-400"
+                    required
+                  />
+                  {errors.authorizationPassword && (
+                    <p className="text-sm text-red-400">{errors.authorizationPassword}</p>
                   )}
+                  <p className="text-xs text-amber-400/70">
+                    This password is required to authorize admin account creation
+                  </p>
+                </div>
+
+                <div className="border-t border-slate-700 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="setup-password" className="text-slate-300">Create Account Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="setup-password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Minimum 6 characters"
+                        className="pr-12 h-12 rounded-xl bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-primary"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="text-sm text-red-400">{errors.password}</p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-slate-300">Confirm Password</Label>
+                  <Label htmlFor="confirmPassword" className="text-slate-300">Confirm Account Password</Label>
                   <Input
                     id="confirmPassword"
                     name="confirmPassword"
