@@ -1,75 +1,123 @@
 import { Link } from 'react-router-dom';
-import { BookOpen, Mail, Phone, MapPin } from 'lucide-react';
+import { Logo } from '@/components/Logo';
+import { motion } from 'framer-motion';
+import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Youtube } from 'lucide-react';
+
+const footerLinks = {
+  quick: [
+    { name: 'Home', path: '/' },
+    { name: 'About Us', path: '/about' },
+    { name: 'Contact', path: '/contact' },
+    { name: 'Login', path: '/auth' },
+  ],
+  resources: [
+    { name: 'Study Notes', path: '/dashboard/notes' },
+    { name: 'Video Lectures', path: '/dashboard/videos' },
+    { name: 'Online Tests', path: '/dashboard/tests' },
+  ],
+};
+
+const socialLinks = [
+  { icon: Facebook, href: '#', label: 'Facebook' },
+  { icon: Twitter, href: '#', label: 'Twitter' },
+  { icon: Instagram, href: '#', label: 'Instagram' },
+  { icon: Youtube, href: '#', label: 'YouTube' },
+];
 
 export function Footer() {
   return (
-    <footer className="bg-foreground text-background py-12">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <footer className="bg-card border-t border-border">
+      <div className="container mx-auto px-4 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <span className="font-display text-xl font-bold">
-                Shiva Study Center
-              </span>
-            </div>
-            <p className="text-background/70 text-sm">
-              Empowering students with quality education and personalized coaching since 2010.
+          <div className="lg:col-span-1">
+            <Logo size="md" />
+            <p className="text-muted-foreground mt-4 leading-relaxed">
+              Empowering students with quality education and personalized guidance since 2010.
             </p>
+            
+            {/* Social Links */}
+            <div className="flex gap-3 mt-6">
+              {socialLinks.map((social) => (
+                <motion.a
+                  key={social.label}
+                  href={social.href}
+                  whileHover={{ scale: 1.1, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
+                  aria-label={social.label}
+                >
+                  <social.icon className="w-5 h-5" />
+                </motion.a>
+              ))}
+            </div>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-display text-lg font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/" className="text-background/70 hover:text-background transition-colors text-sm">
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link to="/about" className="text-background/70 hover:text-background transition-colors text-sm">
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link to="/contact" className="text-background/70 hover:text-background transition-colors text-sm">
-                  Contact
-                </Link>
-              </li>
-              <li>
-                <Link to="/auth" className="text-background/70 hover:text-background transition-colors text-sm">
-                  Student Login
-                </Link>
-              </li>
+            <h4 className="font-display font-bold text-foreground mb-5">Quick Links</h4>
+            <ul className="space-y-3">
+              {footerLinks.quick.map((link) => (
+                <li key={link.name}>
+                  <Link 
+                    to={link.path} 
+                    className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-2 group"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/50 group-hover:bg-primary transition-colors" />
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Contact Info */}
+          {/* Resources */}
           <div>
-            <h3 className="font-display text-lg font-semibold mb-4">Contact Us</h3>
+            <h4 className="font-display font-bold text-foreground mb-5">Resources</h4>
             <ul className="space-y-3">
-              <li className="flex items-center gap-2 text-background/70 text-sm">
-                <Phone className="w-4 h-4" />
-                +91 98765 43210
+              {footerLinks.resources.map((link) => (
+                <li key={link.name}>
+                  <Link 
+                    to={link.path} 
+                    className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-2 group"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/50 group-hover:bg-primary transition-colors" />
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h4 className="font-display font-bold text-foreground mb-5">Contact Us</h4>
+            <ul className="space-y-4">
+              <li className="flex items-start gap-3 text-muted-foreground">
+                <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <span>123 Education Street, Knowledge City, 110001</span>
               </li>
-              <li className="flex items-center gap-2 text-background/70 text-sm">
-                <Mail className="w-4 h-4" />
-                info@shivastudycenter.com
+              <li className="flex items-center gap-3 text-muted-foreground">
+                <Phone className="w-5 h-5 text-primary flex-shrink-0" />
+                <span>+91 98765 43210</span>
               </li>
-              <li className="flex items-start gap-2 text-background/70 text-sm">
-                <MapPin className="w-4 h-4 mt-0.5" />
-                123 Education Lane, Knowledge City
+              <li className="flex items-center gap-3 text-muted-foreground">
+                <Mail className="w-5 h-5 text-primary flex-shrink-0" />
+                <span>info@shivastudycenter.com</span>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-background/10 mt-8 pt-8 text-center text-background/50 text-sm">
-          © {new Date().getFullYear()} Shiva Study Center. All rights reserved.
+        {/* Bottom Bar */}
+        <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} Shiva Study Center. All rights reserved.
+          </p>
+          <div className="flex gap-6 text-sm text-muted-foreground">
+            <Link to="#" className="hover:text-primary transition-colors">Privacy Policy</Link>
+            <Link to="#" className="hover:text-primary transition-colors">Terms of Service</Link>
+          </div>
         </div>
       </div>
     </footer>

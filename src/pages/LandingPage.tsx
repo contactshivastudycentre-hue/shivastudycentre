@@ -1,157 +1,425 @@
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Users, FileText, Play, ClipboardList, CheckCircle, ArrowRight } from 'lucide-react';
+import { 
+  ClipboardList, 
+  FileText, 
+  Play, 
+  Users, 
+  CheckCircle, 
+  ArrowRight, 
+  Sparkles,
+  GraduationCap,
+  Target,
+  Award,
+  Zap
+} from 'lucide-react';
+
+const fadeInUp = {
+  initial: { opacity: 0, y: 30 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] }
+};
+
+const stagger = {
+  animate: {
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
 
 const features = [
   {
     icon: ClipboardList,
     title: 'Online Tests',
     description: 'Take MCQ-based tests with timer and instant results',
+    gradient: 'from-violet-500 to-purple-600',
   },
   {
     icon: FileText,
     title: 'Study Notes',
     description: 'Access comprehensive notes organized by subject and class',
+    gradient: 'from-blue-500 to-cyan-500',
   },
   {
     icon: Play,
     title: 'Video Lectures',
     description: 'Watch expert video lessons anytime, anywhere',
+    gradient: 'from-pink-500 to-rose-500',
   },
   {
     icon: Users,
     title: 'Personal Guidance',
     description: 'Get personalized attention and mentorship',
+    gradient: 'from-amber-500 to-orange-500',
   },
 ];
 
 const benefits = [
-  'Expert faculty with years of experience',
-  'Comprehensive study materials',
-  'Regular assessments and feedback',
-  'Doubt clearing sessions',
-  'Progress tracking dashboard',
-  'Flexible learning schedule',
+  { icon: GraduationCap, text: 'Expert faculty with years of experience' },
+  { icon: FileText, text: 'Comprehensive study materials' },
+  { icon: Target, text: 'Regular assessments and feedback' },
+  { icon: Sparkles, text: 'Doubt clearing sessions' },
+  { icon: Zap, text: 'Progress tracking dashboard' },
+  { icon: Award, text: 'Flexible learning schedule' },
+];
+
+const stats = [
+  { value: '500+', label: 'Students' },
+  { value: '50+', label: 'Tests' },
+  { value: '100+', label: 'Video Lectures' },
+  { value: '95%', label: 'Success Rate' },
 ];
 
 export default function LandingPage() {
   return (
-    <div>
+    <div className="overflow-hidden">
       {/* Hero Section */}
-      <section className="hero-gradient py-20 md:py-32">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center hero-text">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
-              <BookOpen className="w-5 h-5" />
-              <span className="text-sm font-medium">Excellence in Education Since 2010</span>
-            </div>
-            <h1 className="text-4xl md:text-6xl font-display font-bold mb-6 leading-tight">
-              Shape Your Future with Quality Education
-            </h1>
-            <p className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
+      <section className="relative min-h-[90vh] flex items-center hero-gradient overflow-hidden">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <motion.div 
+            className="absolute top-20 left-10 w-72 h-72 rounded-full bg-white/10 blur-3xl"
+            animate={{ 
+              scale: [1, 1.2, 1],
+              x: [0, 30, 0],
+              y: [0, -20, 0],
+            }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div 
+            className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-white/10 blur-3xl"
+            animate={{ 
+              scale: [1.2, 1, 1.2],
+              x: [0, -40, 0],
+              y: [0, 30, 0],
+            }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div 
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-white/5 blur-3xl"
+            animate={{ 
+              scale: [1, 1.1, 1],
+              rotate: [0, 180, 360],
+            }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          />
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-4xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-md rounded-full px-5 py-2.5 mb-8 border border-white/20"
+            >
+              <Sparkles className="w-4 h-4 text-yellow-300" />
+              <span className="text-sm font-medium text-white">Excellence in Education Since 2010</span>
+            </motion.div>
+
+            <motion.h1 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="text-4xl sm:text-5xl md:text-7xl font-display font-extrabold mb-6 text-white leading-tight"
+            >
+              Shape Your Future with{' '}
+              <span className="relative">
+                <span className="relative z-10">Quality Education</span>
+                <motion.span 
+                  className="absolute -bottom-2 left-0 right-0 h-3 bg-white/30 rounded-full -z-0"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 0.8, delay: 1 }}
+                />
+              </span>
+            </motion.h1>
+
+            <motion.p 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed"
+            >
               Join Shiva Study Center and unlock your potential with our comprehensive coaching program, expert faculty, and personalized learning approach.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            </motion.p>
+
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center"
+            >
               <Link to="/auth">
-                <Button size="lg" className="btn-hero text-lg px-8">
+                <Button size="lg" className="btn-hero text-lg px-8 h-14 rounded-xl group">
                   Get Started
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <motion.span
+                    className="ml-2"
+                    animate={{ x: [0, 4, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </motion.span>
                 </Button>
               </Link>
               <Link to="/about">
-                <Button size="lg" variant="outline" className="btn-ghost-white text-lg px-8">
+                <Button size="lg" variant="outline" className="btn-ghost-white text-lg px-8 h-14 rounded-xl">
                   Learn More
                 </Button>
               </Link>
-            </div>
+            </motion.div>
+
+            {/* Stats */}
+            <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 pt-10 border-t border-white/20"
+            >
+              {stats.map((stat, index) => (
+                <motion.div 
+                  key={stat.label}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: 1 + index * 0.1 }}
+                  className="text-center"
+                >
+                  <div className="text-3xl md:text-4xl font-display font-bold text-white mb-1">
+                    {stat.value}
+                  </div>
+                  <div className="text-sm text-white/70">{stat.label}</div>
+                </motion.div>
+              ))}
+            </motion.div>
           </div>
+        </div>
+
+        {/* Bottom Wave */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
+            <path 
+              d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" 
+              fill="hsl(var(--background))"
+            />
+          </svg>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-background">
+      <section className="py-24 bg-background relative">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-4">
-              Everything You Need to Succeed
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+          <motion.div 
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+            className="text-center mb-16"
+          >
+            <motion.span 
+              variants={fadeInUp}
+              className="inline-block text-sm font-semibold text-primary mb-4 tracking-wider uppercase"
+            >
+              What We Offer
+            </motion.span>
+            <motion.h2 
+              variants={fadeInUp}
+              className="text-3xl md:text-5xl font-display font-bold text-foreground mb-6"
+            >
+              Everything You Need to{' '}
+              <span className="gradient-text">Succeed</span>
+            </motion.h2>
+            <motion.p 
+              variants={fadeInUp}
+              className="text-muted-foreground text-lg max-w-2xl mx-auto"
+            >
               Our comprehensive platform provides all the tools and resources you need for academic excellence.
-            </p>
-          </div>
+            </motion.p>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feature) => (
-              <div key={feature.title} className="feature-card group">
-                <div className="w-14 h-14 rounded-xl bg-accent flex items-center justify-center mb-4 group-hover:bg-primary transition-colors">
-                  <feature.icon className="w-7 h-7 text-primary group-hover:text-primary-foreground transition-colors" />
-                </div>
-                <h3 className="text-xl font-display font-semibold text-foreground mb-2">
+          <motion.div 
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={stagger}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          >
+            {features.map((feature, index) => (
+              <motion.div 
+                key={feature.title}
+                variants={fadeInUp}
+                whileHover={{ y: -8, transition: { duration: 0.3 } }}
+                className="feature-card group cursor-pointer"
+              >
+                <motion.div 
+                  className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-5 shadow-lg group-hover:scale-110 transition-transform duration-300`}
+                  whileHover={{ rotate: [0, -5, 5, 0] }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <feature.icon className="w-7 h-7 text-white" />
+                </motion.div>
+                <h3 className="text-xl font-display font-bold text-foreground mb-3">
                   {feature.title}
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground leading-relaxed">
                   {feature.description}
                 </p>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Benefits Section */}
-      <section className="py-20 bg-secondary">
+      <section className="py-24 mesh-gradient relative overflow-hidden">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-6">
-                Why Choose Shiva Study Center?
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+            >
+              <span className="inline-block text-sm font-semibold text-primary mb-4 tracking-wider uppercase">
+                Why Choose Us
+              </span>
+              <h2 className="text-3xl md:text-5xl font-display font-bold text-foreground mb-6 leading-tight">
+                Why Choose{' '}
+                <span className="gradient-text">Shiva Study Center?</span>
               </h2>
-              <p className="text-muted-foreground text-lg mb-8">
+              <p className="text-muted-foreground text-lg mb-10 leading-relaxed">
                 We are committed to providing the best learning experience with a focus on individual growth and academic success.
               </p>
-              <ul className="space-y-4">
-                {benefits.map((benefit) => (
-                  <li key={benefit} className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle className="w-4 h-4 text-success" />
+              
+              <motion.ul 
+                initial="initial"
+                whileInView="animate"
+                viewport={{ once: true }}
+                variants={stagger}
+                className="space-y-4"
+              >
+                {benefits.map((benefit, index) => (
+                  <motion.li 
+                    key={benefit.text}
+                    variants={fadeInUp}
+                    className="flex items-center gap-4 group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-success/20 to-success/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <benefit.icon className="w-5 h-5 text-success" />
                     </div>
-                    <span className="text-foreground">{benefit}</span>
-                  </li>
+                    <span className="text-foreground font-medium">{benefit.text}</span>
+                  </motion.li>
                 ))}
-              </ul>
-            </div>
-            <div className="bg-card rounded-2xl p-8 shadow-lg border border-border">
-              <h3 className="text-2xl font-display font-bold text-foreground mb-4">
-                Ready to Start Learning?
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                Register now and join thousands of successful students who have achieved their goals with us.
-              </p>
-              <Link to="/auth">
-                <Button className="w-full" size="lg">
-                  Register Now
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-              </Link>
-            </div>
+              </motion.ul>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="relative"
+            >
+              <div className="glass-card p-8 md:p-10">
+                <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent-gradient blur-2xl opacity-50" />
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent-gradient flex items-center justify-center mb-6 shadow-lg">
+                    <GraduationCap className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-4">
+                    Ready to Start Learning?
+                  </h3>
+                  <p className="text-muted-foreground mb-8 leading-relaxed">
+                    Register now and join thousands of successful students who have achieved their goals with us.
+                  </p>
+                  <Link to="/auth">
+                    <Button className="w-full btn-gradient h-14 text-lg rounded-xl group">
+                      Register Now
+                      <motion.span
+                        className="ml-2"
+                        animate={{ x: [0, 4, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      >
+                        <ArrowRight className="w-5 h-5" />
+                      </motion.span>
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Floating Elements */}
+              <motion.div 
+                className="absolute -bottom-8 -left-8 w-24 h-24 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-xl flex items-center justify-center"
+                animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Award className="w-10 h-10 text-white" />
+              </motion.div>
+              <motion.div 
+                className="absolute -top-6 -left-6 w-16 h-16 rounded-xl bg-gradient-to-br from-pink-400 to-rose-500 shadow-xl flex items-center justify-center"
+                animate={{ y: [0, 10, 0], rotate: [0, -5, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+              >
+                <Sparkles className="w-7 h-7 text-white" />
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-primary">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-display font-bold text-primary-foreground mb-4">
-            Start Your Journey Today
-          </h2>
-          <p className="text-primary-foreground/80 text-lg mb-8 max-w-2xl mx-auto">
-            Don't wait to achieve your dreams. Join Shiva Study Center and take the first step towards success.
-          </p>
-          <Link to="/contact">
-            <Button size="lg" className="btn-hero text-lg px-8">
-              Contact Us
-            </Button>
-          </Link>
+      <section className="relative py-24 overflow-hidden">
+        <div className="absolute inset-0 hero-gradient" />
+        <div className="absolute inset-0">
+          <motion.div 
+            className="absolute top-10 left-1/4 w-64 h-64 rounded-full bg-white/10 blur-3xl"
+            animate={{ scale: [1, 1.2, 1], x: [0, 20, 0] }}
+            transition={{ duration: 6, repeat: Infinity }}
+          />
+          <motion.div 
+            className="absolute bottom-10 right-1/4 w-80 h-80 rounded-full bg-white/10 blur-3xl"
+            animate={{ scale: [1.2, 1, 1.2], y: [0, -30, 0] }}
+            transition={{ duration: 8, repeat: Infinity }}
+          />
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="text-center max-w-3xl mx-auto"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              whileInView={{ scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-lg flex items-center justify-center mx-auto mb-8"
+            >
+              <Zap className="w-10 h-10 text-white" />
+            </motion.div>
+            <h2 className="text-3xl md:text-5xl font-display font-bold text-white mb-6">
+              Start Your Journey Today
+            </h2>
+            <p className="text-white/80 text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
+              Don't wait to achieve your dreams. Join Shiva Study Center and take the first step towards success.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/auth">
+                <Button size="lg" className="btn-hero text-lg px-10 h-14 rounded-xl">
+                  Get Started Free
+                </Button>
+              </Link>
+              <Link to="/contact">
+                <Button size="lg" variant="outline" className="btn-ghost-white text-lg px-10 h-14 rounded-xl">
+                  Contact Us
+                </Button>
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
     </div>
