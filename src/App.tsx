@@ -27,6 +27,7 @@ import TestsPage from "@/pages/dashboard/TestsPage";
 import TestAttemptPage from "@/pages/dashboard/TestAttemptPage";
 import NotesPage from "@/pages/dashboard/NotesPage";
 import VideosPage from "@/pages/dashboard/VideosPage";
+import VideoWatchPage from "@/pages/dashboard/VideoWatchPage";
 import ProfilePage from "@/pages/dashboard/ProfilePage";
 
 // Admin Dashboard
@@ -36,6 +37,7 @@ import AdminTestsPage from "@/pages/admin/AdminTestsPage";
 import AdminQuestionsPage from "@/pages/admin/AdminQuestionsPage";
 import AdminNotesPage from "@/pages/admin/AdminNotesPage";
 import AdminVideosPage from "@/pages/admin/AdminVideosPage";
+import AdminPasswordResetPage from "@/pages/admin/AdminPasswordResetPage";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +70,7 @@ const App = () => (
               <Route path="tests/:testId" element={<TestAttemptPage />} />
               <Route path="notes" element={<NotesPage />} />
               <Route path="videos" element={<VideosPage />} />
+              <Route path="videos/:videoId" element={<VideoWatchPage />} />
               <Route path="profile" element={<ProfilePage />} />
             </Route>
 
@@ -79,6 +82,7 @@ const App = () => (
               <Route path="tests/:testId/questions" element={<AdminQuestionsPage />} />
               <Route path="notes" element={<AdminNotesPage />} />
               <Route path="videos" element={<AdminVideosPage />} />
+              <Route path="password-resets" element={<AdminPasswordResetPage />} />
             </Route>
 
             {/* 404 */}
