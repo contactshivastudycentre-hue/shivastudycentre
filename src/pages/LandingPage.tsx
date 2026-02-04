@@ -13,8 +13,10 @@ import {
   Award,
   Zap,
   Shield,
-  UserCircle
+  UserCircle,
+  ExternalLink
 } from 'lucide-react';
+import swaritImage from '@/assets/swarit-roy.jpg';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -402,6 +404,77 @@ export default function LandingPage() {
                   Contact Us
                 </Button>
               </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* About the Platform & Creator Section */}
+      <section className="py-20 bg-background border-t border-border">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-4xl mx-auto"
+          >
+            <div className="text-center mb-12">
+              <span className="inline-block text-sm font-semibold text-primary mb-3 tracking-wider uppercase">
+                Technology Partner
+              </span>
+              <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground">
+                About the Platform & Creator
+              </h2>
+            </div>
+
+            <div className="bg-card rounded-2xl p-8 md:p-10 border border-border">
+              <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+                {/* Photo */}
+                <div className="flex-shrink-0">
+                  <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden bg-muted">
+                    <img 
+                      src={swaritImage} 
+                      alt="Swarit Roy - Founder & CEO of Kairaux" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 text-center md:text-left">
+                  <div className="mb-1">
+                    <span className="text-sm font-medium text-primary">Founder & CEO – Kairaux</span>
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-display font-bold text-foreground mb-4">
+                    Swarit Roy
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed mb-6">
+                    Swarit Roy, Founder & CEO of Kairaux, is focused on building modern skill-based learning systems 
+                    that combine education with technology and AI. This platform is designed to help students not only 
+                    study better, but also learn real-world skills using smart digital tools.
+                  </p>
+
+                  {/* Kairaux Branding */}
+                  <div className="bg-accent/50 rounded-xl p-5 mb-6">
+                    <p className="text-sm text-foreground font-medium mb-2">Powered by KAIRAUX</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      A skills and AI-driven learning ecosystem focused on helping learners build practical skills 
+                      and use intelligent tools for growth.
+                    </p>
+                  </div>
+
+                  {/* CTA */}
+                  <a 
+                    href="https://kairaux.online" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    Learn Skills & Use KAI AI at KAIRAUX.ONLINE
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
             </div>
           </motion.div>
         </div>
