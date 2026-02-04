@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Play, X } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { CardSkeletonGrid } from '@/components/skeletons/CardSkeleton';
+import { VideoPlayer } from '@/components/VideoPlayer';
+import { SearchInput } from '@/components/SearchInput';
 
 interface Video {
   id: string;
@@ -18,6 +20,7 @@ export default function VideosPage() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterSubject, setFilterSubject] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeVideo, setActiveVideo] = useState<Video | null>(null);
 
   useEffect(() => {
@@ -41,35 +44,15 @@ export default function VideosPage() {
 
   const filteredVideos = videos.filter((video) => {
     if (filterSubject && video.subject !== filterSubject) return false;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        video.title.toLowerCase().includes(query) ||
+        video.subject.toLowerCase().includes(query)
+      );
+    }
     return true;
   });
-
-  // Convert YouTube URL to embed URL with proper parameters
-  const getEmbedUrl = (url: string) => {
-    // YouTube watch URL
-    const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?]+)/);
-    if (youtubeMatch) {
-      const videoId = youtubeMatch[1];
-      // rel=0: no related videos, modestbranding=1: minimal YouTube branding
-      // controls=1: show controls, playsinline=1: play inline on mobile
-      return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&controls=1&playsinline=1`;
-    }
-    
-    // YouTube embed URL (already embedded)
-    if (url.includes('youtube.com/embed/')) {
-      // Ensure proper params are added
-      const hasParams = url.includes('?');
-      return `${url}${hasParams ? '&' : '?'}rel=0&modestbranding=1`;
-    }
-
-    // Google Drive video
-    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-    if (driveMatch) {
-      return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
-    }
-
-    return url;
-  };
 
   // Get YouTube thumbnail
   const getThumbnail = (video: Video) => {
@@ -102,60 +85,49 @@ export default function VideosPage() {
         <p className="text-muted-foreground">Watch video lectures and tutorials</p>
       </div>
 
-      {/* Subject Filters */}
-      {videos.length > 0 && uniqueSubjects.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={!filterSubject ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilterSubject(null)}
-          >
-            All Subjects
-          </Button>
-          {uniqueSubjects.map((subject) => (
-            <Button
-              key={subject}
-              variant={filterSubject === subject ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterSubject(filterSubject === subject ? null : subject)}
-            >
-              {subject}
-            </Button>
-          ))}
+      {/* Search and Filters */}
+      {videos.length > 0 && (
+        <div className="space-y-3">
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search videos by title..."
+            className="max-w-md"
+          />
+          
+          {uniqueSubjects.length > 1 && (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={!filterSubject ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilterSubject(null)}
+              >
+                All Subjects
+              </Button>
+              {uniqueSubjects.map((subject) => (
+                <Button
+                  key={subject}
+                  variant={filterSubject === subject ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilterSubject(filterSubject === subject ? null : subject)}
+                >
+                  {subject}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Active Video Player Modal */}
+      {/* Video Player Modal */}
       {activeVideo && (
-        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm animate-fade-in p-4 md:p-8">
-          <div className="bg-card rounded-xl shadow-2xl border overflow-hidden h-full max-w-5xl mx-auto flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/50">
-              <div className="flex-1 mr-4">
-                <h3 className="font-semibold text-foreground truncate">{activeVideo.title}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {activeVideo.subject} • {activeVideo.class}
-                </p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => setActiveVideo(null)}>
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-            
-            {/* Video Container */}
-            <div className="flex-1 bg-black flex items-center justify-center">
-              <div className="w-full h-full max-h-[70vh] aspect-video">
-                <iframe
-                  src={getEmbedUrl(activeVideo.video_url)}
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  title={activeVideo.title}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <VideoPlayer
+          url={activeVideo.video_url}
+          title={activeVideo.title}
+          subject={activeVideo.subject}
+          className={activeVideo.class}
+          onClose={() => setActiveVideo(null)}
+        />
       )}
 
       {filteredVideos.length === 0 ? (

@@ -27,6 +27,7 @@ import {
 import { Play, Plus, MoreVertical, Edit, Trash2, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ClassSelect } from '@/components/ClassSelect';
+import { SubjectSelect } from '@/components/SubjectSelect';
 import { useAuth } from '@/lib/auth';
 
 interface Video {
@@ -68,6 +69,26 @@ export default function AdminVideosPage() {
       setVideos(data);
     }
     setIsLoading(false);
+  };
+
+  // Extract YouTube video ID and auto-generate thumbnail
+  const extractYouTubeId = (url: string): string | null => {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?]+)/);
+    return match ? match[1] : null;
+  };
+
+  const handleVideoUrlChange = (url: string) => {
+    setFormData({ ...formData, video_url: url });
+    
+    // Auto-generate thumbnail from YouTube URL
+    const videoId = extractYouTubeId(url);
+    if (videoId && !formData.thumbnail_url) {
+      setFormData(prev => ({
+        ...prev,
+        video_url: url,
+        thumbnail_url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -171,16 +192,16 @@ export default function AdminVideosPage() {
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g., Chapter 1 - Introduction to Physics"
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
-                  <Input
-                    id="subject"
+                  <Label>Subject</Label>
+                  <SubjectSelect
                     value={formData.subject}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                    onChange={(value) => setFormData({ ...formData, subject: value })}
                     required
                   />
                 </div>
@@ -194,18 +215,21 @@ export default function AdminVideosPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="video_url">Video URL (YouTube or embed link)</Label>
+                <Label htmlFor="video_url">YouTube URL</Label>
                 <Input
                   id="video_url"
                   type="url"
                   value={formData.video_url}
-                  onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+                  onChange={(e) => handleVideoUrlChange(e.target.value)}
                   placeholder="https://youtube.com/watch?v=..."
                   required
                 />
+                <p className="text-xs text-muted-foreground">
+                  Paste a YouTube video link. Thumbnail will be auto-generated.
+                </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="thumbnail_url">Thumbnail URL (Optional)</Label>
+                <Label htmlFor="thumbnail_url">Custom Thumbnail URL (Optional)</Label>
                 <Input
                   id="thumbnail_url"
                   type="url"

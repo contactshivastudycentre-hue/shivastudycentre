@@ -27,6 +27,7 @@ import {
 import { FileText, Plus, MoreVertical, Edit, Trash2, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ClassSelect } from '@/components/ClassSelect';
+import { SubjectSelect } from '@/components/SubjectSelect';
 import { useAuth } from '@/lib/auth';
 
 interface Note {
@@ -155,21 +156,21 @@ export default function AdminNotesPage() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title">Title / Chapter Name</Label>
                 <Input
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g., Chapter 1 - Motion and Force"
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
-                  <Input
-                    id="subject"
+                  <Label>Subject</Label>
+                  <SubjectSelect
                     value={formData.subject}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                    onChange={(value) => setFormData({ ...formData, subject: value })}
                     required
                   />
                 </div>
@@ -183,15 +184,18 @@ export default function AdminNotesPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="pdf_url">PDF URL</Label>
+                <Label htmlFor="pdf_url">PDF URL (Google Drive or Direct Link)</Label>
                 <Input
                   id="pdf_url"
                   type="url"
                   value={formData.pdf_url}
                   onChange={(e) => setFormData({ ...formData, pdf_url: e.target.value })}
-                  placeholder="https://..."
+                  placeholder="https://drive.google.com/file/d/..."
                   required
                 />
+                <p className="text-xs text-muted-foreground">
+                  Use Google Drive share link or any direct PDF URL
+                </p>
               </div>
               <div className="flex gap-3">
                 <Button type="submit" className="flex-1">

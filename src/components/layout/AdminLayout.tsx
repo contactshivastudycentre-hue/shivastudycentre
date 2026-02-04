@@ -1,7 +1,8 @@
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
-import { Users, FileText, Play, ClipboardList, Settings, LogOut, BookOpen, Home } from 'lucide-react';
+import { Users, FileText, Play, ClipboardList, LogOut, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
+import { Logo, LogoIcon } from '@/components/Logo';
 
 const sidebarItems = [
   { name: 'Dashboard', path: '/admin', icon: Home },
@@ -24,7 +25,7 @@ export function AdminLayout() {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/admin-login" replace />;
   }
 
   if (!isAdmin) {
@@ -43,18 +44,21 @@ export function AdminLayout() {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex-col">
         {/* Logo */}
-        <div className="p-6 border-b border-border">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <span className="font-display text-lg font-bold text-foreground block">
-                Shiva Study
-              </span>
-              <span className="text-xs text-primary font-medium">Admin Panel</span>
+        <div className="p-4 border-b border-border">
+          <Link to="/admin" className="block">
+            <div className="flex items-center gap-3">
+              <LogoIcon size={40} />
+              <div className="flex flex-col">
+                <span className="font-display text-lg font-bold text-foreground leading-tight">
+                  Shiva Study Center
+                </span>
+                <span className="text-xs text-primary font-medium">Admin Panel</span>
+              </div>
             </div>
           </Link>
+          <p className="text-[10px] text-muted-foreground mt-2 uppercase tracking-wider">
+            Powered by KAIRAUX
+          </p>
         </div>
 
         {/* Navigation */}
@@ -89,13 +93,16 @@ export function AdminLayout() {
 
       {/* Mobile Header */}
       <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <BookOpen className="w-5 h-5 text-primary-foreground" />
+        <Link to="/admin" className="flex items-center gap-2">
+          <LogoIcon size={32} />
+          <div className="flex flex-col">
+            <span className="font-display text-base font-bold text-foreground leading-tight">
+              SSC Admin
+            </span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Powered by KAIRAUX
+            </span>
           </div>
-          <span className="font-display text-lg font-bold text-foreground">
-            Admin
-          </span>
         </Link>
         <Button variant="ghost" size="sm" onClick={signOut}>
           <LogOut className="w-4 h-4" />

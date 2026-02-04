@@ -1,46 +1,57 @@
 import { motion } from 'framer-motion';
+
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showText?: boolean;
+  showPoweredBy?: boolean;
   className?: string;
 }
+
 const sizes = {
   sm: {
     icon: 32,
-    text: 'text-lg'
+    text: 'text-lg',
+    subtext: 'text-[10px]'
   },
   md: {
     icon: 40,
-    text: 'text-xl'
+    text: 'text-xl',
+    subtext: 'text-xs'
   },
   lg: {
     icon: 56,
-    text: 'text-2xl'
+    text: 'text-2xl',
+    subtext: 'text-xs'
   },
   xl: {
     icon: 80,
-    text: 'text-4xl'
+    text: 'text-4xl',
+    subtext: 'text-sm'
   }
 };
+
 export function Logo({
   size = 'md',
   showText = true,
+  showPoweredBy = false,
   className = ''
 }: LogoProps) {
-  const {
-    icon,
-    text
-  } = sizes[size];
-  return <div className={`flex items-center gap-3 ${className}`}>
-      <motion.div whileHover={{
-      scale: 1.05,
-      rotate: 2
-    }} transition={{
-      type: 'spring',
-      stiffness: 400,
-      damping: 17
-    }}>
-        <svg width={icon} height={icon} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg">
+  const { icon, text, subtext } = sizes[size];
+
+  return (
+    <div className={`flex items-center gap-3 ${className}`}>
+      <motion.div 
+        whileHover={{ scale: 1.05, rotate: 2 }} 
+        transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+      >
+        <svg 
+          width={icon} 
+          height={icon} 
+          viewBox="0 0 80 80" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg" 
+          className="drop-shadow-lg"
+        >
           {/* Background Circle with Gradient */}
           <defs>
             <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -88,28 +99,29 @@ export function Logo({
         </svg>
       </motion.div>
       
-      {showText && <div className="flex flex-col">
-          <motion.span initial={{
-        opacity: 0,
-        x: -10
-      }} animate={{
-        opacity: 1,
-        x: 0
-      }} className={`font-display font-bold text-foreground ${text} leading-tight`}>
+      {showText && (
+        <div className="flex flex-col">
+          <motion.span 
+            initial={{ opacity: 0, x: -10 }} 
+            animate={{ opacity: 1, x: 0 }} 
+            className={`font-display font-bold text-foreground ${text} leading-tight`}
+          >
             Shiva Study Center
           </motion.span>
-          <motion.span initial={{
-        opacity: 0
-      }} animate={{
-        opacity: 1
-      }} transition={{
-        delay: 0.1
-      }} className="text-xs text-muted-foreground tracking-wider uppercase">
-            ​by sanjay singhania sir    
+          <motion.span 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            transition={{ delay: 0.1 }} 
+            className={`text-muted-foreground tracking-wider uppercase ${subtext}`}
+          >
+            {showPoweredBy ? 'Powered by KAIRAUX' : 'by Sanjay Singhania Sir'}
           </motion.span>
-        </div>}
-    </div>;
+        </div>
+      )}
+    </div>
+  );
 }
+
 export function LogoIcon({
   size = 40,
   className = ''
@@ -117,13 +129,17 @@ export function LogoIcon({
   size?: number;
   className?: string;
 }) {
-  return <motion.svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className={`drop-shadow-lg ${className}`} whileHover={{
-    scale: 1.05
-  }} transition={{
-    type: 'spring',
-    stiffness: 400,
-    damping: 17
-  }}>
+  return (
+    <motion.svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 80 80" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg" 
+      className={`drop-shadow-lg ${className}`} 
+      whileHover={{ scale: 1.05 }} 
+      transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+    >
       <defs>
         <linearGradient id="logoGradientIcon" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="hsl(var(--primary))" />
@@ -142,5 +158,6 @@ export function LogoIcon({
       </g>
       
       <text x="40" y="72" textAnchor="middle" fill="white" fontWeight="bold" fontSize="10" fontFamily="system-ui, sans-serif" letterSpacing="2">SSC</text>
-    </motion.svg>;
+    </motion.svg>
+  );
 }
