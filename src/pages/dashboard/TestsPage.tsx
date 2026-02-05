@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ClipboardList, Clock, ArrowRight, CheckCircle } from 'lucide-react';
+import { ClipboardList, Clock, ArrowRight, CheckCircle, Eye } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { CardSkeletonGrid } from '@/components/skeletons/CardSkeleton';
 
@@ -19,7 +19,9 @@ interface TestAttempt {
   id: string;
   test_id: string;
   score: number | null;
+  mcq_score: number | null;
   submitted_at: string | null;
+  evaluation_status: string | null;
 }
 
 export default function TestsPage() {
@@ -51,7 +53,7 @@ export default function TestsPage() {
     
     const { data } = await supabase
       .from('test_attempts')
-      .select('id, test_id, score, submitted_at')
+      .select('id, test_id, score, mcq_score, submitted_at, evaluation_status')
       .eq('user_id', user.id);
 
     if (data) {
@@ -118,16 +120,22 @@ export default function TestsPage() {
                       {isCompleted && (
                         <span className="flex items-center gap-1 text-success">
                           <CheckCircle className="w-4 h-4" />
-                          Score: {attempt.score}%
+                          {attempt?.evaluation_status === 'pending' 
+                            ? `MCQ: ${attempt.mcq_score || 0} marks (Review pending)`
+                            : `Score: ${attempt?.score || 0}%`
+                          }
                         </span>
                       )}
                     </div>
                   </div>
                   <div>
                     {isCompleted ? (
-                      <Button variant="outline" disabled>
-                        Completed
-                      </Button>
+                      <Link to={`/dashboard/results/${attempt?.id}`}>
+                        <Button variant="outline" className="gap-2">
+                          <Eye className="w-4 h-4" />
+                          View Result
+                        </Button>
+                      </Link>
                     ) : (
                       <Link to={`/dashboard/tests/${test.id}`}>
                         <Button>

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ClipboardList, FileText, Play, Users, ArrowRight, Sparkles, GraduationCap, Target, Award, Zap, Shield, UserCircle, ExternalLink, Download } from 'lucide-react';
 import swaritImage from '@/assets/swarit-roy.jpg';
-import { PWAInstallButton, LandingInstallButton } from '@/components/PWAInstallButton';
+import { SmallPWAButton } from '@/components/pwa/SmallPWAButton';
 
 const fadeInUp = {
   initial: {
@@ -194,7 +194,7 @@ export default function LandingPage() {
               duration: 0.8,
               delay: 0.7
             }} className="flex justify-center mb-6">
-              <LandingInstallButton />
+              <SmallPWAButton variant="landing" />
             </motion.div>
 
             <motion.div initial={{
@@ -503,7 +503,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* PWA Install Button - Mobile Only */}
-      <PWAInstallButton />
+      {/* PWA Install handled by SmallPWAButton in header now */}
     </div>;
 }
