@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send, Shield, Loader2, AlertTriangle } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send, Shield, Loader2, AlertTriangle, WifiOff, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAntiCheat } from '@/hooks/useAntiCheat';
@@ -53,8 +53,7 @@ interface SubmitResult {
 }
 
 const LOCAL_STORAGE_KEY = 'test-attempt-';
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 2000;
+const MAX_SUBMIT_WAIT_MS = 15000; // 15 seconds max wait
 
 export default function TestAttemptPage() {
   const { testId } = useParams<{ testId: string }>();
@@ -70,19 +69,20 @@ export default function TestAttemptPage() {
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showNavigator, setShowNavigator] = useState(false);
   const [violationCount, setViolationCount] = useState(0);
   const [hasDescriptiveQuestions, setHasDescriptiveQuestions] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'retrying' | 'success' | 'failed'>('idle');
-  const [retryCount, setRetryCount] = useState(0);
+  
+  // Simplified submit states
+  const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'slow' | 'offline' | 'failed' | 'success'>('idle');
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   
-  const submitInProgressRef = useRef(false);
-  const submitAttemptedRef = useRef(false);
+  // Refs to prevent double submission
+  const submitLockRef = useRef(false);
+  const submitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Calculate MCQ score
   const calculateScore = useCallback(() => {
@@ -120,18 +120,31 @@ export default function TestAttemptPage() {
     return { mcqScore, totalMarks, hasDescriptive, percentage };
   }, [answers, questions, test?.total_marks]);
 
-  // Reliable submit function with retry logic
+  // Clean, single-request submit function
   const submitTest = useCallback(async (isAutoSubmit = false): Promise<boolean> => {
-    // Prevent double submission
-    if (submitInProgressRef.current || alreadySubmitted) {
+    // STEP 1: Check if already locked (prevent double submission)
+    if (submitLockRef.current || alreadySubmitted) {
+      console.log('Submit blocked: already in progress or submitted');
       return false;
     }
-    
-    submitInProgressRef.current = true;
-    submitAttemptedRef.current = true;
-    setIsSubmitting(true);
-    setSubmitStatus('submitting');
+
+    // STEP 2: Check internet connection BEFORE attempting
+    if (!navigator.onLine) {
+      setSubmitState('offline');
+      return false;
+    }
+
+    // STEP 3: Lock submission immediately
+    submitLockRef.current = true;
+    setSubmitState('submitting');
     setShowSubmitDialog(false);
+
+    // STEP 4: Set timeout for slow connection warning (after 10s)
+    submitTimeoutRef.current = setTimeout(() => {
+      if (submitState === 'submitting') {
+        setSubmitState('slow');
+      }
+    }, 10000);
 
     const { mcqScore, totalMarks, hasDescriptive, percentage } = calculateScore();
 
@@ -143,75 +156,92 @@ export default function TestAttemptPage() {
       evaluation_status: hasDescriptive ? 'pending' : 'completed',
     };
 
-    let currentRetry = 0;
-    
-    const attemptSubmit = async (): Promise<boolean> => {
+    try {
+      // STEP 5: Single atomic check - is it already submitted?
+      const { data: existingAttempt, error: checkError } = await supabase
+        .from('test_attempts')
+        .select('submitted_at')
+        .eq('id', attemptId)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingAttempt?.submitted_at) {
+        // Already submitted - treat as success
+        clearTimeout(submitTimeoutRef.current!);
+        setAlreadySubmitted(true);
+        setIsCompleted(true);
+        setSubmitResult({ mcqScore, totalMarks, hasDescriptive, percentage });
+        setSubmitState('success');
+        submitLockRef.current = false;
+        
+        toast({
+          title: 'Test Already Submitted',
+          description: 'Your test was already submitted successfully.',
+        });
+        return true;
+      }
+
+      // STEP 6: Single atomic update
+      const { error: updateError } = await supabase
+        .from('test_attempts')
+        .update(updateData)
+        .eq('id', attemptId);
+
+      if (updateError) throw updateError;
+
+      // STEP 7: SUCCESS - Clear everything and show results
+      clearTimeout(submitTimeoutRef.current!);
+      localStorage.removeItem(LOCAL_STORAGE_KEY + testId);
+      
+      setSubmitResult({ mcqScore, totalMarks, hasDescriptive, percentage });
+      setIsCompleted(true);
+      setSubmitState('success');
+      submitLockRef.current = false;
+
+      if (!isAutoSubmit) {
+        toast({
+          title: 'Test Submitted!',
+          description: hasDescriptive 
+            ? 'Your MCQ answers have been auto-graded. Descriptive answers are pending review.'
+            : `You scored ${percentage}%!`,
+        });
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Submit error:', error);
+      clearTimeout(submitTimeoutRef.current!);
+      
+      // SINGLE controlled retry after failure
       try {
-        // First check if already submitted (double-check)
-        const { data: existingAttempt } = await supabase
-          .from('test_attempts')
-          .select('submitted_at')
-          .eq('id', attemptId)
-          .maybeSingle();
-
-        if (existingAttempt?.submitted_at) {
-          // Already submitted
-          setAlreadySubmitted(true);
-          setIsCompleted(true);
-          setSubmitResult({ mcqScore, totalMarks, hasDescriptive, percentage });
-          setSubmitStatus('success');
-          setIsSubmitting(false);
-          submitInProgressRef.current = false;
-          
-          toast({
-            title: 'Test Already Submitted',
-            description: 'Your test was already submitted successfully.',
-          });
-          return true;
-        }
-
-        const { error } = await supabase
+        // Wait briefly and try ONE more time
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const { error: retryError } = await supabase
           .from('test_attempts')
           .update(updateData)
           .eq('id', attemptId);
 
-        if (error) {
-          throw error;
+        if (!retryError) {
+          // Retry succeeded
+          localStorage.removeItem(LOCAL_STORAGE_KEY + testId);
+          setSubmitResult({ mcqScore, totalMarks, hasDescriptive, percentage });
+          setIsCompleted(true);
+          setSubmitState('success');
+          submitLockRef.current = false;
+          return true;
         }
-
-        // Success!
-        localStorage.removeItem(LOCAL_STORAGE_KEY + testId);
-        
-        setSubmitResult({ mcqScore, totalMarks, hasDescriptive, percentage });
-        setIsCompleted(true);
-        setSubmitStatus('success');
-        setIsSubmitting(false);
-        submitInProgressRef.current = false;
-
-        return true;
-      } catch (error) {
-        console.error('Submit error:', error);
-        currentRetry++;
-        setRetryCount(currentRetry);
-
-        if (currentRetry < MAX_RETRIES) {
-          setSubmitStatus('retrying');
-          
-          // Wait and retry
-          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-          return attemptSubmit();
-        } else {
-          // All retries failed
-          setSubmitStatus('failed');
-          setIsSubmitting(false);
-          submitInProgressRef.current = false;
-          return false;
-        }
+      } catch (retryErr) {
+        console.error('Retry also failed:', retryErr);
       }
-    };
 
-    return attemptSubmit();
-  }, [attemptId, answers, calculateScore, testId, toast, alreadySubmitted]);
+      // Both attempts failed - show friendly failure message
+      setSubmitState('failed');
+      submitLockRef.current = false;
+      return false;
+    }
+  }, [attemptId, answers, calculateScore, testId, toast, alreadySubmitted, submitState]);
 
   // Anti-cheat hook
   const { violations } = useAntiCheat({
@@ -425,7 +455,7 @@ export default function TestAttemptPage() {
     return () => clearInterval(timer);
   }, [attemptId, isCompleted, timeLeft, submitTest]);
 
-  // Auto-save to local storage (more frequent)
+  // Auto-save to local storage (every answer change)
   useEffect(() => {
     if (!attemptId || isCompleted) return;
 
@@ -436,11 +466,13 @@ export default function TestAttemptPage() {
     localStorage.setItem(LOCAL_STORAGE_KEY + testId, JSON.stringify(saveData));
   }, [answers, attemptId, isCompleted, testId]);
 
-  // Periodic save to database (less frequent)
+  // Periodic save to database (every 15 seconds)
   useEffect(() => {
     if (!attemptId || isCompleted) return;
 
     const saveTimer = setInterval(async () => {
+      if (!navigator.onLine) return; // Skip if offline
+      
       try {
         await supabase
           .from('test_attempts')
@@ -450,7 +482,7 @@ export default function TestAttemptPage() {
         // Silent fail for auto-save
         console.error('Auto-save failed:', e);
       }
-    }, 10000);
+    }, 15000);
 
     return () => clearInterval(saveTimer);
   }, [answers, attemptId, isCompleted]);
@@ -490,10 +522,23 @@ export default function TestAttemptPage() {
 
   // Handle retry after failure
   const handleRetrySubmit = () => {
-    setSubmitStatus('idle');
-    setRetryCount(0);
-    submitInProgressRef.current = false;
+    setSubmitState('idle');
+    submitLockRef.current = false;
     submitTest(false);
+  };
+
+  // Handle offline state retry
+  const handleOfflineRetry = () => {
+    if (navigator.onLine) {
+      setSubmitState('idle');
+      submitTest(false);
+    } else {
+      toast({
+        title: 'Still Offline',
+        description: 'Please check your internet connection.',
+        variant: 'destructive',
+      });
+    }
   };
 
   if (isLoading) {
@@ -505,7 +550,7 @@ export default function TestAttemptPage() {
   }
 
   // Submitting overlay - covers the whole screen
-  if (isSubmitting || submitStatus === 'submitting' || submitStatus === 'retrying') {
+  if (submitState === 'submitting' || submitState === 'slow') {
     return (
       <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center">
         <div className="max-w-sm mx-auto text-center px-4">
@@ -513,41 +558,75 @@ export default function TestAttemptPage() {
             <Loader2 className="w-10 h-10 text-primary animate-spin" />
           </div>
           <h2 className="text-xl font-display font-bold text-foreground mb-2">
-            {submitStatus === 'retrying' ? 'Retrying Submission...' : 'Submitting Your Test'}
+            Submitting Your Test
           </h2>
           <p className="text-muted-foreground mb-4">
-            {submitStatus === 'retrying' 
-              ? `Attempt ${retryCount + 1} of ${MAX_RETRIES}. Please wait...`
+            {submitState === 'slow' 
+              ? 'Taking longer than expected. Please stay on this page...'
               : 'Please wait while we save your answers. Do not close this page.'}
           </p>
           <div className="h-2 bg-secondary rounded-full overflow-hidden">
             <div className="h-full bg-primary animate-pulse w-2/3" />
           </div>
+          {submitState === 'slow' && (
+            <p className="text-xs text-muted-foreground mt-4">
+              Your answers are safely saved locally. If this takes too long, contact your admin.
+            </p>
+          )}
         </div>
       </div>
     );
   }
 
-  // Failed submission UI
-  if (submitStatus === 'failed') {
+  // Offline state - cannot submit
+  if (submitState === 'offline') {
+    return (
+      <div className="max-w-sm mx-auto text-center py-12 px-4">
+        <div className="w-20 h-20 rounded-full bg-warning/10 flex items-center justify-center mx-auto mb-6">
+          <WifiOff className="w-10 h-10 text-warning" />
+        </div>
+        <h2 className="text-xl font-display font-bold text-foreground mb-2">
+          No Internet Connection
+        </h2>
+        <p className="text-muted-foreground mb-6">
+          Please reconnect to the internet before submitting your test. Your answers are saved locally and will not be lost.
+        </p>
+        <div className="flex flex-col gap-3">
+          <Button onClick={handleOfflineRetry} size="lg" className="w-full">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Check Connection & Submit
+          </Button>
+          <Button variant="outline" onClick={() => setSubmitState('idle')} className="w-full">
+            Return to Test
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Failed submission UI - clean and calm
+  if (submitState === 'failed') {
     return (
       <div className="max-w-sm mx-auto text-center py-12 px-4">
         <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6">
           <AlertTriangle className="w-10 h-10 text-destructive" />
         </div>
         <h2 className="text-xl font-display font-bold text-foreground mb-2">
-          Submission Failed
+          Submission Could Not Complete
         </h2>
         <p className="text-muted-foreground mb-6">
-          We couldn't submit your test due to a network issue. Your answers are saved locally and will not be lost.
+          We had trouble submitting your test. Your answers are safely saved on this device. Please try again or contact your teacher if the problem continues.
         </p>
         <div className="flex flex-col gap-3">
           <Button onClick={handleRetrySubmit} size="lg" className="w-full">
-            <Loader2 className="w-4 h-4 mr-2" />
+            <RefreshCw className="w-4 h-4 mr-2" />
             Try Again
           </Button>
+          <Button variant="outline" onClick={() => setSubmitState('idle')} className="w-full">
+            Return to Test
+          </Button>
           <p className="text-xs text-muted-foreground">
-            Make sure you have a stable internet connection before retrying.
+            Your answers are safe. You can try submitting again when ready.
           </p>
         </div>
       </div>
@@ -857,7 +936,7 @@ export default function TestAttemptPage() {
         {currentIndex === questions.length - 1 ? (
           <Button 
             onClick={() => setShowSubmitDialog(true)} 
-            disabled={isSubmitting}
+            disabled={submitState !== 'idle'}
             className="flex-1 sm:flex-none"
           >
             <Send className="w-4 h-4 mr-2" />
