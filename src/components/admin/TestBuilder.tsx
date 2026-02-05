@@ -94,6 +94,22 @@ const questionTypeIcons: Record<QuestionType, React.ReactNode> = {
   long_answer: <AlignLeft className="w-4 h-4" />,
 };
 
+// Default marks by question type
+const getDefaultMarks = (type: QuestionType): number => {
+  switch (type) {
+    case 'mcq_single':
+    case 'mcq_multiple':
+    case 'true_false':
+      return 1;
+    case 'short_answer':
+      return 3;
+    case 'long_answer':
+      return 5;
+    default:
+      return 1;
+  }
+};
+
 export default function TestBuilder() {
   const { testId } = useParams<{ testId: string }>();
   const navigate = useNavigate();
@@ -207,14 +223,23 @@ export default function TestBuilder() {
 
   const canAddQuestions = test.title && test.subject && test.class;
 
-  const addQuestion = () => {
+  const addQuestion = (type: QuestionType = 'mcq_single') => {
+    const defaultMarks = getDefaultMarks(type);
+    let options: string[] = ['', '', '', ''];
+    
+    if (type === 'true_false') {
+      options = ['True', 'False'];
+    } else if (['short_answer', 'long_answer'].includes(type)) {
+      options = [];
+    }
+    
     const newQuestion: Question = {
       id: `temp-${Date.now()}`,
       question_text: '',
-      question_type: 'mcq_single',
-      options: ['', '', '', ''],
+      question_type: type,
+      options,
       correct_answers: [],
-      marks: 1,
+      marks: defaultMarks,
       isNew: true,
       isEditing: true,
     };
@@ -254,6 +279,7 @@ export default function TestBuilder() {
     if (!question) return;
 
     let options = question.options;
+    const newMarks = getDefaultMarks(type);
     
     if (type === 'true_false') {
       options = ['True', 'False'];
@@ -263,7 +289,7 @@ export default function TestBuilder() {
       options = ['', '', '', ''];
     }
     
-    updateQuestion(id, { question_type: type, options, correct_answers: [] });
+    updateQuestion(id, { question_type: type, options, correct_answers: [], marks: newMarks });
   };
 
   const saveTest = async (publish = false) => {
@@ -555,7 +581,7 @@ export default function TestBuilder() {
               <Sparkles className="w-4 h-4 mr-2" />
               Bulk Add
             </Button>
-            <Button onClick={addQuestion} disabled={!canAddQuestions}>
+            <Button onClick={() => addQuestion()} disabled={!canAddQuestions}>
               <Plus className="w-4 h-4 mr-2" />
               Add Question
             </Button>
@@ -581,7 +607,7 @@ export default function TestBuilder() {
                 <Sparkles className="w-4 h-4 mr-2" />
                 Paste from ChatGPT / Word
               </Button>
-              <Button onClick={addQuestion}>
+              <Button onClick={() => addQuestion()}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Question Manually
               </Button>
