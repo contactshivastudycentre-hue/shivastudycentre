@@ -39,6 +39,7 @@ import TestBuilder from "@/components/admin/TestBuilder";
 import AdminNotesPage from "@/pages/admin/AdminNotesPage";
 import AdminVideosPage from "@/pages/admin/AdminVideosPage";
 import AdminPasswordResetPage from "@/pages/admin/AdminPasswordResetPage";
+import AdminResultsPage from "@/pages/admin/AdminResultsPage";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,7 @@ const App = () => (
               <Route path="tests" element={<AdminTestsPage />} />
               <Route path="tests/:testId/questions" element={<AdminQuestionsPage />} />
               <Route path="tests/:testId/builder" element={<TestBuilder />} />
+              <Route path="results" element={<AdminResultsPage />} />
               <Route path="notes" element={<AdminNotesPage />} />
               <Route path="videos" element={<AdminVideosPage />} />
               <Route path="password-resets" element={<AdminPasswordResetPage />} />
