@@ -53,7 +53,7 @@ interface SubmitResult {
 }
 
 const LOCAL_STORAGE_KEY = 'test-attempt-';
-const MAX_SUBMIT_WAIT_MS = 15000; // 15 seconds max wait
+const MAX_SUBMIT_WAIT_MS = 8000; // 8 seconds max wait before showing slow connection warning
 
 export default function TestAttemptPage() {
   const { testId } = useParams<{ testId: string }>();
@@ -139,12 +139,12 @@ export default function TestAttemptPage() {
     setSubmitState('submitting');
     setShowSubmitDialog(false);
 
-    // STEP 4: Set timeout for slow connection warning (after 10s)
+    // STEP 4: Set timeout for slow connection warning (after 8s)
     submitTimeoutRef.current = setTimeout(() => {
       if (submitState === 'submitting') {
         setSubmitState('slow');
       }
-    }, 10000);
+    }, MAX_SUBMIT_WAIT_MS);
 
     const { mcqScore, totalMarks, hasDescriptive, percentage } = calculateScore();
 
@@ -182,13 +182,20 @@ export default function TestAttemptPage() {
         return true;
       }
 
-      // STEP 6: Single atomic update
-      const { error: updateError } = await supabase
-        .from('test_attempts')
-        .update(updateData)
-        .eq('id', attemptId);
+      // STEP 6: Call atomic backend submit RPC (handles locking + atomic save)
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('submit_test_attempt', {
+        p_attempt_id: attemptId,
+        p_answers: JSON.parse(JSON.stringify(answers)),
+        p_mcq_score: mcqScore,
+        p_score: hasDescriptive ? null : Math.round((mcqScore / totalMarks) * 100),
+        p_has_descriptive: hasDescriptive,
+      });
 
-      if (updateError) throw updateError;
+      if (rpcError) throw rpcError;
+      const result = rpcResult as { status: string; attemptId?: string; resultStatus?: string; message?: string };
+      if (!result || result.status !== 'success') {
+        throw new Error(result?.message || 'Submit failed');
+      }
 
       // STEP 7: SUCCESS - Clear everything and show results
       clearTimeout(submitTimeoutRef.current!);
@@ -213,24 +220,30 @@ export default function TestAttemptPage() {
       console.error('Submit error:', error);
       clearTimeout(submitTimeoutRef.current!);
       
-      // SINGLE controlled retry after failure
+      // SINGLE controlled retry (max once) before failing
       try {
         // Wait briefly and try ONE more time
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        const { error: retryError } = await supabase
-          .from('test_attempts')
-          .update(updateData)
-          .eq('id', attemptId);
+        const { data: retryResult, error: retryError } = await supabase.rpc('submit_test_attempt', {
+          p_attempt_id: attemptId,
+          p_answers: JSON.parse(JSON.stringify(answers)),
+          p_mcq_score: mcqScore,
+          p_score: hasDescriptive ? null : Math.round((mcqScore / totalMarks) * 100),
+          p_has_descriptive: hasDescriptive,
+        });
 
         if (!retryError) {
-          // Retry succeeded
-          localStorage.removeItem(LOCAL_STORAGE_KEY + testId);
-          setSubmitResult({ mcqScore, totalMarks, hasDescriptive, percentage });
-          setIsCompleted(true);
-          setSubmitState('success');
-          submitLockRef.current = false;
-          return true;
+          const retryRes = retryResult as { status: string };
+          if (retryRes?.status === 'success') {
+            // Retry succeeded
+            localStorage.removeItem(LOCAL_STORAGE_KEY + testId);
+            setSubmitResult({ mcqScore, totalMarks, hasDescriptive, percentage });
+            setIsCompleted(true);
+            setSubmitState('success');
+            submitLockRef.current = false;
+            return true;
+          }
         }
       } catch (retryErr) {
         console.error('Retry also failed:', retryErr);
