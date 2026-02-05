@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
-import { Users, FileText, Play, ClipboardList, LogOut, Home, KeyRound } from 'lucide-react';
+import { Users, FileText, Play, ClipboardList, LogOut, Home, KeyRound, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { Logo, LogoIcon } from '@/components/Logo';
@@ -8,6 +8,7 @@ const sidebarItems = [
   { name: 'Dashboard', path: '/admin', icon: Home },
   { name: 'Students', path: '/admin/students', icon: Users },
   { name: 'Tests', path: '/admin/tests', icon: ClipboardList },
+  { name: 'Results', path: '/admin/results', icon: BarChart3 },
   { name: 'Notes', path: '/admin/notes', icon: FileText },
   { name: 'Videos', path: '/admin/videos', icon: Play },
   { name: 'Password Resets', path: '/admin/password-resets', icon: KeyRound },

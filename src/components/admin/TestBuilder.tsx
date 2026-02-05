@@ -45,12 +45,14 @@ import {
   FileText,
   AlignLeft,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth';
 import { ClassSelect } from '@/components/ClassSelect';
 import { SubjectSelect } from '@/components/SubjectSelect';
+import { BulkQuestionParser } from '@/components/admin/BulkQuestionParser';
 
 type QuestionType = 'mcq_single' | 'mcq_multiple' | 'true_false' | 'short_answer' | 'long_answer';
 
@@ -116,6 +118,16 @@ export default function TestBuilder() {
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [showBulkParser, setShowBulkParser] = useState(false);
+
+  const handleBulkQuestionsAdd = (parsedQuestions: Question[]) => {
+    const questionsWithIds = parsedQuestions.map((q, i) => ({
+      ...q,
+      id: `temp-${Date.now()}-${i}`,
+      isNew: true,
+    }));
+    setQuestions([...questions, ...questionsWithIds]);
+  };
 
   useEffect(() => {
     if (!isNew && testId) {
@@ -532,12 +544,22 @@ export default function TestBuilder() {
 
       {/* Questions Section */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-lg font-semibold text-foreground">Questions</h2>
-          <Button onClick={addQuestion} disabled={!canAddQuestions}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Question
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowBulkParser(true)} 
+              disabled={!canAddQuestions}
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Bulk Add
+            </Button>
+            <Button onClick={addQuestion} disabled={!canAddQuestions}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Question
+            </Button>
+          </div>
         </div>
 
         {!canAddQuestions && (
@@ -554,10 +576,16 @@ export default function TestBuilder() {
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">No Questions Yet</h3>
             <p className="text-muted-foreground mb-4">Start building your test by adding questions.</p>
-            <Button onClick={addQuestion}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add First Question
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button variant="outline" onClick={() => setShowBulkParser(true)}>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Paste from ChatGPT / Word
+              </Button>
+              <Button onClick={addQuestion}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Question Manually
+              </Button>
+            </div>
           </div>
         )}
 
@@ -602,6 +630,13 @@ export default function TestBuilder() {
           onClose={() => setShowPreview(false)}
         />
       )}
+
+      {/* Bulk Question Parser */}
+      <BulkQuestionParser
+        open={showBulkParser}
+        onOpenChange={setShowBulkParser}
+        onQuestionsAdd={handleBulkQuestionsAdd}
+      />
     </div>
   );
 }

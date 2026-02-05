@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,9 +6,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send, Shield, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import { useAntiCheat } from '@/hooks/useAntiCheat';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +45,8 @@ interface Answer {
   text?: string;
 }
 
+const LOCAL_STORAGE_KEY = 'test-attempt-';
+
 export default function TestAttemptPage() {
   const { testId } = useParams<{ testId: string }>();
   const navigate = useNavigate();
@@ -63,6 +66,133 @@ export default function TestAttemptPage() {
   const [score, setScore] = useState<number | null>(null);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showNavigator, setShowNavigator] = useState(false);
+  const [violationCount, setViolationCount] = useState(0);
+  const [hasDescriptiveQuestions, setHasDescriptiveQuestions] = useState(false);
+  
+  const submitInProgressRef = useRef(false);
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
+
+  // Reliable submit function with retry logic
+  const submitTest = useCallback(async (forceSubmit = false) => {
+    if (!attemptId || submitInProgressRef.current) return;
+    
+    submitInProgressRef.current = true;
+    setIsSubmitting(true);
+
+    // Calculate MCQ score
+    let mcqScore = 0;
+    let mcqTotal = 0;
+    let hasDescriptive = false;
+
+    questions.forEach((q) => {
+      const answer = answers[q.id];
+      
+      if (['mcq_single', 'mcq_multiple', 'true_false'].includes(q.question_type)) {
+        mcqTotal += q.marks;
+        const selected = answer?.selected || [];
+        const correct = q.correct_answers;
+        
+        if (q.question_type === 'mcq_multiple') {
+          // For multiple correct, all must match
+          if (selected.length === correct.length && 
+              selected.every(s => correct.includes(s)) &&
+              correct.every(c => selected.includes(c))) {
+            mcqScore += q.marks;
+          }
+        } else {
+          // For single correct
+          if (selected.length === 1 && correct.includes(selected[0])) {
+            mcqScore += q.marks;
+          }
+        }
+      } else {
+        hasDescriptive = true;
+      }
+    });
+
+    const totalMarks = test?.total_marks || 0;
+    const calculatedScore = totalMarks > 0 ? Math.round((mcqScore / totalMarks) * 100) : 0;
+
+    const updateData = {
+      answers: JSON.parse(JSON.stringify(answers)),
+      score: hasDescriptive ? null : calculatedScore,
+      mcq_score: mcqScore,
+      submitted_at: new Date().toISOString(),
+      evaluation_status: hasDescriptive ? 'pending' : 'completed',
+    };
+
+    try {
+      const { error } = await supabase
+        .from('test_attempts')
+        .update(updateData)
+        .eq('id', attemptId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Clear local storage
+      localStorage.removeItem(LOCAL_STORAGE_KEY + testId);
+      
+      setScore(calculatedScore);
+      setIsCompleted(true);
+      submitInProgressRef.current = false;
+      setIsSubmitting(false);
+      retryCountRef.current = 0;
+
+      toast({
+        title: 'Test Submitted!',
+        description: hasDescriptive 
+          ? 'MCQ answers evaluated. Descriptive answers pending review.' 
+          : `You scored ${mcqScore}/${totalMarks} marks`,
+      });
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      retryCountRef.current += 1;
+
+      if (retryCountRef.current < maxRetries) {
+        toast({
+          title: 'Retrying...',
+          description: `Network issue. Retrying (${retryCountRef.current}/${maxRetries})...`,
+          variant: 'destructive',
+        });
+        
+        // Wait and retry
+        setTimeout(() => {
+          submitInProgressRef.current = false;
+          submitTest(forceSubmit);
+        }, 2000);
+      } else {
+        toast({
+          title: 'Submission Failed',
+          description: 'Please check your internet and try again. Your answers are saved locally.',
+          variant: 'destructive',
+        });
+        submitInProgressRef.current = false;
+        setIsSubmitting(false);
+        retryCountRef.current = 0;
+      }
+    }
+  }, [attemptId, answers, questions, test, toast, testId]);
+
+  // Anti-cheat hook
+  const { violations } = useAntiCheat({
+    isActive: !!attemptId && !isCompleted && !isLoading,
+    onViolation: (type) => {
+      setViolationCount(prev => prev + 1);
+      console.log('Violation:', type);
+    },
+    onForceSubmit: () => {
+      toast({
+        title: 'Test Auto-Submitted',
+        description: 'Due to multiple violations, your test has been automatically submitted.',
+        variant: 'destructive',
+      });
+      submitTest(true);
+    },
+    warningThreshold: 3,
+  });
 
   useEffect(() => {
     if (testId) {
@@ -91,14 +221,21 @@ export default function TestAttemptPage() {
       .eq('test_id', testId);
 
     if (questionsData) {
-      setQuestions(questionsData.map(q => ({
+      const parsedQuestions = questionsData.map(q => ({
         id: q.id,
         question_text: q.question_text,
         question_type: (q.question_type as QuestionType) || 'mcq_single',
         options: (q.options as string[]) || [],
         correct_answers: (q.correct_answers as number[]) || [],
         marks: q.marks || 1,
-      })));
+      }));
+      setQuestions(parsedQuestions);
+      
+      // Check for descriptive questions
+      const hasDesc = parsedQuestions.some(q => 
+        ['short_answer', 'long_answer'].includes(q.question_type)
+      );
+      setHasDescriptiveQuestions(hasDesc);
     }
 
     // Check for existing attempt
@@ -115,11 +252,34 @@ export default function TestAttemptPage() {
         setScore(existingAttempt.score);
       } else {
         setAttemptId(existingAttempt.id);
-        setAnswers((existingAttempt.answers as Record<string, Answer>) || {});
+        
+        // Try to restore from local storage first (more recent)
+        const localData = localStorage.getItem(LOCAL_STORAGE_KEY + testId);
+        if (localData) {
+          try {
+            const parsed = JSON.parse(localData);
+            if (parsed.answers) {
+              setAnswers(parsed.answers);
+            }
+          } catch (e) {
+            // Fall back to DB answers
+            setAnswers((existingAttempt.answers as Record<string, Answer>) || {});
+          }
+        } else {
+          setAnswers((existingAttempt.answers as Record<string, Answer>) || {});
+        }
+        
         const startTime = new Date(existingAttempt.started_at).getTime();
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         const remaining = testData.duration_minutes * 60 - elapsed;
-        setTimeLeft(Math.max(0, remaining));
+        
+        if (remaining <= 0) {
+          // Time already expired, auto-submit
+          setTimeLeft(0);
+          submitTest(true);
+        } else {
+          setTimeLeft(remaining);
+        }
       }
     }
 
@@ -134,13 +294,17 @@ export default function TestAttemptPage() {
       .insert([{
         user_id: user.id,
         test_id: testId,
-        answers: JSON.parse('{}'),
+        answers: {},
       }])
       .select()
       .single();
 
     if (data) {
       setAttemptId(data.id);
+      toast({
+        title: 'Test Started',
+        description: 'Good luck! Your timer has started.',
+      });
     } else if (error) {
       toast({
         title: 'Error',
@@ -151,75 +315,6 @@ export default function TestAttemptPage() {
     }
   };
 
-  const submitTest = useCallback(async () => {
-    if (!attemptId || isSubmitting) return;
-    
-    setIsSubmitting(true);
-
-    // Calculate MCQ score
-    let mcqScore = 0;
-    let mcqTotal = 0;
-    let hasDescriptive = false;
-
-    questions.forEach((q) => {
-      const answer = answers[q.id];
-      
-      if (['mcq_single', 'mcq_multiple', 'true_false'].includes(q.question_type)) {
-        mcqTotal += q.marks;
-        const selected = answer?.selected || [];
-        const correct = q.correct_answers;
-        
-        if (q.question_type === 'mcq_multiple') {
-          // For multiple correct, all must match
-          if (selected.length === correct.length && selected.every(s => correct.includes(s))) {
-            mcqScore += q.marks;
-          }
-        } else {
-          // For single correct
-          if (selected.length === 1 && selected[0] === correct[0]) {
-            mcqScore += q.marks;
-          }
-        }
-      } else {
-        hasDescriptive = true;
-      }
-    });
-
-    const calculatedScore = mcqTotal > 0 ? Math.round((mcqScore / mcqTotal) * 100) : 0;
-
-    const { error } = await supabase
-      .from('test_attempts')
-      .update({
-        answers: JSON.parse(JSON.stringify(answers)),
-        score: calculatedScore,
-        mcq_score: mcqScore,
-        submitted_at: new Date().toISOString(),
-        evaluation_status: hasDescriptive ? 'pending' : 'completed',
-      })
-      .eq('id', attemptId);
-
-    if (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to submit test.',
-        variant: 'destructive',
-      });
-      setIsSubmitting(false);
-      return;
-    }
-
-    setScore(calculatedScore);
-    setIsCompleted(true);
-    setIsSubmitting(false);
-
-    toast({
-      title: 'Test Submitted!',
-      description: hasDescriptive 
-        ? 'MCQ answers evaluated. Descriptive answers pending review.' 
-        : `You scored ${calculatedScore}%`,
-    });
-  }, [attemptId, answers, questions, isSubmitting, toast]);
-
   // Timer
   useEffect(() => {
     if (!attemptId || isCompleted || timeLeft <= 0) return;
@@ -227,7 +322,13 @@ export default function TestAttemptPage() {
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          submitTest();
+          // Time's up - auto submit
+          toast({
+            title: "Time's Up!",
+            description: 'Auto-submitting your test...',
+            variant: 'destructive',
+          });
+          submitTest(true);
           return 0;
         }
         return prev - 1;
@@ -235,20 +336,35 @@ export default function TestAttemptPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [attemptId, isCompleted, timeLeft, submitTest]);
+  }, [attemptId, isCompleted, timeLeft, submitTest, toast]);
 
-  // Auto-save answers
+  // Auto-save to local storage (more frequent)
   useEffect(() => {
     if (!attemptId || isCompleted) return;
 
-    const saveTimer = setTimeout(async () => {
-      await supabase
-        .from('test_attempts')
-        .update({ answers: JSON.parse(JSON.stringify(answers)) })
-        .eq('id', attemptId);
-    }, 2000);
+    const saveData = {
+      answers,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY + testId, JSON.stringify(saveData));
+  }, [answers, attemptId, isCompleted, testId]);
 
-    return () => clearTimeout(saveTimer);
+  // Periodic save to database (less frequent)
+  useEffect(() => {
+    if (!attemptId || isCompleted) return;
+
+    const saveTimer = setInterval(async () => {
+      try {
+        await supabase
+          .from('test_attempts')
+          .update({ answers: JSON.parse(JSON.stringify(answers)) })
+          .eq('id', attemptId);
+      } catch (e) {
+        console.error('Auto-save failed:', e);
+      }
+    }, 10000); // Every 10 seconds
+
+    return () => clearInterval(saveTimer);
   }, [answers, attemptId, isCompleted]);
 
   const formatTime = (seconds: number) => {
@@ -287,7 +403,7 @@ export default function TestAttemptPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-pulse text-muted-foreground">Loading test...</div>
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -305,10 +421,21 @@ export default function TestAttemptPage() {
           <p className="text-muted-foreground mb-6">
             You have completed "{test?.title}"
           </p>
-          <div className="text-5xl font-display font-bold text-primary mb-2">
-            {score}%
-          </div>
-          <p className="text-sm text-muted-foreground mb-6">MCQ Score</p>
+          {hasDescriptiveQuestions ? (
+            <div className="bg-accent/50 rounded-lg p-4 mb-6">
+              <p className="text-sm text-muted-foreground">
+                Your test contains descriptive answers that require manual evaluation.
+                Your final result will be available once reviewed by the admin.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="text-5xl font-display font-bold text-primary mb-2">
+                {score}%
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">Your Score</p>
+            </>
+          )}
           <Button onClick={() => navigate('/dashboard/tests')}>
             Back to Tests
           </Button>
@@ -341,15 +468,24 @@ export default function TestAttemptPage() {
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
               <div className="text-sm">
-                <p className="font-medium text-foreground mb-2">Instructions:</p>
+                <p className="font-medium text-foreground mb-2">Important Instructions:</p>
                 <ul className="text-muted-foreground space-y-1">
                   <li>• You can only attempt this test once</li>
                   <li>• Timer starts when you click "Start Test"</li>
                   <li>• Test auto-submits when time runs out</li>
                   <li>• Your answers are saved automatically</li>
+                  <li className="text-destructive font-medium">• Do NOT switch tabs or leave the page</li>
+                  <li className="text-destructive font-medium">• Violations will reset your test</li>
                 </ul>
               </div>
             </div>
+          </div>
+
+          <div className="bg-primary/5 rounded-xl p-4 mb-6 flex items-center gap-3">
+            <Shield className="w-6 h-6 text-primary" />
+            <p className="text-sm text-muted-foreground text-left">
+              This test has anti-cheating protection. Stay on this page throughout the test.
+            </p>
           </div>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -380,8 +516,17 @@ export default function TestAttemptPage() {
               Q {currentIndex + 1} of {questions.length}
             </p>
           </div>
+          
+          {violationCount > 0 && (
+            <div className="text-xs text-destructive bg-destructive/10 px-2 py-1 rounded-full mr-2">
+              ⚠️ {3 - violationCount} warnings left
+            </div>
+          )}
+          
           <div className={`flex items-center gap-2 px-4 py-2 rounded-full font-mono font-semibold ${
-            timeLeft < 60 ? 'bg-destructive/10 text-destructive animate-pulse' : 'bg-accent text-accent-foreground'
+            timeLeft < 60 ? 'bg-destructive/10 text-destructive animate-pulse' : 
+            timeLeft < 300 ? 'bg-warning/10 text-warning' : 
+            'bg-accent text-accent-foreground'
           }`}>
             <Clock className="w-4 h-4" />
             {formatTime(timeLeft)}
@@ -529,8 +674,12 @@ export default function TestAttemptPage() {
             disabled={isSubmitting}
             className="flex-1 sm:flex-none"
           >
-            <Send className="w-4 h-4 mr-2" />
-            Submit
+            {isSubmitting ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4 mr-2" />
+            )}
+            {isSubmitting ? 'Submitting...' : 'Submit'}
           </Button>
         ) : (
           <Button
@@ -621,9 +770,16 @@ export default function TestAttemptPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Review Answers</AlertDialogCancel>
-            <AlertDialogAction onClick={submitTest} disabled={isSubmitting}>
-              {isSubmitting ? 'Submitting...' : 'Submit Test'}
+            <AlertDialogCancel disabled={isSubmitting}>Review Answers</AlertDialogCancel>
+            <AlertDialogAction onClick={() => submitTest()} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                'Submit Test'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
