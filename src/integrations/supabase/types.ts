@@ -400,6 +400,16 @@ export type Database = {
         Args: { check_user_id?: string }
         Returns: boolean
       }
+      submit_test_attempt: {
+        Args: {
+          p_answers: Json
+          p_attempt_id: string
+          p_has_descriptive: boolean
+          p_mcq_score: number
+          p_score: number
+        }
+        Returns: Json
+      }
       user_has_liked_video: {
         Args: { check_user_id?: string; video_uuid: string }
         Returns: boolean
