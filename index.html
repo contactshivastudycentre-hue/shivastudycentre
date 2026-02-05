@@ -2,17 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Shiva Study Center - Excellence in Education</title>
     <meta name="description" content="Shiva Study Center - Online coaching platform for students. Access video lectures, study notes, and practice tests.">
     <meta name="author" content="KAIRAUX" />
     
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#6366f1" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="msapplication-TileColor" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="SSC" />
+    <link rel="apple-touch-icon" href="/pwa-icon-192.svg" />
     
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
@@ -27,23 +29,105 @@
     <meta name="twitter:description" content="Excellence in Education - Online coaching platform">
     <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/5E7hVo5s0Yd40fF4fpLCGOVSVeh1/social-images/social-1770210221811-WhatsApp Image 2026-02-04 at 6.12.40 PM.jpeg">
     
-    <link rel="icon" type="image/png" href="https://storage.googleapis.com/gpt-engineer-file-uploads/5E7hVo5s0Yd40fF4fpLCGOVSVeh1/uploads/1770210217398-kairaux-new logo.png">
+    <link rel="icon" type="image/svg+xml" href="/pwa-icon-192.svg">
+    
+    <!-- Splash Screen Styles -->
+    <style>
+      #pwa-splash {
+        position: fixed;
+        inset: 0;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.3s ease-out;
+      }
+      #pwa-splash.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #pwa-splash svg {
+        width: 120px;
+        height: 120px;
+        animation: pulse 2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.9; }
+      }
+    </style>
   </head>
 
   <body>
+    <!-- PWA Splash Screen -->
+    <div id="pwa-splash">
+      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="splashGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#3b82f6" />
+            <stop offset="50%" stop-color="#6366f1" />
+            <stop offset="100%" stop-color="#8b5cf6" />
+          </linearGradient>
+        </defs>
+        <circle cx="40" cy="40" r="35" fill="url(#splashGradient)" />
+        <circle cx="40" cy="40" r="30" stroke="white" stroke-width="1.5" stroke-opacity="0.3" fill="none" />
+        <g transform="translate(20, 22)">
+          <path d="M20 6 L20 34 C20 34 12 32 4 34 L4 8 C12 6 20 6 20 6Z" fill="white" fill-opacity="0.95" />
+          <path d="M20 6 L20 34 C20 34 28 32 36 34 L36 8 C28 6 20 6 20 6Z" fill="white" fill-opacity="0.85" />
+          <path d="M20 4 L20 36" stroke="white" stroke-width="2" stroke-opacity="0.6" />
+        </g>
+        <text x="40" y="72" text-anchor="middle" fill="white" font-weight="bold" font-size="10" font-family="system-ui, sans-serif" letter-spacing="2">SSC</text>
+      </svg>
+    </div>
+    
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Register service worker for PWA
+      // Hide splash screen when app loads
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const splash = document.getElementById('pwa-splash');
+          if (splash) {
+            splash.classList.add('fade-out');
+            setTimeout(() => splash.remove(), 300);
+          }
+        }, 500);
+      });
+      
+      // Register service worker for PWA with auto-update
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
             .then(registration => {
               console.log('SW registered:', registration.scope);
+              
+              // Check for updates periodically
+              setInterval(() => {
+                registration.update();
+              }, 60000); // Check every minute
+              
+              // Listen for new service worker
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                if (newWorker) {
+                  newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                      // New version available - dispatch event for toast
+                      window.dispatchEvent(new CustomEvent('pwa-update-available'));
+                    }
+                  });
+                }
+              });
             })
             .catch(error => {
               console.log('SW registration failed:', error);
             });
+            
+          // Handle controller change (new SW activated)
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            // Optionally reload on update
+          });
         });
       }
     </script>

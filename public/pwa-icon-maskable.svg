@@ -1,0 +1,36 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoGradientMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Full Background for Maskable -->
+  <rect width="512" height="512" fill="url(#logoGradientMask)" />
+  
+  <!-- Inner Ring -->
+  <circle cx="256" cy="256" r="160" stroke="white" stroke-width="3" stroke-opacity="0.2" fill="none" />
+  
+  <!-- Book Symbol - Open Book (Centered for safe zone) -->
+  <g transform="translate(156, 156)">
+    <!-- Left Page -->
+    <path d="M100 30 L100 170 C100 170 60 160 20 170 L20 40 C60 30 100 30 100 30Z" fill="white" fill-opacity="0.95" />
+    <!-- Right Page -->
+    <path d="M100 30 L100 170 C100 170 140 160 180 170 L180 40 C140 30 100 30 100 30Z" fill="white" fill-opacity="0.85" />
+    <!-- Spine -->
+    <path d="M100 20 L100 180" stroke="white" stroke-width="5" stroke-opacity="0.6" />
+    <!-- Page Lines Left -->
+    <path d="M40 70 L85 65" stroke="#3b82f6" stroke-width="4" stroke-opacity="0.4" stroke-linecap="round" />
+    <path d="M40 95 L85 90" stroke="#3b82f6" stroke-width="4" stroke-opacity="0.4" stroke-linecap="round" />
+    <path d="M40 120 L85 115" stroke="#3b82f6" stroke-width="4" stroke-opacity="0.4" stroke-linecap="round" />
+    <!-- Page Lines Right -->
+    <path d="M115 65 L160 70" stroke="#3b82f6" stroke-width="4" stroke-opacity="0.4" stroke-linecap="round" />
+    <path d="M115 90 L160 95" stroke="#3b82f6" stroke-width="4" stroke-opacity="0.4" stroke-linecap="round" />
+    <path d="M115 115 L160 120" stroke="#3b82f6" stroke-width="4" stroke-opacity="0.4" stroke-linecap="round" />
+  </g>
+  
+  <!-- SSC Text -->
+  <text x="256" y="420" text-anchor="middle" fill="white" font-weight="bold" font-size="48" font-family="system-ui, sans-serif" letter-spacing="8">SSC</text>
+</svg>

@@ -1,0 +1,36 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoGradient512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main Circle -->
+  <circle cx="256" cy="256" r="224" fill="url(#logoGradient512)" />
+  
+  <!-- Inner Ring -->
+  <circle cx="256" cy="256" r="192" stroke="white" stroke-width="4" stroke-opacity="0.3" fill="none" />
+  
+  <!-- Book Symbol - Open Book -->
+  <g transform="translate(128, 140)">
+    <!-- Left Page -->
+    <path d="M128 38 L128 218 C128 218 77 205 26 218 L26 51 C77 38 128 38 128 38Z" fill="white" fill-opacity="0.95" />
+    <!-- Right Page -->
+    <path d="M128 38 L128 218 C128 218 179 205 230 218 L230 51 C179 38 128 38 128 38Z" fill="white" fill-opacity="0.85" />
+    <!-- Spine -->
+    <path d="M128 26 L128 230" stroke="white" stroke-width="6" stroke-opacity="0.6" />
+    <!-- Page Lines Left -->
+    <path d="M51 90 L110 83" stroke="#3b82f6" stroke-width="5" stroke-opacity="0.4" stroke-linecap="round" />
+    <path d="M51 122 L110 115" stroke="#3b82f6" stroke-width="5" stroke-opacity="0.4" stroke-linecap="round" />
+    <path d="M51 154 L110 147" stroke="#3b82f6" stroke-width="5" stroke-opacity="0.4" stroke-linecap="round" />
+    <!-- Page Lines Right -->
+    <path d="M146 83 L205 90" stroke="#3b82f6" stroke-width="5" stroke-opacity="0.4" stroke-linecap="round" />
+    <path d="M146 115 L205 122" stroke="#3b82f6" stroke-width="5" stroke-opacity="0.4" stroke-linecap="round" />
+    <path d="M146 147 L205 154" stroke="#3b82f6" stroke-width="5" stroke-opacity="0.4" stroke-linecap="round" />
+  </g>
+  
+  <!-- SSC Text -->
+  <text x="256" y="460" text-anchor="middle" fill="white" font-weight="bold" font-size="64" font-family="system-ui, sans-serif" letter-spacing="10">SSC</text>
+</svg>
