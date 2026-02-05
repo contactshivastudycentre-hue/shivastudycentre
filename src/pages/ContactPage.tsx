@@ -12,7 +12,7 @@ const contactInfo = [
   {
     icon: Phone,
     title: 'Phone',
-    value: '+91 98765 43210',
+    value: '+91 95348 95725',
     description: 'Mon-Sat, 9am-6pm',
   },
   {
