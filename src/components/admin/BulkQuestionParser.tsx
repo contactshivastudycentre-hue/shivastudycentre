@@ -57,6 +57,22 @@ const questionTypeLabels: Record<QuestionType, string> = {
   long_answer: 'Long Answer',
 };
 
+// Default marks by question type
+const getDefaultMarks = (type: QuestionType): number => {
+  switch (type) {
+    case 'mcq_single':
+    case 'mcq_multiple':
+    case 'true_false':
+      return 1;
+    case 'short_answer':
+      return 3;
+    case 'long_answer':
+      return 5;
+    default:
+      return 1;
+  }
+};
+
 export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQuestionParserProps) {
   const { toast } = useToast();
   const [rawText, setRawText] = useState('');
@@ -217,7 +233,7 @@ export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQ
       question_type: questionType,
       options,
       correct_answers: correctAnswers,
-      marks: 1,
+      marks: getDefaultMarks(questionType),
     };
   };
 
@@ -253,6 +269,7 @@ export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQ
     if (!question) return;
 
     let options = question.options;
+    const newMarks = getDefaultMarks(type);
     
     if (type === 'true_false') {
       options = ['True', 'False'];
@@ -262,7 +279,7 @@ export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQ
       options = ['', '', '', ''];
     }
     
-    updateQuestion(id, { question_type: type, options, correct_answers: [] });
+    updateQuestion(id, { question_type: type, options, correct_answers: [], marks: newMarks });
   };
 
   const toggleCorrectAnswer = (questionId: string, optionIndex: number, isMultiple: boolean) => {
