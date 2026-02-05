@@ -1,7 +1,9 @@
-const CACHE_NAME = 'ssc-cache-v1';
+const CACHE_NAME = 'ssc-cache-v2';
 const STATIC_ASSETS = [
   '/',
-  '/manifest.json'
+  '/manifest.json',
+  '/pwa-icon-192.svg',
+  '/pwa-icon-512.svg'
 ];
 
 // Install event - cache static assets
@@ -15,13 +17,13 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and take control immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== CACHE_NAME)
+          .filter((name) => name.startsWith('ssc-cache-') && name !== CACHE_NAME)
           .map((name) => caches.delete(name))
       );
     }).then(() => self.clients.claim())
@@ -67,4 +69,11 @@ self.addEventListener('fetch', (event) => {
         });
       })
   );
+});
+
+// Listen for skip waiting message
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });

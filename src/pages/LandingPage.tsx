@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ClipboardList, FileText, Play, Users, ArrowRight, Sparkles, GraduationCap, Target, Award, Zap, Shield, UserCircle, ExternalLink } from 'lucide-react';
+import { ClipboardList, FileText, Play, Users, ArrowRight, Sparkles, GraduationCap, Target, Award, Zap, Shield, UserCircle, ExternalLink, Download } from 'lucide-react';
 import swaritImage from '@/assets/swarit-roy.jpg';
-import { PWAInstallButton } from '@/components/PWAInstallButton';
+import { PWAInstallButton, LandingInstallButton } from '@/components/PWAInstallButton';
 
 const fadeInUp = {
   initial: {
@@ -183,6 +183,18 @@ export default function LandingPage() {
                   Admin Login
                 </Button>
               </Link>
+            </motion.div>
+
+            {/* Download App Button - Mobile Only */}
+            <motion.div initial={{
+              opacity: 0
+            }} animate={{
+              opacity: 1
+            }} transition={{
+              duration: 0.8,
+              delay: 0.7
+            }} className="flex justify-center mb-6">
+              <LandingInstallButton />
             </motion.div>
 
             <motion.div initial={{
