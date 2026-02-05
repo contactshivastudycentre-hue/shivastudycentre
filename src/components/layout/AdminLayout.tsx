@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
-import { Users, FileText, Play, ClipboardList, LogOut, Home, KeyRound, BarChart3 } from 'lucide-react';
+import { Users, FileText, Play, ClipboardList, LogOut, Home, KeyRound, BarChart3, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { Logo, LogoIcon } from '@/components/Logo';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 const sidebarItems = [
   { name: 'Dashboard', path: '/admin', icon: Home },
@@ -12,6 +14,11 @@ const sidebarItems = [
   { name: 'Notes', path: '/admin/notes', icon: FileText },
   { name: 'Videos', path: '/admin/videos', icon: Play },
   { name: 'Password Resets', path: '/admin/password-resets', icon: KeyRound },
+];
+
+const contentItems = [
+  { name: 'Notes', path: '/admin/notes', icon: FileText, description: 'Manage study materials' },
+  { name: 'Videos', path: '/admin/videos', icon: Play, description: 'Manage video lectures' },
 ];
 
 export function AdminLayout() {
@@ -114,18 +121,52 @@ export function AdminLayout() {
       {/* Mobile Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40 safe-bottom">
         <div className="flex items-center justify-around py-2">
-          {sidebarItems.slice(0, 5).map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex flex-col items-center justify-center gap-1 p-2 ${
-                isActive(item.path) ? 'text-primary' : 'text-muted-foreground'
-              }`}
-            >
-              <item.icon className="w-5 h-5" />
-              <span className="text-xs font-medium">{item.name}</span>
-            </Link>
-          ))}
+          {/* Dashboard */}
+          <Link
+            to="/admin"
+            className={`flex flex-col items-center justify-center gap-1 p-2 ${
+              isActive('/admin') ? 'text-primary' : 'text-muted-foreground'
+            }`}
+          >
+            <Home className="w-5 h-5" />
+            <span className="text-xs font-medium">Home</span>
+          </Link>
+
+          {/* Students */}
+          <Link
+            to="/admin/students"
+            className={`flex flex-col items-center justify-center gap-1 p-2 ${
+              isActive('/admin/students') ? 'text-primary' : 'text-muted-foreground'
+            }`}
+          >
+            <Users className="w-5 h-5" />
+            <span className="text-xs font-medium">Students</span>
+          </Link>
+
+          {/* Tests */}
+          <Link
+            to="/admin/tests"
+            className={`flex flex-col items-center justify-center gap-1 p-2 ${
+              isActive('/admin/tests') ? 'text-primary' : 'text-muted-foreground'
+            }`}
+          >
+            <ClipboardList className="w-5 h-5" />
+            <span className="text-xs font-medium">Tests</span>
+          </Link>
+
+          {/* Content (Notes + Videos) */}
+          <ContentSheet isActive={isActive} />
+
+          {/* Results */}
+          <Link
+            to="/admin/results"
+            className={`flex flex-col items-center justify-center gap-1 p-2 ${
+              isActive('/admin/results') ? 'text-primary' : 'text-muted-foreground'
+            }`}
+          >
+            <BarChart3 className="w-5 h-5" />
+            <span className="text-xs font-medium">Results</span>
+          </Link>
         </div>
       </nav>
 
@@ -136,5 +177,55 @@ export function AdminLayout() {
         </div>
       </main>
     </div>
+  );
+}
+
+// Content Sheet Component for Mobile Nav
+function ContentSheet({ isActive }: { isActive: (path: string) => boolean }) {
+  const [open, setOpen] = useState(false);
+  const isContentActive = contentItems.some(item => isActive(item.path));
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <button
+          className={`flex flex-col items-center justify-center gap-1 p-2 ${
+            isContentActive ? 'text-primary' : 'text-muted-foreground'
+          }`}
+        >
+          <BookOpen className="w-5 h-5" />
+          <span className="text-xs font-medium">Content</span>
+        </button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="rounded-t-3xl pb-8">
+        <SheetHeader className="pb-4">
+          <SheetTitle className="text-lg font-display">Manage Content</SheetTitle>
+        </SheetHeader>
+        <div className="grid grid-cols-2 gap-4">
+          {contentItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              onClick={() => setOpen(false)}
+              className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all ${
+                isActive(item.path)
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-card hover:border-primary/50 hover:bg-accent'
+              }`}
+            >
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
+                isActive(item.path) ? 'bg-primary text-primary-foreground' : 'bg-muted'
+              }`}>
+                <item.icon className="w-7 h-7" />
+              </div>
+              <div className="text-center">
+                <p className="font-semibold">{item.name}</p>
+                <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
