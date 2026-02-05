@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send, Shield, Loader2 } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send, Shield, Loader2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAntiCheat } from '@/hooks/useAntiCheat';
@@ -45,7 +45,16 @@ interface Answer {
   text?: string;
 }
 
+interface SubmitResult {
+  mcqScore: number;
+  totalMarks: number;
+  hasDescriptive: boolean;
+  percentage: number;
+}
+
 const LOCAL_STORAGE_KEY = 'test-attempt-';
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 2000;
 
 export default function TestAttemptPage() {
   const { testId } = useParams<{ testId: string }>();
@@ -63,24 +72,20 @@ export default function TestAttemptPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [score, setScore] = useState<number | null>(null);
+  const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showNavigator, setShowNavigator] = useState(false);
   const [violationCount, setViolationCount] = useState(0);
   const [hasDescriptiveQuestions, setHasDescriptiveQuestions] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'retrying' | 'success' | 'failed'>('idle');
+  const [retryCount, setRetryCount] = useState(0);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   
   const submitInProgressRef = useRef(false);
-  const retryCountRef = useRef(0);
-  const maxRetries = 3;
+  const submitAttemptedRef = useRef(false);
 
-  // Reliable submit function with retry logic
-  const submitTest = useCallback(async (forceSubmit = false) => {
-    if (!attemptId || submitInProgressRef.current) return;
-    
-    submitInProgressRef.current = true;
-    setIsSubmitting(true);
-
-    // Calculate MCQ score
+  // Calculate MCQ score
+  const calculateScore = useCallback(() => {
     let mcqScore = 0;
     let mcqTotal = 0;
     let hasDescriptive = false;
@@ -94,14 +99,12 @@ export default function TestAttemptPage() {
         const correct = q.correct_answers;
         
         if (q.question_type === 'mcq_multiple') {
-          // For multiple correct, all must match
           if (selected.length === correct.length && 
               selected.every(s => correct.includes(s)) &&
               correct.every(c => selected.includes(c))) {
             mcqScore += q.marks;
           }
         } else {
-          // For single correct
           if (selected.length === 1 && correct.includes(selected[0])) {
             mcqScore += q.marks;
           }
@@ -112,69 +115,103 @@ export default function TestAttemptPage() {
     });
 
     const totalMarks = test?.total_marks || 0;
-    const calculatedScore = totalMarks > 0 ? Math.round((mcqScore / totalMarks) * 100) : 0;
+    const percentage = totalMarks > 0 ? Math.round((mcqScore / totalMarks) * 100) : 0;
+
+    return { mcqScore, totalMarks, hasDescriptive, percentage };
+  }, [answers, questions, test?.total_marks]);
+
+  // Reliable submit function with retry logic
+  const submitTest = useCallback(async (isAutoSubmit = false): Promise<boolean> => {
+    // Prevent double submission
+    if (submitInProgressRef.current || alreadySubmitted) {
+      return false;
+    }
+    
+    submitInProgressRef.current = true;
+    submitAttemptedRef.current = true;
+    setIsSubmitting(true);
+    setSubmitStatus('submitting');
+    setShowSubmitDialog(false);
+
+    const { mcqScore, totalMarks, hasDescriptive, percentage } = calculateScore();
 
     const updateData = {
       answers: JSON.parse(JSON.stringify(answers)),
-      score: hasDescriptive ? null : calculatedScore,
+      score: hasDescriptive ? null : percentage,
       mcq_score: mcqScore,
       submitted_at: new Date().toISOString(),
       evaluation_status: hasDescriptive ? 'pending' : 'completed',
     };
 
-    try {
-      const { error } = await supabase
-        .from('test_attempts')
-        .update(updateData)
-        .eq('id', attemptId);
+    let currentRetry = 0;
+    
+    const attemptSubmit = async (): Promise<boolean> => {
+      try {
+        // First check if already submitted (double-check)
+        const { data: existingAttempt } = await supabase
+          .from('test_attempts')
+          .select('submitted_at')
+          .eq('id', attemptId)
+          .maybeSingle();
 
-      if (error) {
-        throw error;
-      }
-
-      // Clear local storage
-      localStorage.removeItem(LOCAL_STORAGE_KEY + testId);
-      
-      setScore(calculatedScore);
-      setIsCompleted(true);
-      submitInProgressRef.current = false;
-      setIsSubmitting(false);
-      retryCountRef.current = 0;
-
-      toast({
-        title: 'Test Submitted!',
-        description: hasDescriptive 
-          ? 'MCQ answers evaluated. Descriptive answers pending review.' 
-          : `You scored ${mcqScore}/${totalMarks} marks`,
-      });
-    } catch (error: any) {
-      console.error('Submit error:', error);
-      retryCountRef.current += 1;
-
-      if (retryCountRef.current < maxRetries) {
-        toast({
-          title: 'Retrying...',
-          description: `Network issue. Retrying (${retryCountRef.current}/${maxRetries})...`,
-          variant: 'destructive',
-        });
-        
-        // Wait and retry
-        setTimeout(() => {
+        if (existingAttempt?.submitted_at) {
+          // Already submitted
+          setAlreadySubmitted(true);
+          setIsCompleted(true);
+          setSubmitResult({ mcqScore, totalMarks, hasDescriptive, percentage });
+          setSubmitStatus('success');
+          setIsSubmitting(false);
           submitInProgressRef.current = false;
-          submitTest(forceSubmit);
-        }, 2000);
-      } else {
-        toast({
-          title: 'Submission Failed',
-          description: 'Please check your internet and try again. Your answers are saved locally.',
-          variant: 'destructive',
-        });
-        submitInProgressRef.current = false;
+          
+          toast({
+            title: 'Test Already Submitted',
+            description: 'Your test was already submitted successfully.',
+          });
+          return true;
+        }
+
+        const { error } = await supabase
+          .from('test_attempts')
+          .update(updateData)
+          .eq('id', attemptId);
+
+        if (error) {
+          throw error;
+        }
+
+        // Success!
+        localStorage.removeItem(LOCAL_STORAGE_KEY + testId);
+        
+        setSubmitResult({ mcqScore, totalMarks, hasDescriptive, percentage });
+        setIsCompleted(true);
+        setSubmitStatus('success');
         setIsSubmitting(false);
-        retryCountRef.current = 0;
+        submitInProgressRef.current = false;
+
+        return true;
+      } catch (error) {
+        console.error('Submit error:', error);
+        currentRetry++;
+        setRetryCount(currentRetry);
+
+        if (currentRetry < MAX_RETRIES) {
+          setSubmitStatus('retrying');
+          
+          // Wait and retry
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+          return attemptSubmit();
+        } else {
+          // All retries failed
+          setSubmitStatus('failed');
+          setIsSubmitting(false);
+          submitInProgressRef.current = false;
+          return false;
+        }
       }
-    }
-  }, [attemptId, answers, questions, test, toast, testId]);
+    };
+
+    return attemptSubmit();
+  }, [attemptId, answers, calculateScore, testId, toast, alreadySubmitted]);
 
   // Anti-cheat hook
   const { violations } = useAntiCheat({
@@ -201,86 +238,105 @@ export default function TestAttemptPage() {
   }, [testId]);
 
   const fetchTestData = async () => {
-    const { data: testData } = await supabase
-      .from('tests')
-      .select('id, title, duration_minutes, total_marks, description')
-      .eq('id', testId)
-      .single();
+    try {
+      const { data: testData } = await supabase
+        .from('tests')
+        .select('id, title, duration_minutes, total_marks, description')
+        .eq('id', testId)
+        .maybeSingle();
 
-    if (!testData) {
-      navigate('/dashboard/tests');
-      return;
-    }
+      if (!testData) {
+        navigate('/dashboard/tests');
+        return;
+      }
 
-    setTest(testData);
-    setTimeLeft(testData.duration_minutes * 60);
+      setTest(testData);
+      setTimeLeft(testData.duration_minutes * 60);
 
-    const { data: questionsData } = await supabase
-      .from('questions')
-      .select('*')
-      .eq('test_id', testId);
+      const { data: questionsData } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('test_id', testId);
 
-    if (questionsData) {
-      const parsedQuestions = questionsData.map(q => ({
-        id: q.id,
-        question_text: q.question_text,
-        question_type: (q.question_type as QuestionType) || 'mcq_single',
-        options: (q.options as string[]) || [],
-        correct_answers: (q.correct_answers as number[]) || [],
-        marks: q.marks || 1,
-      }));
-      setQuestions(parsedQuestions);
-      
-      // Check for descriptive questions
-      const hasDesc = parsedQuestions.some(q => 
-        ['short_answer', 'long_answer'].includes(q.question_type)
-      );
-      setHasDescriptiveQuestions(hasDesc);
-    }
-
-    // Check for existing attempt
-    const { data: existingAttempt } = await supabase
-      .from('test_attempts')
-      .select('*')
-      .eq('test_id', testId)
-      .eq('user_id', user?.id)
-      .single();
-
-    if (existingAttempt) {
-      if (existingAttempt.submitted_at) {
-        setIsCompleted(true);
-        setScore(existingAttempt.score);
-      } else {
-        setAttemptId(existingAttempt.id);
+      if (questionsData) {
+        const parsedQuestions = questionsData.map(q => ({
+          id: q.id,
+          question_text: q.question_text,
+          question_type: (q.question_type as QuestionType) || 'mcq_single',
+          options: (q.options as string[]) || [],
+          correct_answers: (q.correct_answers as number[]) || [],
+          marks: q.marks || 1,
+        }));
+        setQuestions(parsedQuestions);
         
-        // Try to restore from local storage first (more recent)
-        const localData = localStorage.getItem(LOCAL_STORAGE_KEY + testId);
-        if (localData) {
-          try {
-            const parsed = JSON.parse(localData);
-            if (parsed.answers) {
-              setAnswers(parsed.answers);
+        const hasDesc = parsedQuestions.some(q => 
+          ['short_answer', 'long_answer'].includes(q.question_type)
+        );
+        setHasDescriptiveQuestions(hasDesc);
+      }
+
+      // Check for existing attempt
+      const { data: existingAttempt } = await supabase
+        .from('test_attempts')
+        .select('*')
+        .eq('test_id', testId)
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (existingAttempt) {
+        if (existingAttempt.submitted_at) {
+          // Already submitted - show results
+          setIsCompleted(true);
+          setAlreadySubmitted(true);
+          
+          const hasDesc = questionsData?.some(q => 
+            ['short_answer', 'long_answer'].includes(q.question_type)
+          ) || false;
+          
+          setSubmitResult({
+            mcqScore: existingAttempt.mcq_score || 0,
+            totalMarks: testData.total_marks || 0,
+            hasDescriptive: hasDesc,
+            percentage: existingAttempt.score || 0,
+          });
+        } else {
+          setAttemptId(existingAttempt.id);
+          
+          // Try to restore from local storage first (more recent)
+          const localData = localStorage.getItem(LOCAL_STORAGE_KEY + testId);
+          if (localData) {
+            try {
+              const parsed = JSON.parse(localData);
+              if (parsed.answers) {
+                setAnswers(parsed.answers);
+              }
+            } catch (e) {
+              setAnswers((existingAttempt.answers as Record<string, Answer>) || {});
             }
-          } catch (e) {
-            // Fall back to DB answers
+          } else {
             setAnswers((existingAttempt.answers as Record<string, Answer>) || {});
           }
-        } else {
-          setAnswers((existingAttempt.answers as Record<string, Answer>) || {});
-        }
-        
-        const startTime = new Date(existingAttempt.started_at).getTime();
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        const remaining = testData.duration_minutes * 60 - elapsed;
-        
-        if (remaining <= 0) {
-          // Time already expired, auto-submit
-          setTimeLeft(0);
-          submitTest(true);
-        } else {
-          setTimeLeft(remaining);
+          
+          const startTime = new Date(existingAttempt.started_at).getTime();
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          const remaining = testData.duration_minutes * 60 - elapsed;
+          
+          if (remaining <= 0) {
+            setTimeLeft(0);
+            // Auto-submit with a slight delay to show UI
+            setTimeout(() => submitTest(true), 500);
+          } else {
+            setTimeLeft(remaining);
+          }
         }
       }
+    } catch (error) {
+      console.error('Error fetching test data:', error);
+      toast({
+        title: 'Unable to load test',
+        description: 'Please check your connection and try again.',
+        variant: 'destructive',
+      });
     }
 
     setIsLoading(false);
@@ -289,29 +345,65 @@ export default function TestAttemptPage() {
   const startAttempt = async () => {
     if (!user || !testId) return;
 
-    const { data, error } = await supabase
-      .from('test_attempts')
-      .insert([{
-        user_id: user.id,
-        test_id: testId,
-        answers: {},
-      }])
-      .select()
-      .single();
+    try {
+      // First check if an attempt already exists
+      const { data: existingAttempt } = await supabase
+        .from('test_attempts')
+        .select('id, submitted_at')
+        .eq('test_id', testId)
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-    if (data) {
-      setAttemptId(data.id);
+      if (existingAttempt?.submitted_at) {
+        toast({
+          title: 'Test Already Submitted',
+          description: 'You have already completed this test.',
+        });
+        setAlreadySubmitted(true);
+        setIsCompleted(true);
+        return;
+      }
+
+      if (existingAttempt) {
+        setAttemptId(existingAttempt.id);
+        toast({
+          title: 'Test Resumed',
+          description: 'Continuing your previous attempt.',
+        });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('test_attempts')
+        .insert([{
+          user_id: user.id,
+          test_id: testId,
+          answers: {},
+        }])
+        .select()
+        .single();
+
+      if (data) {
+        setAttemptId(data.id);
+        toast({
+          title: 'Test Started',
+          description: 'Good luck! Your timer has started.',
+        });
+      } else if (error) {
+        toast({
+          title: 'Unable to start test',
+          description: 'You may have already attempted this test.',
+          variant: 'destructive',
+        });
+        navigate('/dashboard/tests');
+      }
+    } catch (error) {
+      console.error('Error starting attempt:', error);
       toast({
-        title: 'Test Started',
-        description: 'Good luck! Your timer has started.',
-      });
-    } else if (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to start test. You may have already attempted this test.',
+        title: 'Unable to start test',
+        description: 'Please check your connection and try again.',
         variant: 'destructive',
       });
-      navigate('/dashboard/tests');
     }
   };
 
@@ -322,12 +414,7 @@ export default function TestAttemptPage() {
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          // Time's up - auto submit
-          toast({
-            title: "Time's Up!",
-            description: 'Auto-submitting your test...',
-            variant: 'destructive',
-          });
+          // Time's up - auto submit silently
           submitTest(true);
           return 0;
         }
@@ -336,7 +423,7 @@ export default function TestAttemptPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [attemptId, isCompleted, timeLeft, submitTest, toast]);
+  }, [attemptId, isCompleted, timeLeft, submitTest]);
 
   // Auto-save to local storage (more frequent)
   useEffect(() => {
@@ -360,9 +447,10 @@ export default function TestAttemptPage() {
           .update({ answers: JSON.parse(JSON.stringify(answers)) })
           .eq('id', attemptId);
       } catch (e) {
+        // Silent fail for auto-save
         console.error('Auto-save failed:', e);
       }
-    }, 10000); // Every 10 seconds
+    }, 10000);
 
     return () => clearInterval(saveTimer);
   }, [answers, attemptId, isCompleted]);
@@ -400,6 +488,14 @@ export default function TestAttemptPage() {
     }).length;
   };
 
+  // Handle retry after failure
+  const handleRetrySubmit = () => {
+    setSubmitStatus('idle');
+    setRetryCount(0);
+    submitInProgressRef.current = false;
+    submitTest(false);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -408,6 +504,111 @@ export default function TestAttemptPage() {
     );
   }
 
+  // Submitting overlay - covers the whole screen
+  if (isSubmitting || submitStatus === 'submitting' || submitStatus === 'retrying') {
+    return (
+      <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="max-w-sm mx-auto text-center px-4">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+            <Loader2 className="w-10 h-10 text-primary animate-spin" />
+          </div>
+          <h2 className="text-xl font-display font-bold text-foreground mb-2">
+            {submitStatus === 'retrying' ? 'Retrying Submission...' : 'Submitting Your Test'}
+          </h2>
+          <p className="text-muted-foreground mb-4">
+            {submitStatus === 'retrying' 
+              ? `Attempt ${retryCount + 1} of ${MAX_RETRIES}. Please wait...`
+              : 'Please wait while we save your answers. Do not close this page.'}
+          </p>
+          <div className="h-2 bg-secondary rounded-full overflow-hidden">
+            <div className="h-full bg-primary animate-pulse w-2/3" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Failed submission UI
+  if (submitStatus === 'failed') {
+    return (
+      <div className="max-w-sm mx-auto text-center py-12 px-4">
+        <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6">
+          <AlertTriangle className="w-10 h-10 text-destructive" />
+        </div>
+        <h2 className="text-xl font-display font-bold text-foreground mb-2">
+          Submission Failed
+        </h2>
+        <p className="text-muted-foreground mb-6">
+          We couldn't submit your test due to a network issue. Your answers are saved locally and will not be lost.
+        </p>
+        <div className="flex flex-col gap-3">
+          <Button onClick={handleRetrySubmit} size="lg" className="w-full">
+            <Loader2 className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Make sure you have a stable internet connection before retrying.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Completed state
+  if (isCompleted && submitResult) {
+    return (
+      <div className="max-w-xl mx-auto animate-fade-in px-4">
+        <div className="dashboard-card text-center py-12">
+          <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-10 h-10 text-success" />
+          </div>
+          <h1 className="text-2xl font-display font-bold text-foreground mb-2">
+            Test Submitted Successfully!
+          </h1>
+          <p className="text-muted-foreground mb-6">
+            You have completed "{test?.title}"
+          </p>
+          
+          {submitResult.hasDescriptive ? (
+            <div className="space-y-4 mb-6">
+              <div className="bg-accent/50 rounded-xl p-6">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Your test contains descriptive answers that require manual evaluation.
+                </p>
+                <div className="bg-background rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground mb-1">MCQ Score (Auto-Evaluated)</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {submitResult.mcqScore} / {submitResult.totalMarks} marks
+                  </p>
+                </div>
+              </div>
+              <div className="bg-warning/10 rounded-xl p-4 flex items-start gap-3">
+                <Clock className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-left">
+                  <span className="font-medium">Result Pending:</span> Your final score will be available after the admin reviews your descriptive answers.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-6">
+              <div className="text-6xl font-display font-bold text-primary mb-2">
+                {submitResult.percentage}%
+              </div>
+              <p className="text-lg text-muted-foreground">
+                {submitResult.mcqScore} / {submitResult.totalMarks} marks
+              </p>
+            </div>
+          )}
+          
+          <Button onClick={() => navigate('/dashboard/tests')} size="lg">
+            Back to Tests
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Already submitted but no result data
   if (isCompleted) {
     return (
       <div className="max-w-xl mx-auto animate-fade-in px-4">
@@ -416,27 +617,12 @@ export default function TestAttemptPage() {
             <CheckCircle className="w-10 h-10 text-success" />
           </div>
           <h1 className="text-2xl font-display font-bold text-foreground mb-2">
-            Test Completed!
+            Test Already Submitted
           </h1>
           <p className="text-muted-foreground mb-6">
-            You have completed "{test?.title}"
+            You have already completed this test.
           </p>
-          {hasDescriptiveQuestions ? (
-            <div className="bg-accent/50 rounded-lg p-4 mb-6">
-              <p className="text-sm text-muted-foreground">
-                Your test contains descriptive answers that require manual evaluation.
-                Your final result will be available once reviewed by the admin.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="text-5xl font-display font-bold text-primary mb-2">
-                {score}%
-              </div>
-              <p className="text-sm text-muted-foreground mb-6">Your Score</p>
-            </>
-          )}
-          <Button onClick={() => navigate('/dashboard/tests')}>
+          <Button onClick={() => navigate('/dashboard/tests')} size="lg">
             Back to Tests
           </Button>
         </div>
@@ -475,7 +661,7 @@ export default function TestAttemptPage() {
                   <li>• Test auto-submits when time runs out</li>
                   <li>• Your answers are saved automatically</li>
                   <li className="text-destructive font-medium">• Do NOT switch tabs or leave the page</li>
-                  <li className="text-destructive font-medium">• Violations will reset your test</li>
+                  <li className="text-destructive font-medium">• Violations will auto-submit your test</li>
                 </ul>
               </div>
             </div>
@@ -674,12 +860,8 @@ export default function TestAttemptPage() {
             disabled={isSubmitting}
             className="flex-1 sm:flex-none"
           >
-            {isSubmitting ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4 mr-2" />
-            )}
-            {isSubmitting ? 'Submitting...' : 'Submit'}
+            <Send className="w-4 h-4 mr-2" />
+            Submit Test
           </Button>
         ) : (
           <Button
@@ -754,32 +936,61 @@ export default function TestAttemptPage() {
         </div>
       )}
 
-      {/* Submit Confirmation Dialog */}
+      {/* Submit Confirmation Dialog - Clear and Professional */}
       <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Submit Test?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>You have answered {getAnsweredCount()} out of {questions.length} questions.</p>
-              {getAnsweredCount() < questions.length && (
-                <p className="text-warning font-medium">
-                  ⚠️ {questions.length - getAnsweredCount()} question(s) are unanswered.
+            <AlertDialogTitle className="flex items-center gap-2 text-xl">
+              <Send className="w-5 h-5 text-primary" />
+              Submit Your Test?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 pt-2">
+                {/* Summary */}
+                <div className="bg-accent/50 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-muted-foreground">Questions Answered</span>
+                    <span className="font-semibold text-foreground">
+                      {getAnsweredCount()} / {questions.length}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all"
+                      style={{ width: `${(getAnsweredCount() / questions.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Warning for unanswered */}
+                {getAnsweredCount() < questions.length && (
+                  <div className="flex items-start gap-2 p-3 bg-warning/10 rounded-lg">
+                    <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-warning">
+                      You have {questions.length - getAnsweredCount()} unanswered question(s). 
+                      Unanswered questions will receive zero marks.
+                    </p>
+                  </div>
+                )}
+
+                {/* Final warning */}
+                <p className="text-sm text-muted-foreground">
+                  <strong className="text-foreground">Important:</strong> Once submitted, you cannot change your answers. 
+                  Make sure you have reviewed all your responses.
                 </p>
-              )}
-              <p>Once submitted, you cannot change your answers.</p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Review Answers</AlertDialogCancel>
-            <AlertDialogAction onClick={() => submitTest()} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                'Submit Test'
-              )}
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="flex-1 sm:flex-none">
+              Review Answers
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => submitTest(false)} 
+              className="flex-1 sm:flex-none bg-primary hover:bg-primary/90"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Confirm Submit
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
