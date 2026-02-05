@@ -26,6 +26,7 @@ import AdminAuthPage from "@/pages/AdminAuthPage";
 import StudentDashboard from "@/pages/dashboard/StudentDashboard";
 import TestsPage from "@/pages/dashboard/TestsPage";
 import TestAttemptPage from "@/pages/dashboard/TestAttemptPage";
+import TestResultPage from "@/pages/dashboard/TestResultPage";
 import NotesPage from "@/pages/dashboard/NotesPage";
 import VideosPage from "@/pages/dashboard/VideosPage";
 import VideoWatchPage from "@/pages/dashboard/VideoWatchPage";
@@ -73,6 +74,7 @@ const App = () => (
               <Route index element={<StudentDashboard />} />
               <Route path="tests" element={<TestsPage />} />
               <Route path="tests/:testId" element={<TestAttemptPage />} />
+              <Route path="results/:attemptId" element={<TestResultPage />} />
               <Route path="notes" element={<NotesPage />} />
               <Route path="videos" element={<VideosPage />} />
               <Route path="videos/:videoId" element={<VideoWatchPage />} />

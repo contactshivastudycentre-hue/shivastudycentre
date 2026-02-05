@@ -93,29 +93,28 @@ export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQ
 
     const questions: ParsedQuestion[] = [];
     
-    // Split by question patterns like Q1., Q2., 1., 2., Question 1:, etc.
-    const questionPatterns = [
-      /(?:^|\n)(?:Q\.?\s*)?(\d+)[.):\s]+/gi,
-      /(?:^|\n)Question\s*(\d+)[.):\s]*/gi,
-    ];
-    
-    // Try to split by common patterns
+    // IMPROVED: More flexible splitting strategies
     let blocks: string[] = [];
     
-    // First, try splitting by Q1., Q2., etc.
-    const qPattern = /(?=(?:^|\n)(?:Q\.?\s*)?\d+[.):\s]+)/gmi;
-    blocks = rawText.split(qPattern).filter(b => b.trim());
+    // Strategy 1: Q1., Q2., Q.1, Q 1, etc.
+    const qPattern = /(?=(?:^|\n)(?:Q\.?\s*)?(\d+)[.):\s]+)/gmi;
+    blocks = rawText.split(qPattern).filter(b => b.trim() && !/^\d+$/.test(b.trim()));
     
     if (blocks.length <= 1) {
-      // Try splitting by "Question X" pattern
+      // Strategy 2: "Question 1:", "Question 1)", etc.
       const questionPattern = /(?=(?:^|\n)Question\s*\d+[.):\s]*)/gmi;
       blocks = rawText.split(questionPattern).filter(b => b.trim());
     }
     
     if (blocks.length <= 1) {
-      // Try splitting by numbered lines
+      // Strategy 3: Simple numbered lines "1.", "2.", "1)", "2)"
       const numberedPattern = /(?=(?:^|\n)\d+[.)]\s+)/gm;
-      blocks = rawText.split(numberedPattern).filter(b => b.trim());
+      blocks = rawText.split(numberedPattern).filter(b => b.trim() && !/^\d+[.)]\s*$/.test(b.trim()));
+    }
+
+    if (blocks.length <= 1) {
+      // Strategy 4: Split by double newlines (ChatGPT often uses this)
+      blocks = rawText.split(/\n\s*\n/).filter(b => b.trim());
     }
 
     blocks.forEach((block, index) => {
@@ -128,7 +127,7 @@ export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQ
     if (questions.length === 0) {
       toast({
         title: 'Parsing Failed',
-        description: 'Could not detect any questions. Please check the format.',
+        description: 'Could not detect any questions. Please check the format and try again.',
         variant: 'destructive',
       });
       return;
@@ -136,7 +135,6 @@ export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQ
 
     setParsedQuestions(questions);
     setStep('preview');
-    // Expand all by default
     setExpandedCards(new Set(questions.map(q => q.id)));
 
     toast({
@@ -149,86 +147,167 @@ export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQ
     const lines = block.split('\n').map(l => l.trim()).filter(l => l);
     if (lines.length === 0) return null;
 
-    // Remove question number prefix
-    let questionText = lines[0].replace(/^(?:Q\.?\s*)?\d+[.):\s]+/i, '').trim();
-    questionText = questionText.replace(/^Question\s*\d+[.):\s]*/i, '').trim();
+    // IMPROVED: More aggressive question number removal
+    let questionText = lines[0]
+      .replace(/^(?:Q\.?\s*)?(\d+)[.):\s]+/i, '')
+      .replace(/^Question\s*\d+[.):\s]*/i, '')
+      .replace(/^\d+[.)]\s*/i, '')
+      .trim();
     
-    if (!questionText) return null;
+    if (!questionText) {
+      // Maybe question text is on the next line
+      if (lines.length > 1) {
+        questionText = lines[1].trim();
+      }
+    }
+    
+    if (!questionText || questionText.length < 3) return null;
 
     const options: string[] = [];
     let correctAnswers: number[] = [];
     let questionType: QuestionType = 'short_answer';
     let answerText = '';
 
-    // Look for options (A., B., C., D., etc. or a), b), c), d))
-    const optionPattern = /^[A-Da-d][.)]\s*(.+)/;
-    const answerPattern = /^(?:Answer|Ans|Correct)[:\s]*(.+)/i;
+    // IMPROVED: More flexible option patterns
+    // Matches: A., A), a., a), (A), (a), A:, A -, etc.
+    const optionPatterns = [
+      /^[A-Fa-f][.):\-]\s*(.+)/,           // A. B. C. D. E. F.
+      /^\([A-Fa-f]\)\s*(.+)/,              // (A) (B) (C) (D)
+      /^[A-Fa-f]\s*[–—-]\s*(.+)/,          // A - or A – or A —
+      /^(?:Option\s*)?[A-Fa-f]:\s*(.+)/i,  // Option A: or A:
+      /^[ivxIVX]+[.)]\s*(.+)/,             // Roman numerals i. ii. iii. iv.
+      /^[1-4][.)]\s*(.+)/,                 // 1. 2. 3. 4. (for options within question)
+    ];
+
+    // IMPROVED: More flexible answer patterns
+    const answerPatterns = [
+      /^(?:Answer|Ans|Correct(?:\s*Answer)?|Solution|Key)[:\s]*(.+)/i,
+      /^(?:Correct|Right)\s*(?:Option|Answer)?[:\s]*(.+)/i,
+      /^\*\*?(?:Answer|Ans)[:\s]*(.+?)\*?\*?$/i,  // **Answer: B** (markdown bold)
+      /^→\s*(.+)/,  // Arrow prefix
+    ];
+    
+    let isAfterQuestion = false;
     
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
       
-      const optionMatch = line.match(optionPattern);
-      if (optionMatch) {
-        options.push(optionMatch[1].trim());
-        continue;
-      }
+      // Skip empty lines
+      if (!line) continue;
       
-      const answerMatch = line.match(answerPattern);
-      if (answerMatch) {
-        answerText = answerMatch[1].trim();
-        continue;
+      // Check for options first
+      let optionFound = false;
+      for (const pattern of optionPatterns) {
+        const optionMatch = line.match(pattern);
+        if (optionMatch) {
+          const optionText = optionMatch[1].trim();
+          // Skip if it looks like a sub-question
+          if (optionText.length > 0 && !optionText.match(/^Q\.?\s*\d+/i)) {
+            options.push(optionText);
+            optionFound = true;
+            isAfterQuestion = true;
+          }
+          break;
+        }
       }
+      if (optionFound) continue;
       
-      // If we have options already, this might be part of the answer
-      if (options.length === 0 && !answerText) {
-        // Append to question if no options found yet
-        questionText += ' ' + line;
+      // Check for answer
+      let answerFound = false;
+      for (const pattern of answerPatterns) {
+        const answerMatch = line.match(pattern);
+        if (answerMatch) {
+          answerText = answerMatch[1].trim();
+          // Clean up markdown/formatting
+          answerText = answerText.replace(/^\*+|\*+$/g, '').trim();
+          answerFound = true;
+          break;
+        }
+      }
+      if (answerFound) continue;
+      
+      // If no options found yet and not an answer, append to question
+      if (options.length === 0 && !answerText && !isAfterQuestion) {
+        // Check if this line could be part of the question
+        if (!line.match(/^[A-Fa-f][.):\-]/) && !line.match(/^(?:Answer|Ans)/i)) {
+          questionText += ' ' + line;
+        }
       }
     }
 
-    // Determine question type and correct answers
+    // IMPROVED: Better question type detection
     if (options.length >= 2) {
       questionType = 'mcq_single';
       
-      // Check if options are just "True" and "False"
+      // Check for True/False
       if (options.length === 2) {
-        const lowerOptions = options.map(o => o.toLowerCase());
-        if (lowerOptions.includes('true') && lowerOptions.includes('false')) {
+        const lowerOptions = options.map(o => o.toLowerCase().trim());
+        if (
+          (lowerOptions.includes('true') && lowerOptions.includes('false')) ||
+          (lowerOptions.includes('yes') && lowerOptions.includes('no')) ||
+          (lowerOptions.includes('correct') && lowerOptions.includes('incorrect'))
+        ) {
           questionType = 'true_false';
         }
       }
       
-      // Try to find correct answer from answer text
+      // IMPROVED: Better answer detection
       if (answerText) {
-        const answerLetter = answerText.match(/^[A-Da-d]/);
-        if (answerLetter) {
-          const letterIndex = answerLetter[0].toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
-          if (letterIndex >= 0 && letterIndex < options.length) {
-            correctAnswers = [letterIndex];
+        // Clean answer text
+        const cleanAnswer = answerText.toUpperCase().replace(/[^A-F,\s&]/g, '');
+        
+        // Extract letters
+        const letters = cleanAnswer.match(/[A-F]/g);
+        
+        if (letters && letters.length > 0) {
+          const indices = letters.map(l => l.charCodeAt(0) - 'A'.charCodeAt(0))
+            .filter(i => i >= 0 && i < options.length);
+          
+          if (indices.length > 1) {
+            questionType = 'mcq_multiple';
+            correctAnswers = indices;
+          } else if (indices.length === 1) {
+            correctAnswers = indices;
           }
         }
         
-        // Check for multiple answers like "A, C" or "A and C"
-        const multipleAnswers = answerText.match(/[A-Da-d]/g);
-        if (multipleAnswers && multipleAnswers.length > 1) {
-          questionType = 'mcq_multiple';
-          correctAnswers = multipleAnswers.map(l => 
-            l.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0)
-          ).filter(i => i >= 0 && i < options.length);
+        // Try matching option text directly
+        if (correctAnswers.length === 0) {
+          const lowerAnswer = answerText.toLowerCase().trim();
+          const matchIndex = options.findIndex(opt => 
+            opt.toLowerCase().trim() === lowerAnswer ||
+            opt.toLowerCase().includes(lowerAnswer) ||
+            lowerAnswer.includes(opt.toLowerCase())
+          );
+          if (matchIndex >= 0) {
+            correctAnswers = [matchIndex];
+          }
         }
       }
     } else {
-      // No MCQ options - determine if short or long answer
-      if (questionText.length > 100 || questionText.toLowerCase().includes('explain') || 
-          questionText.toLowerCase().includes('describe') || questionText.toLowerCase().includes('discuss')) {
-        questionType = 'long_answer';
-      } else {
-        questionType = 'short_answer';
-      }
+      // IMPROVED: Better descriptive type detection
+      const lowerQuestion = questionText.toLowerCase();
+      const longAnswerKeywords = [
+        'explain', 'describe', 'discuss', 'elaborate', 'analyze', 'evaluate',
+        'compare', 'contrast', 'justify', 'illustrate', 'define and explain',
+        'what are the', 'how does', 'why is', 'write about', 'give an account',
+        'critically examine', 'state and explain'
+      ];
+      
+      const isLongAnswer = questionText.length > 80 || 
+        longAnswerKeywords.some(kw => lowerQuestion.includes(kw));
+      
+      questionType = isLongAnswer ? 'long_answer' : 'short_answer';
     }
 
+    // Clean up question text
+    questionText = questionText
+      .replace(/\s+/g, ' ')
+      .replace(/^\s*[-–—•]\s*/, '')
+      .trim();
+
     return {
-      id: `parsed-${index}-${Date.now()}`,
+      id: `parsed-${index}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       question_text: questionText,
       question_type: questionType,
       options,

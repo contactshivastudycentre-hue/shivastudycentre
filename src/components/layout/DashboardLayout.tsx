@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { BottomNav } from './BottomNav';
 import { Logo, LogoIcon } from '@/components/Logo';
+import { SmallPWAButton } from '@/components/pwa/SmallPWAButton';
 
 const sidebarItems = [
   { name: 'Dashboard', path: '/dashboard', icon: Home },
@@ -152,6 +153,7 @@ export function DashboardLayout() {
           </div>
         </Link>
         <div className="flex items-center gap-2">
+          <SmallPWAButton variant="header" />
           <span className="text-sm text-muted-foreground hidden sm:block">{profile.full_name}</span>
         </div>
       </header>

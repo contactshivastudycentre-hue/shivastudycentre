@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send, Shield, Loader2, AlertTriangle, WifiOff, RefreshCw } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send, Shield, Loader2, AlertTriangle, WifiOff, RefreshCw, Eye } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAntiCheat } from '@/hooks/useAntiCheat';
@@ -692,9 +692,15 @@ export default function TestAttemptPage() {
             </div>
           )}
           
-          <Button onClick={() => navigate('/dashboard/tests')} size="lg">
-            Back to Tests
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button variant="outline" onClick={() => navigate(`/dashboard/results/${attemptId}`)} size="lg" className="gap-2">
+              <Eye className="w-4 h-4" />
+              View Detailed Result
+            </Button>
+            <Button onClick={() => navigate('/dashboard/tests')} size="lg">
+              Back to Tests
+            </Button>
+          </div>
         </div>
       </div>
     );
