@@ -311,7 +311,7 @@ export default function AboutPage() {
                 </div>
                 <div className="flex items-center justify-center gap-3 text-foreground">
                   <Phone className="w-5 h-5 text-primary flex-shrink-0" />
-                  <span>+91 98765 43210</span>
+                  <span>+91 95348 95725</span>
                 </div>
               </div>
             </div>
