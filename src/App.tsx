@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth";
 import { PWAInstallButton, PWAUpdateToast } from "@/components/PWAInstallButton";
+import { SEOHead } from "@/components/SEOHead";
+import { JsonLd } from "@/components/JsonLd";
 
 // Layouts
 import { PublicLayout } from "@/components/layout/PublicLayout";
@@ -54,6 +56,8 @@ const App = () => (
         <PWAInstallButton />
         <PWAUpdateToast />
         <BrowserRouter>
+          <SEOHead />
+          <JsonLd />
           <Routes>
             {/* Public Routes */}
             <Route element={<PublicLayout />}>

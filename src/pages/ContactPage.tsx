@@ -328,6 +328,24 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+      {/* Google Maps Embed */}
+      <section className="bg-background pb-16">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <h2 className="text-2xl font-display font-bold text-foreground mb-6 text-center">Find Us on the Map</h2>
+          <div className="rounded-xl overflow-hidden border border-border aspect-video md:aspect-[21/9]">
+            <iframe
+              title="Shiva Study Centre Location – Krishna Chowk, Desari, Vaishali, Bihar"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3594.0!2d85.45!3d25.68!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2sDesari%2C+Vaishali%2C+Bihar!5e0!3m2!1sen!2sin!4v1700000000000"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -124,10 +124,11 @@ export default function LandingPage() {
           }} transition={{
             duration: 0.8,
             delay: 0.2
-          }} className="text-4xl sm:text-5xl md:text-7xl font-display font-extrabold mb-6 text-white leading-tight">
-              Shape Your Future with{' '}
-              <span className="relative">
-                <span className="relative z-10">Quality Education</span>
+           }} className="text-4xl sm:text-5xl md:text-7xl font-display font-extrabold mb-6 text-white leading-tight">
+               <span className="sr-only">Shiva Study Centre – Official Coaching Institute in Desari, Vaishali, Bihar. </span>
+               Shape Your Future with{' '}
+               <span className="relative">
+                 <span className="relative z-10">Quality Education</span>
                 <motion.span className="absolute -bottom-2 left-0 right-0 h-3 bg-white/30 rounded-full -z-0" initial={{
                 scaleX: 0
               }} animate={{
