@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://shivastudycentre.lovable.app/</loc>
+    <loc>https://shivastudycentre.org/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://shivastudycentre.lovable.app/about</loc>
+    <loc>https://shivastudycentre.org/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://shivastudycentre.lovable.app/contact</loc>
+    <loc>https://shivastudycentre.org/contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://shivastudycentre.lovable.app/terms</loc>
+    <loc>https://shivastudycentre.org/terms</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://shivastudycentre.lovable.app/student-login</loc>
+    <loc>https://shivastudycentre.org/student-login</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
