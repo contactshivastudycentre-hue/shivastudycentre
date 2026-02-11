@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Logo } from '@/components/Logo';
 import { motion } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
 import { ClassSelect } from '@/components/ClassSelect';
 import { ForgotPasswordModal } from '@/components/ForgotPasswordModal';
 
@@ -180,6 +181,23 @@ export default function StudentAuthPage() {
         setIsLoading(false);
         return;
       }
+    }
+
+    // Check for duplicate mobile number
+    const { data: existingMobile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('mobile', data.mobile)
+      .maybeSingle();
+
+    if (existingMobile) {
+      toast({
+        title: 'Mobile Number Already Registered',
+        description: 'This mobile number is already registered with another account. Please use a different number.',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
     }
 
     const { error } = await signUp(

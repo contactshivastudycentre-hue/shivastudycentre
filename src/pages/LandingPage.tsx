@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { ClipboardList, FileText, Play, Users, ArrowRight, Sparkles, GraduationCap, Target, Award, Zap, Shield, UserCircle, ExternalLink, Download } from 'lucide-react';
 import swaritImage from '@/assets/swarit-roy.jpg';
 import { SmallPWAButton } from '@/components/pwa/SmallPWAButton';
+import { useIsMobile } from '@/hooks/use-mobile';
+import MobileAppLanding from '@/pages/MobileAppLanding';
 
 const fadeInUp = {
   initial: {
@@ -67,6 +69,13 @@ const benefits = [{
   text: 'Flexible learning schedule'
 }];
 export default function LandingPage() {
+  const isMobile = useIsMobile();
+
+  // On mobile, show the animated app landing instead of full website
+  if (isMobile) {
+    return <MobileAppLanding />;
+  }
+
   return <div className="overflow-hidden">
       {/* Hero Section */}
       <section className="relative min-h-[90vh] flex items-center hero-gradient overflow-hidden">
