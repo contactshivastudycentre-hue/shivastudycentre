@@ -57,19 +57,19 @@ export default function AdminDashboard() {
   }, []);
 
   const fetchStats = async () => {
-    const [profiles, tests, notes, videos] = await Promise.all([
-      supabase.from('profiles').select('status'),
+    const [profilesCount, pendingCount, approvedCount, tests, notes, videos] = await Promise.all([
+      supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('status', 'approved'),
       supabase.from('tests').select('id', { count: 'exact', head: true }),
       supabase.from('notes').select('id', { count: 'exact', head: true }),
       supabase.from('videos').select('id', { count: 'exact', head: true }),
     ]);
 
-    const profileData = profiles.data || [];
-    
     setStats({
-      totalStudents: profileData.length,
-      pendingStudents: profileData.filter((p) => p.status === 'pending').length,
-      approvedStudents: profileData.filter((p) => p.status === 'approved').length,
+      totalStudents: profilesCount.count || 0,
+      pendingStudents: pendingCount.count || 0,
+      approvedStudents: approvedCount.count || 0,
       totalTests: tests.count || 0,
       totalNotes: notes.count || 0,
       totalVideos: videos.count || 0,

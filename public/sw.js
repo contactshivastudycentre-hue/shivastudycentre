@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ssc-cache-v2';
+const CACHE_NAME = 'ssc-cache-v3';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -46,6 +46,10 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
+        // If it's a navigation request and we got a 404, serve the index page (SPA fallback)
+        if (event.request.mode === 'navigate' && response.status === 404) {
+          return caches.match('/') || response;
+        }
         // Cache successful responses
         if (response.ok) {
           const responseClone = response.clone();
