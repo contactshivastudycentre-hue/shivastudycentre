@@ -391,6 +391,10 @@ export type Database = {
     }
     Functions: {
       delete_student: { Args: { student_user_id: string }; Returns: boolean }
+      get_email_by_user_id: {
+        Args: { target_user_id: string }
+        Returns: string
+      }
       get_student_status: {
         Args: { check_user_id?: string }
         Returns: Database["public"]["Enums"]["student_status"]
