@@ -15,7 +15,7 @@ import { ClassSelect } from '@/components/ClassSelect';
 import { ForgotPasswordModal } from '@/components/ForgotPasswordModal';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
+  identifier: z.string().min(1, 'Please enter your email or mobile number'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
@@ -114,7 +114,7 @@ export default function StudentAuthPage() {
 
     const formData = new FormData(e.currentTarget);
     const data = {
-      email: formData.get('email') as string,
+      identifier: (formData.get('identifier') as string).trim(),
       password: formData.get('password') as string,
     };
 
@@ -134,12 +134,60 @@ export default function StudentAuthPage() {
       }
     }
 
-    const { error } = await signIn(data.email, data.password);
+    let loginEmail = data.identifier;
+
+    // If identifier looks like a phone number, look up email from profiles
+    const isPhone = /^[\d+\-\s()]{10,}$/.test(data.identifier.replace(/\s/g, ''));
+    if (isPhone) {
+      const cleanNumber = data.identifier.replace(/[\s\-()]/g, '');
+      const { data: profiles, error: lookupError } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('mobile', cleanNumber);
+
+      if (lookupError || !profiles || profiles.length === 0) {
+        toast({
+          title: 'Login Failed',
+          description: 'No account found with this mobile number.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (profiles.length > 1) {
+        toast({
+          title: 'Multiple Accounts Found',
+          description: 'Multiple accounts use this number. Please login with your email instead.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Get email via RPC
+      const { data: emailData, error: emailError } = await supabase
+        .rpc('get_email_by_user_id' as any, { target_user_id: profiles[0].user_id });
+
+      if (emailError || !emailData) {
+        toast({
+          title: 'Login Failed',
+          description: 'Could not retrieve account details. Please try logging in with your email.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      loginEmail = emailData as string;
+    }
+
+    const { error } = await signIn(loginEmail, data.password);
 
     if (error) {
       let description = error.message;
       if (error.message === 'Invalid login credentials') {
-        description = 'Invalid email or password. If you are new, please sign up first.';
+        description = 'Invalid email/mobile or password. If you are new, please sign up first.';
       } else if (error.message.includes('Email not confirmed')) {
         description = 'Please check your email and confirm your account first.';
       }
@@ -288,17 +336,17 @@ export default function StudentAuthPage() {
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
+                    <Label htmlFor="login-identifier">Email or Mobile Number</Label>
                     <Input
-                      id="login-email"
-                      name="email"
-                      type="email"
-                      placeholder="your@email.com"
+                      id="login-identifier"
+                      name="identifier"
+                      type="text"
+                      placeholder="your@email.com or 9876543210"
                       className="h-12 rounded-xl"
                       required
                     />
-                    {errors.email && (
-                      <p className="text-sm text-destructive">{errors.email}</p>
+                    {errors.identifier && (
+                      <p className="text-sm text-destructive">{errors.identifier}</p>
                     )}
                   </div>
 
