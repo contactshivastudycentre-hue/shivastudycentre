@@ -57,10 +57,22 @@ export default function AdminDashboard() {
   }, []);
 
   const fetchStats = async () => {
+    // First get admin user IDs to exclude them from student counts
+    const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
+    const adminIds = (adminRoles || []).map(r => r.user_id);
+
+    const baseQuery = () => {
+      let q = supabase.from('profiles').select('id', { count: 'exact', head: true });
+      if (adminIds.length > 0) {
+        q = q.not('user_id', 'in', `(${adminIds.join(',')})`);
+      }
+      return q;
+    };
+
     const [profilesCount, pendingCount, approvedCount, tests, notes, videos] = await Promise.all([
-      supabase.from('profiles').select('id', { count: 'exact', head: true }),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('status', 'approved'),
+      baseQuery(),
+      baseQuery().eq('status', 'pending'),
+      baseQuery().eq('status', 'approved'),
       supabase.from('tests').select('id', { count: 'exact', head: true }),
       supabase.from('notes').select('id', { count: 'exact', head: true }),
       supabase.from('videos').select('id', { count: 'exact', head: true }),
