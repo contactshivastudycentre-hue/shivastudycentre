@@ -183,17 +183,16 @@ export default function StudentAuthPage() {
       }
     }
 
-    // Check for duplicate mobile number
-    const { data: existingMobile } = await supabase
+    // Check mobile number usage (max 3 accounts per number)
+    const { data: existingMobiles, error: mobileCheckError } = await supabase
       .from('profiles')
       .select('id')
-      .eq('mobile', data.mobile)
-      .maybeSingle();
+      .eq('mobile', data.mobile);
 
-    if (existingMobile) {
+    if (!mobileCheckError && existingMobiles && existingMobiles.length >= 3) {
       toast({
-        title: 'Mobile Number Already Registered',
-        description: 'This mobile number is already registered with another account. Please use a different number.',
+        title: 'Mobile Number Limit Reached',
+        description: 'This mobile number already has 3 accounts registered. Please use a different number.',
         variant: 'destructive',
       });
       setIsLoading(false);
