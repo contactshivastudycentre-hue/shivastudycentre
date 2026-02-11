@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { BottomNav } from './BottomNav';
 import { Logo, LogoIcon } from '@/components/Logo';
 import { SmallPWAButton } from '@/components/pwa/SmallPWAButton';
+import { DesktopBlockGuard } from '@/components/guards/DesktopBlockGuard';
 
 const sidebarItems = [
   { name: 'Dashboard', path: '/dashboard', icon: Home },
@@ -95,6 +96,7 @@ export function DashboardLayout() {
   };
 
   return (
+    <DesktopBlockGuard>
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex-col">
@@ -168,5 +170,6 @@ export function DashboardLayout() {
       {/* Mobile Bottom Navigation */}
       <BottomNav />
     </div>
+    </DesktopBlockGuard>
   );
 }
