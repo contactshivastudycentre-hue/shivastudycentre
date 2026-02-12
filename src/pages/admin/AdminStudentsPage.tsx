@@ -57,7 +57,7 @@ interface Profile {
   created_at: string;
 }
 
-const CLASS_OPTIONS = ['Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12'];
+const CLASS_OPTIONS = ['Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12'];
 
 export default function AdminStudentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
