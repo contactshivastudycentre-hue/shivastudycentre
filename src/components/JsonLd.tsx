@@ -7,7 +7,7 @@ const SCHEMA = {
   "alternateName": ["Shiva Study Center", "SSC Desari"],
   "url": "https://shivastudycentre.org",
   "logo": "https://shivastudycentre.org/pwa-icon-512.svg",
-  "description": "Shiva Study Centre is a trusted coaching institute in Desari, Vaishali, Bihar offering quality education for Class 6–12 students.",
+  "description": "Shiva Study Centre is a trusted coaching institute in Desari, Vaishali, Bihar offering quality education for Class 4–12 students.",
   "telephone": "+919534895725",
   "email": "contact.shivastudycentre@gmail.com",
   "address": {

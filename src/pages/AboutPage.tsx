@@ -45,7 +45,7 @@ const stats = [{
   value: '10+',
   label: 'Years Experience'
 }, {
-  value: '6-12',
+  value: '4-12',
   label: 'Classes Covered'
 }];
 export default function AboutPage() {

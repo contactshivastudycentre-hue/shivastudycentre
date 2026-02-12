@@ -7,6 +7,8 @@ import {
 } from '@/components/ui/select';
 
 const CLASSES = [
+  'Class 4',
+  'Class 5',
   'Class 6',
   'Class 7',
   'Class 8',

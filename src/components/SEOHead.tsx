@@ -9,7 +9,7 @@ interface SEOHeadProps {
 const defaults: Record<string, { title: string; description: string }> = {
   '/': {
     title: 'Shiva Study Centre | Official Website | Desari, Vaishali, Bihar',
-    description: 'Official website of Shiva Study Centre, a trusted coaching institute in Desari, Vaishali, Bihar. Notes, tests, video lectures and expert guidance for Class 6–12.',
+    description: 'Official website of Shiva Study Centre, a trusted coaching institute in Desari, Vaishali, Bihar. Notes, tests, video lectures and expert guidance for Class 4–12.',
   },
   '/about': {
     title: 'About Shiva Study Centre | Coaching Institute in Desari, Vaishali',
