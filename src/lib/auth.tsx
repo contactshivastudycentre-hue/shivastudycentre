@@ -61,36 +61,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let mounted = true;
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!mounted) return;
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
           setTimeout(() => {
-            fetchProfile(session.user.id);
+            if (mounted) fetchProfile(session.user.id);
           }, 0);
         } else {
           setProfile(null);
           setIsAdmin(false);
         }
+        
+        // Mark loading done on any auth event if still loading
+        if (isLoading) setIsLoading(false);
       }
     );
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchProfile(session.user.id).finally(() => setIsLoading(false));
+        fetchProfile(session.user.id).finally(() => {
+          if (mounted) setIsLoading(false);
+        });
       } else {
         setIsLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string, mobile: string, studentClass?: string) => {
