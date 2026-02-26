@@ -116,16 +116,25 @@ export default function AdminAuthPage() {
       return;
     }
 
-    const { error } = await signIn(data.email, data.password);
+    try {
+      const { error } = await signIn(data.email, data.password);
 
-    if (error) {
-      const description = error.message === 'Invalid login credentials'
-        ? 'Invalid password. If this is your first time, click "First Time Setup" below.'
-        : error.message;
-      toast({ title: 'Login Failed', description, variant: 'destructive' });
-    } else {
-      await refreshProfile();
-      toast({ title: 'Login Successful', description: 'Welcome back, Admin!' });
+      if (error) {
+        let description = error.message;
+        if (error.message === 'Invalid login credentials') {
+          description = 'Wrong password. If this is your first time, click "First Time Setup" below.';
+        } else if (error.message.includes('Network error') || error.message.includes('Failed to fetch')) {
+          description = 'Network error — check your internet connection and try again.';
+        } else if (error.message.includes('Email not confirmed')) {
+          description = 'Email not confirmed. Please check your inbox.';
+        }
+        toast({ title: 'Login Failed', description, variant: 'destructive' });
+      } else {
+        await refreshProfile();
+        toast({ title: 'Login Successful', description: 'Welcome back, Admin!' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Login Error', description: 'Something went wrong. Check your internet and try again.', variant: 'destructive' });
     }
 
     setIsLoading(false);

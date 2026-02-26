@@ -138,12 +138,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    return { error };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      return { error };
+    } catch (err: any) {
+      // Network errors (Failed to fetch, timeout, etc.)
+      const message = err?.message || 'Unknown error';
+      if (message.includes('Failed to fetch') || message.includes('NetworkError') || message.includes('fetch')) {
+        return { error: new Error('Network error: Please check your internet connection and try again.') as any };
+      }
+      return { error: err as any };
+    }
   };
 
   const signOut = async () => {
