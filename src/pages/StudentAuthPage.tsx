@@ -180,16 +180,22 @@ export default function StudentAuthPage() {
       loginEmail = emailData as string;
     }
 
-    const { error } = await signIn(loginEmail, data.password);
+    try {
+      const { error } = await signIn(loginEmail, data.password);
 
-    if (error) {
-      let description = error.message;
-      if (error.message === 'Invalid login credentials') {
-        description = 'Invalid email/mobile or password. If you are new, please sign up first.';
-      } else if (error.message.includes('Email not confirmed')) {
-        description = 'Please check your email and confirm your account first.';
+      if (error) {
+        let description = error.message;
+        if (error.message === 'Invalid login credentials') {
+          description = 'Wrong email/mobile or password. If you are new, please register first.';
+        } else if (error.message.includes('Email not confirmed')) {
+          description = 'Please check your email and confirm your account first.';
+        } else if (error.message.includes('Network error') || error.message.includes('Failed to fetch')) {
+          description = 'Network error — check your internet connection and try again.';
+        }
+        toast({ title: 'Login Failed', description, variant: 'destructive' });
       }
-      toast({ title: 'Login Failed', description, variant: 'destructive' });
+    } catch (err: any) {
+      toast({ title: 'Login Error', description: 'Something went wrong. Check your internet and try again.', variant: 'destructive' });
     }
 
     setIsLoading(false);
