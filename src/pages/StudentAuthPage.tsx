@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, EyeOff, ArrowLeft, Sparkles, Clock, UserCheck, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Sparkles, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
@@ -33,8 +33,25 @@ export default function StudentAuthPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [studentClass, setStudentClass] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const { user, profile, isAdmin, signIn, signUp } = useAuth();
+  const { user, profile, isAdmin, isLoading: authLoading, signIn, signUp } = useAuth();
   const { toast } = useToast();
+  const identifierRef = useRef<HTMLInputElement>(null);
+
+  // Autofocus identifier field
+  useEffect(() => {
+    if (!authLoading && !user) {
+      setTimeout(() => identifierRef.current?.focus(), 300);
+    }
+  }, [authLoading, user]);
+
+  // Show loading spinner while auth state is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   // Redirect if already logged in and approved
   if (user && profile) {
@@ -94,11 +111,7 @@ export default function StudentAuthPage() {
               </p>
             </div>
 
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => window.location.reload()}
-            >
+            <Button variant="outline" className="w-full" onClick={() => window.location.reload()}>
               Check Status Again
             </Button>
           </motion.div>
@@ -124,9 +137,7 @@ export default function StudentAuthPage() {
       if (err instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
         err.errors.forEach((error) => {
-          if (error.path[0]) {
-            fieldErrors[error.path[0] as string] = error.message;
-          }
+          if (error.path[0]) fieldErrors[error.path[0] as string] = error.message;
         });
         setErrors(fieldErrors);
         setIsLoading(false);
@@ -146,35 +157,22 @@ export default function StudentAuthPage() {
         .eq('mobile', cleanNumber);
 
       if (lookupError || !profiles || profiles.length === 0) {
-        toast({
-          title: 'Login Failed',
-          description: 'No account found with this mobile number.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Login Failed', description: 'No account found with this mobile number.', variant: 'destructive' });
         setIsLoading(false);
         return;
       }
 
       if (profiles.length > 1) {
-        toast({
-          title: 'Multiple Accounts Found',
-          description: 'Multiple accounts use this number. Please login with your email instead.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Multiple Accounts Found', description: 'Multiple accounts use this number. Please login with your email instead.', variant: 'destructive' });
         setIsLoading(false);
         return;
       }
 
-      // Get email via RPC
       const { data: emailData, error: emailError } = await supabase
         .rpc('get_email_by_user_id' as any, { target_user_id: profiles[0].user_id });
 
       if (emailError || !emailData) {
-        toast({
-          title: 'Login Failed',
-          description: 'Could not retrieve account details. Please try logging in with your email.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Login Failed', description: 'Could not retrieve account details. Please try logging in with your email.', variant: 'destructive' });
         setIsLoading(false);
         return;
       }
@@ -191,11 +189,7 @@ export default function StudentAuthPage() {
       } else if (error.message.includes('Email not confirmed')) {
         description = 'Please check your email and confirm your account first.';
       }
-      toast({
-        title: 'Login Failed',
-        description,
-        variant: 'destructive',
-      });
+      toast({ title: 'Login Failed', description, variant: 'destructive' });
     }
 
     setIsLoading(false);
@@ -221,9 +215,7 @@ export default function StudentAuthPage() {
       if (err instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
         err.errors.forEach((error) => {
-          if (error.path[0]) {
-            fieldErrors[error.path[0] as string] = error.message;
-          }
+          if (error.path[0]) fieldErrors[error.path[0] as string] = error.message;
         });
         setErrors(fieldErrors);
         setIsLoading(false);
@@ -238,42 +230,21 @@ export default function StudentAuthPage() {
       .eq('mobile', data.mobile);
 
     if (!mobileCheckError && existingMobiles && existingMobiles.length >= 3) {
-      toast({
-        title: 'Mobile Number Limit Reached',
-        description: 'This mobile number already has 3 accounts registered. Please use a different number.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Mobile Number Limit Reached', description: 'This mobile number already has 3 accounts registered.', variant: 'destructive' });
       setIsLoading(false);
       return;
     }
 
-    const { error } = await signUp(
-      data.email,
-      data.password,
-      data.fullName,
-      data.mobile,
-      data.studentClass
-    );
+    const { error } = await signUp(data.email, data.password, data.fullName, data.mobile, data.studentClass);
 
     if (error) {
       if (error.message.includes('already registered')) {
-        toast({
-          title: 'Email Already Registered',
-          description: 'This email is already registered. Please try logging in instead.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Email Already Registered', description: 'This email is already registered. Please try logging in instead.', variant: 'destructive' });
       } else {
-        toast({
-          title: 'Registration Failed',
-          description: error.message,
-          variant: 'destructive',
-        });
+        toast({ title: 'Registration Failed', description: error.message, variant: 'destructive' });
       }
     } else {
-      toast({
-        title: 'Registration Successful!',
-        description: 'Your request has been sent for approval. Please wait for admin approval.',
-      });
+      toast({ title: 'Registration Successful!', description: 'Your request has been sent for approval.' });
       setStudentClass('');
       (e.target as HTMLFormElement).reset();
     }
@@ -283,12 +254,7 @@ export default function StudentAuthPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex flex-col">
-      {/* Back Link */}
-      <motion.div 
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="p-6"
-      >
+      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="p-6">
         <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group">
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           Back to Home
@@ -296,30 +262,24 @@ export default function StudentAuthPage() {
       </motion.div>
 
       <div className="flex-1 flex items-center justify-center px-4 py-8">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.4 }}
           className="w-full max-w-md"
         >
-          {/* Logo */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
               <Logo size="lg" showText={false} />
             </div>
-            <h1 className="text-3xl font-display font-bold text-foreground">
-              Student Portal
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Login or register as a student
-            </p>
+            <h1 className="text-3xl font-display font-bold text-foreground">Student Portal</h1>
+            <p className="text-muted-foreground mt-2">Login or register as a student</p>
           </div>
 
-          {/* Auth Tabs */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.15 }}
             className="bg-card rounded-2xl p-8 shadow-xl border border-border"
           >
             <Tabs defaultValue="login" className="w-full">
@@ -332,12 +292,12 @@ export default function StudentAuthPage() {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Login Form */}
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-5">
                   <div className="space-y-2">
                     <Label htmlFor="login-identifier">Email or Mobile Number</Label>
                     <Input
+                      ref={identifierRef}
                       id="login-identifier"
                       name="identifier"
                       type="text"
@@ -345,9 +305,7 @@ export default function StudentAuthPage() {
                       className="h-12 rounded-xl"
                       required
                     />
-                    {errors.identifier && (
-                      <p className="text-sm text-destructive">{errors.identifier}</p>
-                    )}
+                    {errors.identifier && <p className="text-sm text-destructive">{errors.identifier}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -369,9 +327,7 @@ export default function StudentAuthPage() {
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
-                    {errors.password && (
-                      <p className="text-sm text-destructive">{errors.password}</p>
-                    )}
+                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                     <button
                       type="button"
                       onClick={() => setShowForgotPassword(true)}
@@ -382,69 +338,37 @@ export default function StudentAuthPage() {
                   </div>
 
                   <Button type="submit" className="w-full h-12 rounded-xl text-base bg-primary hover:bg-primary/90" disabled={isLoading}>
-                    {isLoading ? 'Logging in...' : 'Login'}
+                    {isLoading ? (
+                      <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Logging in...</span>
+                    ) : 'Login'}
                   </Button>
                 </form>
               </TabsContent>
 
-              {/* Signup Form */}
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="fullName">Full Name</Label>
-                    <Input
-                      id="fullName"
-                      name="fullName"
-                      placeholder="Your full name"
-                      className="h-12 rounded-xl"
-                      required
-                    />
-                    {errors.fullName && (
-                      <p className="text-sm text-destructive">{errors.fullName}</p>
-                    )}
+                    <Input id="fullName" name="fullName" placeholder="Your full name" className="h-12 rounded-xl" required />
+                    {errors.fullName && <p className="text-sm text-destructive">{errors.fullName}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="mobile">Mobile Number</Label>
-                    <Input
-                      id="mobile"
-                      name="mobile"
-                      type="tel"
-                      placeholder="+91 98765 43210"
-                      className="h-12 rounded-xl"
-                      required
-                    />
-                    {errors.mobile && (
-                      <p className="text-sm text-destructive">{errors.mobile}</p>
-                    )}
+                    <Input id="mobile" name="mobile" type="tel" placeholder="+91 98765 43210" className="h-12 rounded-xl" required />
+                    {errors.mobile && <p className="text-sm text-destructive">{errors.mobile}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label>Class</Label>
-                    <ClassSelect 
-                      value={studentClass} 
-                      onChange={setStudentClass}
-                      placeholder="Select your class"
-                      required
-                    />
-                    {errors.studentClass && (
-                      <p className="text-sm text-destructive">{errors.studentClass}</p>
-                    )}
+                    <ClassSelect value={studentClass} onChange={setStudentClass} placeholder="Select your class" required />
+                    {errors.studentClass && <p className="text-sm text-destructive">{errors.studentClass}</p>}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      name="email"
-                      type="email"
-                      placeholder="your@email.com"
-                      className="h-12 rounded-xl"
-                      required
-                    />
-                    {errors.email && (
-                      <p className="text-sm text-destructive">{errors.email}</p>
-                    )}
+                    <Input id="signup-email" name="email" type="email" placeholder="your@email.com" className="h-12 rounded-xl" required />
+                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -466,20 +390,18 @@ export default function StudentAuthPage() {
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
-                    {errors.password && (
-                      <p className="text-sm text-destructive">{errors.password}</p>
-                    )}
+                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                   </div>
 
                   <Button type="submit" className="w-full h-12 rounded-xl text-base bg-primary hover:bg-primary/90" disabled={isLoading}>
-                    {isLoading ? 'Creating Account...' : 'Register'}
+                    {isLoading ? (
+                      <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Creating Account...</span>
+                    ) : 'Register'}
                   </Button>
 
                   <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                     <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                    <p className="text-xs text-amber-700">
-                      After registration, your account will be reviewed and approved by the admin.
-                    </p>
+                    <p className="text-xs text-amber-700">After registration, your account will be reviewed and approved by the admin.</p>
                   </div>
                 </form>
               </TabsContent>
@@ -488,11 +410,7 @@ export default function StudentAuthPage() {
         </motion.div>
       </div>
 
-      {/* Forgot Password Modal */}
-      <ForgotPasswordModal 
-        open={showForgotPassword} 
-        onOpenChange={setShowForgotPassword} 
-      />
+      <ForgotPasswordModal open={showForgotPassword} onOpenChange={setShowForgotPassword} />
     </div>
   );
 }
