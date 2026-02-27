@@ -138,22 +138,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
+    const startTime = Date.now();
+    console.log('[Auth] signIn attempt started for:', email);
+    
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+      
+      const elapsed = Date.now() - startTime;
+      
       if (error) {
-        console.error('[Auth] signIn error:', { message: error.message, status: (error as any).status, details: error });
+        console.error('[Auth] signIn error:', {
+          message: error.message,
+          status: (error as any)?.status,
+          code: (error as any)?.code,
+          elapsed: `${elapsed}ms`,
+          fullError: JSON.stringify(error, null, 2),
+        });
+        return { error };
       }
-      return { error };
+      
+      console.log('[Auth] signIn success:', { elapsed: `${elapsed}ms`, userId: data?.user?.id });
+      return { error: null };
     } catch (err: any) {
-      console.error('[Auth] signIn exception:', err);
-      const message = err?.message || 'Unknown error';
-      if (message.includes('Failed to fetch') || message.includes('NetworkError') || message.includes('fetch') || message.includes('timeout') || message.includes('CORS')) {
-        return { error: { message: 'Network error: Check your internet connection and try again.' } as any };
+      const elapsed = Date.now() - startTime;
+      console.error('[Auth] signIn EXCEPTION:', {
+        name: err?.name,
+        message: err?.message,
+        stack: err?.stack,
+        elapsed: `${elapsed}ms`,
+        type: err?.constructor?.name,
+      });
+      
+      const msg = err?.message || 'Unknown error';
+      let userMessage: string;
+      
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('fetch')) {
+        userMessage = `Network error (${elapsed}ms): Your browser could not reach the server. This is NOT a code bug — it's a connectivity issue. Try: 1) Check internet 2) Disable VPN/ad-blocker 3) Try a different network.`;
+      } else if (msg.includes('CORS')) {
+        userMessage = `CORS error: The server rejected the request origin. Contact support.`;
+      } else if (msg.includes('timeout') || msg.includes('AbortError')) {
+        userMessage = `Request timed out after ${elapsed}ms. Server may be slow — try again.`;
+      } else {
+        userMessage = `Unexpected error: ${msg}`;
       }
-      return { error: { message: message } as any };
+      
+      return { error: { message: userMessage } as any };
     }
   };
 
