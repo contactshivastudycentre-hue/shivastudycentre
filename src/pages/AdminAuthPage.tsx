@@ -120,7 +120,7 @@ export default function AdminAuthPage() {
     }
 
     try {
-      console.log('[AdminLogin] Attempting login...');
+      console.log('[AdminLogin] Attempting login for:', data.email);
       const { error } = await signIn(data.email, data.password);
 
       if (error) {
@@ -128,21 +128,21 @@ export default function AdminAuthPage() {
         let description = error.message;
         if (error.message === 'Invalid login credentials') {
           description = 'Wrong password. If this is your first time, click "First Time Setup" below.';
-        } else if (error.message.includes('Network error') || error.message.includes('Failed to fetch')) {
-          description = 'Network error — check your internet connection and try again.';
         } else if (error.message.includes('Email not confirmed')) {
           description = 'Email not confirmed. Please check your inbox.';
         }
+        // Show the full technical error for debugging
         setLoginError(description);
         toast({ title: 'Login Failed', description, variant: 'destructive' });
       } else {
         console.log('[AdminLogin] Login successful, refreshing profile...');
+        setLoginError('');
         await refreshProfile();
         toast({ title: 'Login Successful', description: 'Welcome back, Admin!' });
       }
     } catch (err: any) {
-      console.error('[AdminLogin] Unexpected error:', err);
-      const msg = 'Something went wrong. Check your internet and try again.';
+      console.error('[AdminLogin] Unexpected exception:', err);
+      const msg = err?.message || 'Something went wrong. Check your internet and try again.';
       setLoginError(msg);
       toast({ title: 'Login Error', description: msg, variant: 'destructive' });
     }
