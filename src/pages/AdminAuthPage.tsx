@@ -23,6 +23,7 @@ export default function AdminAuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSetupMode, setIsSetupMode] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loginError, setLoginError] = useState('');
   const { user, isAdmin, isLoading: authLoading, signIn, signOut, refreshProfile } = useAuth();
   const { toast } = useToast();
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -88,6 +89,7 @@ export default function AdminAuthPage() {
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrors({});
+    setLoginError('');
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -111,15 +113,18 @@ export default function AdminAuthPage() {
     }
 
     if (data.email !== ADMIN_EMAIL) {
+      setLoginError('Only authorized admin email can login here.');
       toast({ title: 'Access Denied', description: 'Only authorized admin email can login here.', variant: 'destructive' });
       setIsLoading(false);
       return;
     }
 
     try {
+      console.log('[AdminLogin] Attempting login...');
       const { error } = await signIn(data.email, data.password);
 
       if (error) {
+        console.error('[AdminLogin] Login failed:', error);
         let description = error.message;
         if (error.message === 'Invalid login credentials') {
           description = 'Wrong password. If this is your first time, click "First Time Setup" below.';
@@ -128,13 +133,18 @@ export default function AdminAuthPage() {
         } else if (error.message.includes('Email not confirmed')) {
           description = 'Email not confirmed. Please check your inbox.';
         }
+        setLoginError(description);
         toast({ title: 'Login Failed', description, variant: 'destructive' });
       } else {
+        console.log('[AdminLogin] Login successful, refreshing profile...');
         await refreshProfile();
         toast({ title: 'Login Successful', description: 'Welcome back, Admin!' });
       }
     } catch (err: any) {
-      toast({ title: 'Login Error', description: 'Something went wrong. Check your internet and try again.', variant: 'destructive' });
+      console.error('[AdminLogin] Unexpected error:', err);
+      const msg = 'Something went wrong. Check your internet and try again.';
+      setLoginError(msg);
+      toast({ title: 'Login Error', description: msg, variant: 'destructive' });
     }
 
     setIsLoading(false);
@@ -268,6 +278,11 @@ export default function AdminAuthPage() {
                     </button>
                   </div>
                   {errors.password && <p className="text-sm text-red-400">{errors.password}</p>}
+                  {loginError && (
+                    <div className="p-3 bg-red-900/40 border border-red-700 rounded-xl mt-2">
+                      <p className="text-sm text-red-300">{loginError}</p>
+                    </div>
+                  )}
                 </div>
 
                 <Button type="submit" className="w-full h-12 rounded-xl text-base bg-primary hover:bg-primary/90" disabled={isLoading}>

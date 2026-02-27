@@ -143,14 +143,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email,
         password,
       });
+      if (error) {
+        console.error('[Auth] signIn error:', { message: error.message, status: (error as any).status, details: error });
+      }
       return { error };
     } catch (err: any) {
-      // Network errors (Failed to fetch, timeout, etc.)
+      console.error('[Auth] signIn exception:', err);
       const message = err?.message || 'Unknown error';
-      if (message.includes('Failed to fetch') || message.includes('NetworkError') || message.includes('fetch')) {
-        return { error: new Error('Network error: Please check your internet connection and try again.') as any };
+      if (message.includes('Failed to fetch') || message.includes('NetworkError') || message.includes('fetch') || message.includes('timeout') || message.includes('CORS')) {
+        return { error: { message: 'Network error: Check your internet connection and try again.' } as any };
       }
-      return { error: err as any };
+      return { error: { message: message } as any };
     }
   };
 

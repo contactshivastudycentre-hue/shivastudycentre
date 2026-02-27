@@ -31,6 +31,7 @@ export default function StudentAuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loginError, setLoginError] = useState('');
   const [studentClass, setStudentClass] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { user, profile, isAdmin, isLoading: authLoading, signIn, signUp } = useAuth();
@@ -123,6 +124,7 @@ export default function StudentAuthPage() {
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrors({});
+    setLoginError('');
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -150,40 +152,59 @@ export default function StudentAuthPage() {
     // If identifier looks like a phone number, look up email from profiles
     const isPhone = /^[\d+\-\s()]{10,}$/.test(data.identifier.replace(/\s/g, ''));
     if (isPhone) {
-      const cleanNumber = data.identifier.replace(/[\s\-()]/g, '');
-      const { data: profiles, error: lookupError } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('mobile', cleanNumber);
+      try {
+        const cleanNumber = data.identifier.replace(/[\s\-()]/g, '');
+        const { data: profiles, error: lookupError } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('mobile', cleanNumber);
 
-      if (lookupError || !profiles || profiles.length === 0) {
-        toast({ title: 'Login Failed', description: 'No account found with this mobile number.', variant: 'destructive' });
+        if (lookupError || !profiles || profiles.length === 0) {
+          console.error('[StudentLogin] Mobile lookup failed:', lookupError);
+          const msg = 'No account found with this mobile number.';
+          setLoginError(msg);
+          toast({ title: 'Login Failed', description: msg, variant: 'destructive' });
+          setIsLoading(false);
+          return;
+        }
+
+        if (profiles.length > 1) {
+          const msg = 'Multiple accounts use this number. Please login with your email instead.';
+          setLoginError(msg);
+          toast({ title: 'Multiple Accounts Found', description: msg, variant: 'destructive' });
+          setIsLoading(false);
+          return;
+        }
+
+        const { data: emailData, error: emailError } = await supabase
+          .rpc('get_email_by_user_id' as any, { target_user_id: profiles[0].user_id });
+
+        if (emailError || !emailData) {
+          console.error('[StudentLogin] Email lookup failed:', emailError);
+          const msg = 'Could not retrieve account details. Please try logging in with your email.';
+          setLoginError(msg);
+          toast({ title: 'Login Failed', description: msg, variant: 'destructive' });
+          setIsLoading(false);
+          return;
+        }
+
+        loginEmail = emailData as string;
+      } catch (err: any) {
+        console.error('[StudentLogin] Mobile lookup exception:', err);
+        const msg = 'Network error while looking up your account. Try again.';
+        setLoginError(msg);
+        toast({ title: 'Error', description: msg, variant: 'destructive' });
         setIsLoading(false);
         return;
       }
-
-      if (profiles.length > 1) {
-        toast({ title: 'Multiple Accounts Found', description: 'Multiple accounts use this number. Please login with your email instead.', variant: 'destructive' });
-        setIsLoading(false);
-        return;
-      }
-
-      const { data: emailData, error: emailError } = await supabase
-        .rpc('get_email_by_user_id' as any, { target_user_id: profiles[0].user_id });
-
-      if (emailError || !emailData) {
-        toast({ title: 'Login Failed', description: 'Could not retrieve account details. Please try logging in with your email.', variant: 'destructive' });
-        setIsLoading(false);
-        return;
-      }
-
-      loginEmail = emailData as string;
     }
 
     try {
+      console.log('[StudentLogin] Attempting login...');
       const { error } = await signIn(loginEmail, data.password);
 
       if (error) {
+        console.error('[StudentLogin] Login failed:', error);
         let description = error.message;
         if (error.message === 'Invalid login credentials') {
           description = 'Wrong email/mobile or password. If you are new, please register first.';
@@ -192,10 +213,16 @@ export default function StudentAuthPage() {
         } else if (error.message.includes('Network error') || error.message.includes('Failed to fetch')) {
           description = 'Network error — check your internet connection and try again.';
         }
+        setLoginError(description);
         toast({ title: 'Login Failed', description, variant: 'destructive' });
+      } else {
+        console.log('[StudentLogin] Login successful');
       }
     } catch (err: any) {
-      toast({ title: 'Login Error', description: 'Something went wrong. Check your internet and try again.', variant: 'destructive' });
+      console.error('[StudentLogin] Unexpected error:', err);
+      const msg = 'Something went wrong. Check your internet and try again.';
+      setLoginError(msg);
+      toast({ title: 'Login Error', description: msg, variant: 'destructive' });
     }
 
     setIsLoading(false);
@@ -342,6 +369,12 @@ export default function StudentAuthPage() {
                       Forgot Password?
                     </button>
                   </div>
+
+                  {loginError && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-xl">
+                      <p className="text-sm text-destructive">{loginError}</p>
+                    </div>
+                  )}
 
                   <Button type="submit" className="w-full h-12 rounded-xl text-base bg-primary hover:bg-primary/90" disabled={isLoading}>
                     {isLoading ? (
