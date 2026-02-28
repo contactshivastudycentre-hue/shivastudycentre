@@ -9,8 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
-import { runConnectionDiagnostic } from '@/lib/connectionTest';
-
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -25,7 +23,6 @@ export default function AdminAuthPage() {
   const [isSetupMode, setIsSetupMode] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loginError, setLoginError] = useState('');
-  const [diagResult, setDiagResult] = useState('');
   const { user, isAdmin, isLoading: authLoading, signIn, signOut, refreshProfile } = useAuth();
   const { toast } = useToast();
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -300,25 +297,8 @@ export default function AdminAuthPage() {
                   ) : 'Login as Admin'}
                 </Button>
 
-                {diagResult && (
-                  <div className="p-3 bg-slate-900 border border-slate-600 rounded-xl mt-2">
-                    <p className="text-xs text-slate-300 font-mono whitespace-pre-wrap">{diagResult}</p>
-                  </div>
-                )}
 
                 <div className="pt-4 border-t border-slate-700 space-y-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-10 rounded-xl border-amber-600 text-amber-300 hover:bg-amber-900/30"
-                    onClick={async () => {
-                      setDiagResult('Running diagnostics...');
-                      const result = await runConnectionDiagnostic();
-                      setDiagResult(result);
-                    }}
-                  >
-                    🔧 Run Connection Diagnostic
-                  </Button>
                   <Button
                     type="button"
                     variant="outline"
