@@ -108,84 +108,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, fullName: string, mobile: string, studentClass?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-      },
-    });
+    try {
+      console.log('[Auth] signUp via proxy...');
+      const { data: proxyData, error: proxyError } = await supabase.functions.invoke('auth-proxy', {
+        body: { action: 'signUp', email, password, fullName, mobile, studentClass, redirectTo: redirectUrl },
+      });
 
-    if (error) return { error };
-
-    if (data.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: data.user.id,
-          full_name: fullName,
-          mobile: mobile,
-          class: studentClass || null,
-          status: 'pending',
-        });
-
-      if (profileError) {
-        return { error: profileError as Error };
+      if (proxyError) {
+        console.error('[Auth] signUp proxy transport error:', proxyError);
+        return { error: { message: proxyError.message || 'Network error during signup' } as Error };
       }
-    }
 
-    return { error: null };
+      if (proxyData?.error) {
+        console.error('[Auth] signUp server error:', proxyData.error);
+        return { error: { message: proxyData.error.message } as Error };
+      }
+
+      // If session was returned, set it on the local client
+      if (proxyData?.session?.access_token) {
+        await supabase.auth.setSession({
+          access_token: proxyData.session.access_token,
+          refresh_token: proxyData.session.refresh_token,
+        });
+      }
+
+      return { error: null };
+    } catch (err: any) {
+      console.error('[Auth] signUp exception:', err);
+      return { error: { message: err?.message || 'Signup failed' } as Error };
+    }
   };
 
   const signIn = async (email: string, password: string) => {
     const startTime = Date.now();
-    console.log('[Auth] signIn attempt started for:', email);
+    console.log('[Auth] signIn via proxy for:', email);
     
     try {
-      const { error, data } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const { data: proxyData, error: proxyError } = await supabase.functions.invoke('auth-proxy', {
+        body: { action: 'signIn', email, password },
       });
       
       const elapsed = Date.now() - startTime;
+      console.log('[Auth] proxy response in', elapsed, 'ms');
       
-      if (error) {
-        console.error('[Auth] signIn error:', {
-          message: error.message,
-          status: (error as any)?.status,
-          code: (error as any)?.code,
-          elapsed: `${elapsed}ms`,
-          fullError: JSON.stringify(error, null, 2),
+      if (proxyError) {
+        console.error('[Auth] signIn proxy transport error:', proxyError);
+        return { error: { message: `Connection error (${elapsed}ms): ${proxyError.message}. Try again.` } as any };
+      }
+
+      if (proxyData?.error) {
+        console.error('[Auth] signIn server error:', proxyData.error);
+        return { error: { message: proxyData.error.message } as any };
+      }
+
+      // Set the session on the local Supabase client
+      if (proxyData?.session?.access_token) {
+        await supabase.auth.setSession({
+          access_token: proxyData.session.access_token,
+          refresh_token: proxyData.session.refresh_token,
         });
-        return { error };
       }
       
-      console.log('[Auth] signIn success:', { elapsed: `${elapsed}ms`, userId: data?.user?.id });
+      console.log('[Auth] signIn success via proxy');
       return { error: null };
     } catch (err: any) {
       const elapsed = Date.now() - startTime;
-      console.error('[Auth] signIn EXCEPTION:', {
-        name: err?.name,
-        message: err?.message,
-        stack: err?.stack,
-        elapsed: `${elapsed}ms`,
-        type: err?.constructor?.name,
-      });
-      
-      const msg = err?.message || 'Unknown error';
-      let userMessage: string;
-      
-      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('fetch')) {
-        userMessage = `Network error (${elapsed}ms): Your browser could not reach the server. This is NOT a code bug — it's a connectivity issue. Try: 1) Check internet 2) Disable VPN/ad-blocker 3) Try a different network.`;
-      } else if (msg.includes('CORS')) {
-        userMessage = `CORS error: The server rejected the request origin. Contact support.`;
-      } else if (msg.includes('timeout') || msg.includes('AbortError')) {
-        userMessage = `Request timed out after ${elapsed}ms. Server may be slow — try again.`;
-      } else {
-        userMessage = `Unexpected error: ${msg}`;
-      }
-      
-      return { error: { message: userMessage } as any };
+      console.error('[Auth] signIn exception:', err);
+      return { error: { message: `Unexpected error (${elapsed}ms): ${err?.message || 'Unknown'}` } as any };
     }
   };
 
