@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
+import { LoginSuccessOverlay } from '@/components/LoginSuccessOverlay';
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -23,9 +24,11 @@ export default function AdminAuthPage() {
   const [isSetupMode, setIsSetupMode] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loginError, setLoginError] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
   const { user, isAdmin, isLoading: authLoading, signIn, signOut, refreshProfile } = useAuth();
   const { toast } = useToast();
   const passwordRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   // Autofocus password field on mount
   useEffect(() => {
@@ -144,7 +147,10 @@ export default function AdminAuthPage() {
         console.log('[AdminLogin] Login successful, refreshing profile...');
         setLoginError('');
         await refreshProfile();
-        toast({ title: 'Login Successful', description: 'Welcome back, Admin!' });
+        setIsLoading(false);
+        setShowSuccess(true);
+        setTimeout(() => navigate('/admin', { replace: true }), 500);
+        return;
       }
     } catch (err: any) {
       console.error('[AdminLogin] Unexpected exception:', err);
@@ -213,6 +219,7 @@ export default function AdminAuthPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col">
+      <LoginSuccessOverlay show={showSuccess} message="Welcome back, Admin!" />
       <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="p-6">
         <Link to="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors group">
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
