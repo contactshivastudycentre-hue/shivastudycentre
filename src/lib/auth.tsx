@@ -34,6 +34,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const AUTH_PROXY_TIMEOUT_MS = 12000;
+  const AUTH_PROXY_MAX_RETRIES = 2;
+
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const callAuthProxy = async (payload: Record<string, unknown>) => {
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), AUTH_PROXY_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/auth-proxy`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: publishableKey,
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      const text = await response.text();
+      const json = text ? JSON.parse(text) : {};
+
+      if (!response.ok) {
+        return {
+          data: null,
+          error: { message: json?.error?.message || `Request failed (${response.status})` } as Error,
+          isTransportError: false,
+        };
+      }
+
+      return { data: json, error: null, isTransportError: false };
+    } catch (err: any) {
+      const isAbort = err?.name === 'AbortError';
+      return {
+        data: null,
+        error: { message: isAbort ? 'Request timeout. Please check network and retry.' : err?.message || 'Network error' } as Error,
+        isTransportError: true,
+      };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
+
+  const callAuthProxyWithRetry = async (payload: Record<string, unknown>) => {
+    let lastError: Error | null = null;
+    let lastTransportError = false;
+
+    for (let attempt = 0; attempt <= AUTH_PROXY_MAX_RETRIES; attempt++) {
+      const result = await callAuthProxy(payload);
+
+      if (!result.error) {
+        return result;
+      }
+
+      lastError = result.error;
+      lastTransportError = result.isTransportError;
+
+      if (!result.isTransportError || attempt === AUTH_PROXY_MAX_RETRIES) {
+        break;
+      }
+
+      await wait(400 * (attempt + 1));
+    }
+
+    return { data: null, error: lastError, isTransportError: lastTransportError };
+  };
+
   const fetchProfile = async (userId: string) => {
     const { data: profileData } = await supabase
       .from('profiles')
@@ -107,74 +178,103 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string, mobile: string, studentClass?: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
+
     try {
       console.log('[Auth] signUp via proxy...');
-      const { data: proxyData, error: proxyError } = await supabase.functions.invoke('auth-proxy', {
-        body: { action: 'signUp', email, password, fullName, mobile, studentClass, redirectTo: redirectUrl },
+      const { data: proxyData, error: proxyError, isTransportError } = await callAuthProxyWithRetry({
+        action: 'signUp',
+        email,
+        password,
+        fullName,
+        mobile,
+        studentClass,
+        redirectTo: redirectUrl,
       });
 
       if (proxyError) {
-        console.error('[Auth] signUp proxy transport error:', proxyError);
-        return { error: { message: proxyError.message || 'Network error during signup' } as Error };
+        if (isTransportError) {
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo: redirectUrl },
+          });
+
+          if (error) return { error };
+
+          if (data.session?.access_token) {
+            await supabase.auth.setSession({
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token,
+            });
+          }
+
+          return { error: null };
+        }
+
+        return { error: proxyError };
       }
 
-      if (proxyData?.error) {
-        console.error('[Auth] signUp server error:', proxyData.error);
-        return { error: { message: proxyData.error.message } as Error };
+      if ((proxyData as any)?.error) {
+        return { error: { message: (proxyData as any).error.message } as Error };
       }
 
-      // If session was returned, set it on the local client
-      if (proxyData?.session?.access_token) {
+      if ((proxyData as any)?.session?.access_token) {
         await supabase.auth.setSession({
-          access_token: proxyData.session.access_token,
-          refresh_token: proxyData.session.refresh_token,
+          access_token: (proxyData as any).session.access_token,
+          refresh_token: (proxyData as any).session.refresh_token,
         });
       }
 
       return { error: null };
     } catch (err: any) {
-      console.error('[Auth] signUp exception:', err);
       return { error: { message: err?.message || 'Signup failed' } as Error };
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    const startTime = Date.now();
-    console.log('[Auth] signIn via proxy for:', email);
-    
+    console.log('[Auth] signIn via resilient auth pipeline for:', email);
+
     try {
-      const { data: proxyData, error: proxyError } = await supabase.functions.invoke('auth-proxy', {
-        body: { action: 'signIn', email, password },
+      const { data: proxyData, error: proxyError, isTransportError } = await callAuthProxyWithRetry({
+        action: 'signIn',
+        email,
+        password,
       });
-      
-      const elapsed = Date.now() - startTime;
-      console.log('[Auth] proxy response in', elapsed, 'ms');
-      
+
       if (proxyError) {
-        console.error('[Auth] signIn proxy transport error:', proxyError);
-        return { error: { message: `Connection error (${elapsed}ms): ${proxyError.message}. Try again.` } as any };
+        if (isTransportError) {
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) {
+            return { error: { message: error.message } as any };
+          }
+
+          if (data.session?.access_token) {
+            await supabase.auth.setSession({
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token,
+            });
+          }
+
+          return { error: null };
+        }
+
+        return { error: { message: proxyError.message } as any };
       }
 
-      if (proxyData?.error) {
-        console.error('[Auth] signIn server error:', proxyData.error);
-        return { error: { message: proxyData.error.message } as any };
+      if ((proxyData as any)?.error) {
+        return { error: { message: (proxyData as any).error.message } as any };
       }
 
-      // Set the session on the local Supabase client
-      if (proxyData?.session?.access_token) {
+      if ((proxyData as any)?.session?.access_token) {
         await supabase.auth.setSession({
-          access_token: proxyData.session.access_token,
-          refresh_token: proxyData.session.refresh_token,
+          access_token: (proxyData as any).session.access_token,
+          refresh_token: (proxyData as any).session.refresh_token,
         });
       }
-      
-      console.log('[Auth] signIn success via proxy');
+
       return { error: null };
     } catch (err: any) {
-      const elapsed = Date.now() - startTime;
-      console.error('[Auth] signIn exception:', err);
-      return { error: { message: `Unexpected error (${elapsed}ms): ${err?.message || 'Unknown'}` } as any };
+      return { error: { message: err?.message || 'Unexpected login error' } as any };
     }
   };
 
