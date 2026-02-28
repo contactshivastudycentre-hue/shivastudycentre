@@ -23,7 +23,7 @@ const contentItems = [
 
 export function AdminLayout() {
   const location = useLocation();
-  const { user, isAdmin, isLoading, signOut } = useAuth();
+  const { user, isAdmin, isLoading, profileLoaded, signOut } = useAuth();
 
   if (isLoading) {
     return (
@@ -35,6 +35,15 @@ export function AdminLayout() {
 
   if (!user) {
     return <Navigate to="/admin-login" replace />;
+  }
+
+  // Wait for profile/role to load before deciding
+  if (!profileLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
   }
 
   if (!isAdmin) {
