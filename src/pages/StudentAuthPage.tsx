@@ -11,7 +11,6 @@ import { z } from 'zod';
 import { Logo } from '@/components/Logo';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
-import { runConnectionDiagnostic } from '@/lib/connectionTest';
 import { ClassSelect } from '@/components/ClassSelect';
 import { ForgotPasswordModal } from '@/components/ForgotPasswordModal';
 
@@ -33,7 +32,6 @@ export default function StudentAuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loginError, setLoginError] = useState('');
-  const [diagResult, setDiagResult] = useState('');
   const [studentClass, setStudentClass] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { user, profile, isAdmin, isLoading: authLoading, signIn, signUp } = useAuth();
@@ -391,24 +389,7 @@ export default function StudentAuthPage() {
                     ) : 'Login'}
                   </Button>
 
-                  {diagResult && (
-                    <div className="p-3 bg-muted border border-border rounded-xl mt-2">
-                      <p className="text-xs text-muted-foreground font-mono whitespace-pre-wrap">{diagResult}</p>
-                    </div>
-                  )}
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-10 rounded-xl text-sm"
-                    onClick={async () => {
-                      setDiagResult('Running diagnostics...');
-                      const result = await runConnectionDiagnostic();
-                      setDiagResult(result);
-                    }}
-                  >
-                    🔧 Run Connection Diagnostic
-                  </Button>
                 </form>
               </TabsContent>
 
