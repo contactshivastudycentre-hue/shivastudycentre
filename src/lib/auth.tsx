@@ -19,6 +19,7 @@ interface AuthContextType {
   profile: Profile | null;
   isAdmin: boolean;
   isLoading: boolean;
+  profileLoaded: boolean;
   signUp: (email: string, password: string, fullName: string, mobile: string, studentClass?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -33,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   const AUTH_PROXY_TIMEOUT_MS = 12000;
   const AUTH_PROXY_MAX_RETRIES = 2;
@@ -106,23 +108,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchProfile = async (userId: string) => {
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
+    setProfileLoaded(false);
+    const [{ data: profileData }, { data: roleData }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('user_id', userId).single(),
+      supabase.from('user_roles').select('role').eq('user_id', userId).eq('role', 'admin'),
+    ]);
 
-    if (profileData) {
-      setProfile(profileData as Profile);
-    }
-
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .eq('role', 'admin');
-
+    if (profileData) setProfile(profileData as Profile);
     setIsAdmin(roleData && roleData.length > 0);
+    setProfileLoaded(true);
   };
 
   const refreshProfile = async () => {
@@ -284,13 +278,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(false);
   };
 
-  return (
+    return (
     <AuthContext.Provider value={{
       user,
       session,
       profile,
       isAdmin,
       isLoading,
+      profileLoaded,
       signUp,
       signIn,
       signOut,
