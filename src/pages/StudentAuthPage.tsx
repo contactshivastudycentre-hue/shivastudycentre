@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { ClassSelect } from '@/components/ClassSelect';
 import { ForgotPasswordModal } from '@/components/ForgotPasswordModal';
+import { LoginSuccessOverlay } from '@/components/LoginSuccessOverlay';
 
 const loginSchema = z.object({
   identifier: z.string().min(1, 'Please enter your email or mobile number'),
@@ -34,9 +35,11 @@ export default function StudentAuthPage() {
   const [loginError, setLoginError] = useState('');
   const [studentClass, setStudentClass] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const { user, profile, isAdmin, isLoading: authLoading, signIn, signUp } = useAuth();
   const { toast } = useToast();
   const identifierRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   // Autofocus identifier field
   useEffect(() => {
@@ -224,6 +227,11 @@ export default function StudentAuthPage() {
         toast({ title: 'Login Failed', description, variant: 'destructive' });
       } else {
         console.log('[StudentLogin] Login successful');
+        setIsLoading(false);
+        setShowSuccess(true);
+        const target = isAdmin ? '/admin' : '/dashboard';
+        setTimeout(() => navigate(target, { replace: true }), 500);
+        return;
       }
     } catch (err: any) {
       console.error('[StudentLogin] Unexpected error:', err);
@@ -294,6 +302,7 @@ export default function StudentAuthPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex flex-col">
+      <LoginSuccessOverlay show={showSuccess} message="Welcome back!" />
       <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="p-6">
         <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group">
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
