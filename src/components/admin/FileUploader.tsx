@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -13,90 +13,50 @@ interface FileUploaderProps {
   existingUrl?: string;
 }
 
-const UPLOAD_TIMEOUT_MS = 30000;
-const MAX_RETRIES = 2;
-
-async function uploadWithRetry(
-  bucket: string,
-  filePath: string,
-  file: File,
-  retries = MAX_RETRIES
-): Promise<{ data: any; error: any }> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      console.log(`[FileUploader] Upload attempt ${attempt + 1}/${retries + 1} for ${filePath}`);
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
-
-      const result = await supabase.storage
-        .from(bucket)
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-
-      clearTimeout(timeout);
-
-      if (result.error) {
-        console.error(`[FileUploader] Attempt ${attempt + 1} error:`, result.error.message);
-        if (attempt < retries) {
-          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
-          continue;
-        }
-        return result;
-      }
-
-      console.log('[FileUploader] Upload succeeded:', result.data);
-      return result;
-    } catch (err: any) {
-      console.error(`[FileUploader] Attempt ${attempt + 1} exception:`, err.message);
-      if (attempt < retries) {
-        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
-        continue;
-      }
-      return { data: null, error: err };
-    }
-  }
-  return { data: null, error: new Error('Upload failed after all retries') };
+// Scale timeout based on file size: 30s base + 5s per MB
+function getTimeout(fileSizeMB: number) {
+  return Math.max(30000, 30000 + fileSizeMB * 5000);
 }
+
+const MAX_RETRIES = 2;
 
 export function FileUploader({
   bucket,
   accept = '.pdf',
-  maxSizeMB = 10,
+  maxSizeMB = 50,
   onUploadComplete,
   existingUrl,
 }: FileUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFile, setSelectedFile] = useState<globalThis.File | null>(null);
   const [uploadedUrl, setUploadedUrl] = useState(existingUrl || '');
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setError(null);
-    console.log('[FileUploader] File selected:', file.name, file.type, `${(file.size / 1024 / 1024).toFixed(2)}MB`);
+    const sizeMB = file.size / 1024 / 1024;
+    console.log('[FileUploader] Selected:', file.name, file.type, `${sizeMB.toFixed(2)}MB`);
 
     if (accept === '.pdf' && file.type !== 'application/pdf') {
       setError('Please select a PDF file.');
       return;
     }
 
-    const maxBytes = maxSizeMB * 1024 * 1024;
-    if (file.size > maxBytes) {
-      setError(`File size must be less than ${maxSizeMB}MB. Current: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
+    if (sizeMB > maxSizeMB) {
+      setError(`File too large (${sizeMB.toFixed(1)}MB). Max ${maxSizeMB}MB.`);
       return;
     }
 
     setSelectedFile(file);
     setUploadedUrl('');
-  };
+  }, [accept, maxSizeMB]);
 
   const uploadFile = async () => {
     if (!selectedFile) return;
@@ -105,62 +65,95 @@ export function FileUploader({
     setProgress(0);
     setError(null);
 
-    // Check auth session first
+    // Verify session
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
-      setError('You must be logged in to upload files. Please refresh and log in again.');
+      setError('Not logged in. Please refresh and log in again.');
       setIsUploading(false);
-      console.error('[FileUploader] No active session');
       return;
     }
-    console.log('[FileUploader] Session verified, user:', sessionData.session.user.id);
 
+    const sizeMB = selectedFile.size / 1024 / 1024;
+    const timeout = getTimeout(sizeMB);
     const timestamp = Date.now();
     const safeName = selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filePath = `${timestamp}-${safeName}`;
 
-    const progressInterval = setInterval(() => {
-      setProgress(prev => Math.min(prev + 8, 85));
-    }, 300);
+    console.log(`[FileUploader] Uploading ${sizeMB.toFixed(1)}MB, timeout: ${timeout}ms`);
 
-    const { data, error: uploadError } = await uploadWithRetry(bucket, filePath, selectedFile);
+    // Simulate progress based on file size
+    const progressStep = Math.max(2, Math.min(8, 80 / (sizeMB * 2)));
+    const progressInterval = setInterval(() => {
+      setProgress(prev => Math.min(prev + progressStep, 90));
+    }, 500);
+
+    let lastError: string | null = null;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) {
+          console.log(`[FileUploader] Retry ${attempt}/${MAX_RETRIES}`);
+          await new Promise(r => setTimeout(r, 1500 * attempt));
+        }
+
+        abortRef.current = new AbortController();
+        const timer = setTimeout(() => abortRef.current?.abort(), timeout);
+
+        const { data, error: uploadError } = await supabase.storage
+          .from(bucket)
+          .upload(filePath, selectedFile, {
+            cacheControl: '3600',
+            upsert: true, // allow retry without "already exists" error
+          });
+
+        clearTimeout(timer);
+
+        if (uploadError) {
+          lastError = uploadError.message;
+          console.error(`[FileUploader] Attempt ${attempt + 1} error:`, lastError);
+          if (attempt < MAX_RETRIES) continue;
+          break;
+        }
+
+        // Success
+        clearInterval(progressInterval);
+        const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
+        console.log('[FileUploader] Success:', urlData.publicUrl);
+
+        setProgress(100);
+        setUploadedUrl(urlData.publicUrl);
+        onUploadComplete(urlData.publicUrl, selectedFile.name);
+        setIsUploading(false);
+        toast({ title: '✅ Upload Complete', description: `${selectedFile.name} uploaded.` });
+        return;
+      } catch (err: any) {
+        lastError = err.name === 'AbortError' ? 'Upload timed out. Try a smaller file or better connection.' : (err.message || 'Unknown error');
+        console.error(`[FileUploader] Attempt ${attempt + 1} exception:`, lastError);
+        if (attempt < MAX_RETRIES) continue;
+      }
+    }
 
     clearInterval(progressInterval);
 
-    if (uploadError || !data) {
-      const msg = uploadError?.message || 'Upload failed after retries.';
-      console.error('[FileUploader] Final upload error:', msg);
-      
-      let userMsg = msg;
-      if (msg.includes('exceeded') || msg.includes('limit')) {
-        userMsg = 'File is too large. Maximum size is 10MB.';
-      } else if (msg.includes('not found') || msg.includes('Bucket')) {
-        userMsg = 'Storage not configured. Please contact admin.';
-      } else if (msg.includes('policy') || msg.includes('denied') || msg.includes('security')) {
-        userMsg = 'Permission denied. Please ensure you are logged in as admin.';
-      } else if (msg.includes('timeout') || msg.includes('abort') || msg.includes('network') || msg.includes('fetch')) {
-        userMsg = 'Network error. Please check your connection and try again.';
-      }
-
-      setError(userMsg);
-      toast({ title: 'Upload Failed', description: userMsg, variant: 'destructive' });
-      setIsUploading(false);
-      return;
+    // Map error to user-friendly message
+    let userMsg = lastError || 'Upload failed.';
+    if (lastError?.includes('exceeded') || lastError?.includes('limit')) {
+      userMsg = `File too large. Maximum is ${maxSizeMB}MB.`;
+    } else if (lastError?.includes('Bucket') || lastError?.includes('not found')) {
+      userMsg = 'Storage not configured. Contact admin.';
+    } else if (lastError?.includes('policy') || lastError?.includes('denied')) {
+      userMsg = 'Permission denied. Make sure you are logged in as admin.';
+    } else if (lastError?.includes('timeout') || lastError?.includes('abort') || lastError?.includes('fetch') || lastError?.includes('network')) {
+      userMsg = 'Network timeout. Check your connection and try again.';
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
-    console.log('[FileUploader] Public URL:', urlData.publicUrl);
-
-    setProgress(100);
-    setUploadedUrl(urlData.publicUrl);
-    onUploadComplete(urlData.publicUrl, selectedFile.name);
+    setError(userMsg);
+    toast({ title: 'Upload Failed', description: userMsg, variant: 'destructive' });
     setIsUploading(false);
-
-    toast({ title: '✅ Upload Complete', description: 'PDF uploaded successfully.' });
   };
 
   const clearFile = () => {
+    abortRef.current?.abort();
     setSelectedFile(null);
     setUploadedUrl('');
     setProgress(0);
@@ -172,7 +165,7 @@ export function FileUploader({
     <div className="space-y-4">
       {!selectedFile && !uploadedUrl && (
         <div
-          className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+          className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors active:scale-[0.98]"
           onClick={() => inputRef.current?.click()}
         >
           <input
@@ -183,9 +176,9 @@ export function FileUploader({
             className="hidden"
           />
           <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-foreground font-medium mb-1">Click to upload</p>
+          <p className="text-foreground font-medium mb-1">Tap to upload</p>
           <p className="text-sm text-muted-foreground">
-            PDF files only (max {maxSizeMB}MB)
+            PDF files up to {maxSizeMB}MB
           </p>
         </div>
       )}
@@ -211,7 +204,7 @@ export function FileUploader({
             <div className="mt-4 space-y-2">
               <Progress value={progress} className="h-2" />
               <p className="text-xs text-muted-foreground text-center">
-                Uploading... {progress}%
+                Uploading... {Math.round(progress)}%
               </p>
             </div>
           )}
