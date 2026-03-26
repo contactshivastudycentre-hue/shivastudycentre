@@ -221,7 +221,7 @@ export default function AdminNotesPage() {
                 <FileUploader
                   bucket="notes"
                   accept=".pdf"
-                  maxSizeMB={10}
+                  maxSizeMB={50}
                   onUploadComplete={(url) => setFormData({ ...formData, pdf_url: url })}
                   existingUrl={formData.pdf_url}
                 />
