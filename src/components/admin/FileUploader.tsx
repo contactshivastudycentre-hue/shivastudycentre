@@ -1,9 +1,14 @@
-import { useState, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Upload, File, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, File, X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  mapUploadErrorToMessage,
+  MULTIPART_THRESHOLD_BYTES,
+  uploadPdfToNotesStorage,
+} from '@/lib/notesUpload';
 
 interface FileUploaderProps {
   bucket: string;
@@ -13,17 +18,10 @@ interface FileUploaderProps {
   existingUrl?: string;
 }
 
-// Scale timeout based on file size: 30s base + 5s per MB
-function getTimeout(fileSizeMB: number) {
-  return Math.max(30000, 30000 + fileSizeMB * 5000);
-}
-
-const MAX_RETRIES = 2;
-
 export function FileUploader({
   bucket,
   accept = '.pdf',
-  maxSizeMB = 50,
+  maxSizeMB = 10,
   onUploadComplete,
   existingUrl,
 }: FileUploaderProps) {
@@ -33,8 +31,11 @@ export function FileUploader({
   const [uploadedUrl, setUploadedUrl] = useState(existingUrl || '');
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    setUploadedUrl(existingUrl || '');
+  }, [existingUrl]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -44,13 +45,14 @@ export function FileUploader({
     const sizeMB = file.size / 1024 / 1024;
     console.log('[FileUploader] Selected:', file.name, file.type, `${sizeMB.toFixed(2)}MB`);
 
-    if (accept === '.pdf' && file.type !== 'application/pdf') {
-      setError('Please select a PDF file.');
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (accept === '.pdf' && !isPdf) {
+      setError('Invalid file type. Please upload a PDF only.');
       return;
     }
 
     if (sizeMB > maxSizeMB) {
-      setError(`File too large (${sizeMB.toFixed(1)}MB). Max ${maxSizeMB}MB.`);
+      setError(`PDF is too large. Please upload a file under ${maxSizeMB}MB.`);
       return;
     }
 
@@ -65,7 +67,10 @@ export function FileUploader({
     setProgress(0);
     setError(null);
 
-    // Verify session
+    const sizeMB = selectedFile.size / 1024 / 1024;
+    const isLargeFile = selectedFile.size > MULTIPART_THRESHOLD_BYTES;
+    console.log(`[FileUploader] Upload start: ${selectedFile.name} (${sizeMB.toFixed(2)}MB)`);
+
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
       setError('Not logged in. Please refresh and log in again.');
@@ -73,87 +78,61 @@ export function FileUploader({
       return;
     }
 
-    const sizeMB = selectedFile.size / 1024 / 1024;
-    const timeout = getTimeout(sizeMB);
-    const timestamp = Date.now();
-    const safeName = selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filePath = `${timestamp}-${safeName}`;
+    const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin');
+    if (adminError || !isAdmin) {
+      const adminMsg = 'Upload blocked. Only admin accounts can upload notes.';
+      console.error('[FileUploader] Admin check failed:', adminError || 'not admin');
+      setError(adminMsg);
+      toast({ title: 'Upload Failed', description: adminMsg, variant: 'destructive' });
+      setIsUploading(false);
+      return;
+    }
 
-    console.log(`[FileUploader] Uploading ${sizeMB.toFixed(1)}MB, timeout: ${timeout}ms`);
-
-    // Simulate progress based on file size
-    const progressStep = Math.max(2, Math.min(8, 80 / (sizeMB * 2)));
-    const progressInterval = setInterval(() => {
-      setProgress(prev => Math.min(prev + progressStep, 90));
-    }, 500);
-
-    let lastError: string | null = null;
-
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        if (attempt > 0) {
-          console.log(`[FileUploader] Retry ${attempt}/${MAX_RETRIES}`);
-          await new Promise(r => setTimeout(r, 1500 * attempt));
-        }
-
-        abortRef.current = new AbortController();
-        const timer = setTimeout(() => abortRef.current?.abort(), timeout);
-
-        const { data, error: uploadError } = await supabase.storage
-          .from(bucket)
-          .upload(filePath, selectedFile, {
-            cacheControl: '3600',
-            upsert: true, // allow retry without "already exists" error
+    const fallbackProgress = !isLargeFile
+      ? window.setInterval(() => {
+          setProgress((prev) => {
+            const next = Math.min(prev + 6, 88);
+            console.log('[FileUploader] Upload progress:', `${next}%`);
+            return next;
           });
+        }, 400)
+      : null;
 
-        clearTimeout(timer);
+    try {
+      const result = await uploadPdfToNotesStorage({
+        bucket,
+        file: selectedFile,
+        onProgress: (value) => {
+          setProgress(value);
+          console.log('[FileUploader] Upload progress:', `${value}%`);
+        },
+      });
 
-        if (uploadError) {
-          lastError = uploadError.message;
-          console.error(`[FileUploader] Attempt ${attempt + 1} error:`, lastError);
-          if (attempt < MAX_RETRIES) continue;
-          break;
-        }
+      if (fallbackProgress) window.clearInterval(fallbackProgress);
 
-        // Success
-        clearInterval(progressInterval);
-        const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
-        console.log('[FileUploader] Success:', urlData.publicUrl);
+      console.log('[FileUploader] Upload success:', {
+        filePath: result.filePath,
+        publicUrl: result.publicUrl,
+        multipart: result.usedMultipart,
+      });
 
-        setProgress(100);
-        setUploadedUrl(urlData.publicUrl);
-        onUploadComplete(urlData.publicUrl, selectedFile.name);
-        setIsUploading(false);
-        toast({ title: '✅ Upload Complete', description: `${selectedFile.name} uploaded.` });
-        return;
-      } catch (err: any) {
-        lastError = err.name === 'AbortError' ? 'Upload timed out. Try a smaller file or better connection.' : (err.message || 'Unknown error');
-        console.error(`[FileUploader] Attempt ${attempt + 1} exception:`, lastError);
-        if (attempt < MAX_RETRIES) continue;
-      }
+      setProgress(100);
+      setUploadedUrl(result.publicUrl);
+      onUploadComplete(result.publicUrl, selectedFile.name);
+      toast({ title: '✅ Upload Complete', description: 'PDF uploaded successfully.' });
+    } catch (uploadError) {
+      if (fallbackProgress) window.clearInterval(fallbackProgress);
+      console.error('[FileUploader] Upload failure:', uploadError);
+      const message = mapUploadErrorToMessage(uploadError, maxSizeMB);
+      setError(message);
+      toast({ title: 'Upload Failed', description: message, variant: 'destructive' });
+    } finally {
+      setIsUploading(false);
     }
-
-    clearInterval(progressInterval);
-
-    // Map error to user-friendly message
-    let userMsg = lastError || 'Upload failed.';
-    if (lastError?.includes('exceeded') || lastError?.includes('limit')) {
-      userMsg = `File too large. Maximum is ${maxSizeMB}MB.`;
-    } else if (lastError?.includes('Bucket') || lastError?.includes('not found')) {
-      userMsg = 'Storage not configured. Contact admin.';
-    } else if (lastError?.includes('policy') || lastError?.includes('denied')) {
-      userMsg = 'Permission denied. Make sure you are logged in as admin.';
-    } else if (lastError?.includes('timeout') || lastError?.includes('abort') || lastError?.includes('fetch') || lastError?.includes('network')) {
-      userMsg = 'Network timeout. Check your connection and try again.';
-    }
-
-    setError(userMsg);
-    toast({ title: 'Upload Failed', description: userMsg, variant: 'destructive' });
-    setIsUploading(false);
   };
 
   const clearFile = () => {
-    abortRef.current?.abort();
+    if (isUploading) return;
     setSelectedFile(null);
     setUploadedUrl('');
     setProgress(0);
@@ -164,10 +143,7 @@ export function FileUploader({
   return (
     <div className="space-y-4">
       {!selectedFile && !uploadedUrl && (
-        <div
-          className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors active:scale-[0.98]"
-          onClick={() => inputRef.current?.click()}
-        >
+        <div className="border-2 border-dashed border-border rounded-xl p-6 text-center space-y-3">
           <input
             ref={inputRef}
             type="file"
@@ -176,9 +152,17 @@ export function FileUploader({
             className="hidden"
           />
           <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-foreground font-medium mb-1">Tap to upload</p>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-12"
+            onClick={() => inputRef.current?.click()}
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Select PDF
+          </Button>
           <p className="text-sm text-muted-foreground">
-            PDF files up to {maxSizeMB}MB
+            PDF only • Max {maxSizeMB}MB • Files over 5MB use multipart upload
           </p>
         </div>
       )}
@@ -210,9 +194,16 @@ export function FileUploader({
           )}
 
           {!isUploading && (
-            <Button className="w-full mt-4" onClick={uploadFile}>
+            <Button className="w-full mt-4 h-12" onClick={uploadFile}>
               <Upload className="w-4 h-4 mr-2" />
-              Upload File
+              Upload PDF
+            </Button>
+          )}
+
+          {isUploading && (
+            <Button className="w-full mt-4 h-12" disabled>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Uploading...
             </Button>
           )}
         </div>
