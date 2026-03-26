@@ -75,7 +75,7 @@ export function AdminLayout() {
             </div>
           </Link>
           <p className="text-[10px] text-muted-foreground mt-2 uppercase tracking-wider">
-            Powered by KAIRAUX
+            Powered by LEADPE
           </p>
         </div>
 
@@ -118,7 +118,7 @@ export function AdminLayout() {
               SSC Admin
             </span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Powered by KAIRAUX
+              Powered by LEADPE
             </span>
           </div>
         </Link>

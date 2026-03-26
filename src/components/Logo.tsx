@@ -114,7 +114,7 @@ export function Logo({
             transition={{ delay: 0.1 }} 
             className={`text-muted-foreground tracking-wider uppercase ${subtext}`}
           >
-            {showPoweredBy ? 'Powered by KAIRAUX' : 'by Sanjay Singhania Sir'}
+            {showPoweredBy ? 'Powered by LEADPE' : 'by Sanjay Singhania Sir'}
           </motion.span>
         </div>
       )}

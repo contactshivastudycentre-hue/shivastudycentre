@@ -328,6 +328,13 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+      {/* LeadPe Lead Capture Widget */}
+      <section className="py-12 bg-background">
+        <div className="container mx-auto px-4 max-w-md">
+          <LeadPeWidget />
+        </div>
+      </section>
+
       {/* Google Maps Embed */}
       <section className="bg-background pb-16">
         <div className="container mx-auto px-4 max-w-6xl">
@@ -346,6 +353,78 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function LeadPeWidget() {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [interest, setInterest] = useState('');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+
+  const handleSubmit = async () => {
+    if (!name || !phone) { alert('Please fill name and phone'); return; }
+    if (phone.replace(/\D/g, '').length !== 10) { alert('Enter 10 digit number'); return; }
+
+    setStatus('sending');
+    try {
+      const res = await fetch('https://vlmdctanuarrmngkrvng.supabase.co/rest/v1/leads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsbWRjdGFudWFycm1uZ2tydm5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc0NjQsImV4cCI6MjA4ODA4MzQ2NH0.W9MoPMjK9eWHq7lFqX54Cqe6ZlF7oR62OwJ76A_a7Q8',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsbWRjdGFudWFycm1uZ2tydm5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc0NjQsImV4cCI6MjA4ODA4MzQ2NH0.W9MoPMjK9eWHq7lFqX54Cqe6ZlF7oR62OwJ76A_a7Q8',
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({
+          business_id: '639a70bb-d5c7-46bf-b685-5c12cba12ee8',
+          customer_name: name,
+          phone: phone.replace(/\D/g, ''),
+          message: interest,
+          source: 'website',
+          status: 'new',
+        }),
+      });
+      if (res.ok) {
+        setStatus('success');
+      } else {
+        setStatus('error');
+      }
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  if (status === 'success') {
+    return (
+      <div className="text-center p-10 bg-primary/5 rounded-2xl border-2 border-primary/20">
+        <div className="text-5xl mb-4">✅</div>
+        <h3 className="text-xl font-bold text-foreground">Request Received!</h3>
+        <p className="text-muted-foreground mt-2">We will call you back within 2 hours.</p>
+        <p className="text-xs text-muted-foreground mt-4">Powered by LeadPe 🌱</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-card border-2 border-primary/30 rounded-2xl p-6 shadow-lg">
+      <h3 className="text-xl font-bold text-foreground mb-1">Get Free Consultation 📞</h3>
+      <p className="text-sm text-muted-foreground mb-5">Leave your details. We'll call you back!</p>
+      <div className="space-y-3">
+        <Input placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="min-h-[44px]" />
+        <Input type="tel" placeholder="WhatsApp Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="min-h-[44px]" />
+        <Input placeholder="What are you looking for?" value={interest} onChange={(e) => setInterest(e.target.value)} className="min-h-[44px]" />
+        <Button
+          onClick={handleSubmit}
+          disabled={status === 'sending'}
+          className="w-full min-h-[48px] text-base"
+        >
+          {status === 'sending' ? 'Sending...' : 'Get Callback 📲'}
+        </Button>
+        {status === 'error' && <p className="text-sm text-destructive text-center">Error. Please try again.</p>}
+        <p className="text-center text-xs text-muted-foreground">Powered by LeadPe 🌱</p>
+      </div>
     </div>
   );
 }
