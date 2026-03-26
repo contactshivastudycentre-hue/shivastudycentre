@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -43,7 +42,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Users, Search, MoreVertical, CheckCircle, Ban, Undo, Edit, Trash2 } from 'lucide-react';
+import {
+  Users,
+  Search,
+  MoreVertical,
+  CheckCircle,
+  Ban,
+  Undo,
+  Edit,
+  Trash2,
+  ArrowUpCircle,
+  Loader2,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 
@@ -55,6 +65,19 @@ interface Profile {
   class: string | null;
   status: 'pending' | 'approved' | 'inactive';
   created_at: string;
+}
+
+interface ClassChangeRequest {
+  id: string;
+  user_id: string;
+  current_class: string;
+  requested_class: string;
+  reason: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  admin_response: string | null;
+  created_at: string;
+  student_name: string;
+  student_mobile: string;
 }
 
 const CLASS_OPTIONS = ['Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12'];
@@ -70,12 +93,23 @@ export default function AdminStudentsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ profile: Profile; permanent: boolean } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [promoteFromClass, setPromoteFromClass] = useState('');
+  const [promoteToClass, setPromoteToClass] = useState('');
+  const [isPromoting, setIsPromoting] = useState(false);
+
+  const [classRequests, setClassRequests] = useState<ClassChangeRequest[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(true);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
+  const [requestOverrideClass, setRequestOverrideClass] = useState<Record<string, string>>({});
+
   const { toast } = useToast();
 
   const statusFilter = searchParams.get('status') as 'pending' | 'approved' | 'inactive' | null;
 
   useEffect(() => {
     fetchProfiles();
+    fetchClassRequests();
   }, []);
 
   const fetchProfiles = async () => {
@@ -94,6 +128,45 @@ export default function AdminStudentsPage() {
       setProfiles(students as Profile[]);
     }
     setIsLoading(false);
+  };
+
+  const fetchClassRequests = async () => {
+    setIsLoadingRequests(true);
+
+    try {
+      const [{ data: requestData, error: requestError }, { data: profileData }] = await Promise.all([
+        (supabase as any)
+          .from('class_change_requests')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(30),
+        supabase
+          .from('profiles')
+          .select('user_id, full_name, mobile'),
+      ]);
+
+      if (requestError) {
+        console.error('[AdminStudentsPage] fetchClassRequests failed:', requestError);
+        return;
+      }
+
+      const profileMap = new Map(
+        (profileData || []).map((p: any) => [p.user_id, { name: p.full_name, mobile: p.mobile }]),
+      );
+
+      const mapped = (requestData || []).map((row: any) => {
+        const linked = profileMap.get(row.user_id);
+        return {
+          ...row,
+          student_name: linked?.name || 'Student',
+          student_mobile: linked?.mobile || '-',
+        };
+      });
+
+      setClassRequests(mapped as ClassChangeRequest[]);
+    } finally {
+      setIsLoadingRequests(false);
+    }
   };
 
   const updateStatus = async (profileId: string, newStatus: 'approved' | 'inactive' | 'pending') => {
@@ -115,7 +188,6 @@ export default function AdminStudentsPage() {
     setIsDeleting(true);
 
     if (deleteTarget.permanent) {
-      // Permanently delete via DB function
       const { error } = await supabase.rpc('delete_student', { student_user_id: deleteTarget.profile.user_id });
       if (error) {
         toast({ title: 'Error', description: 'Failed to delete student: ' + error.message, variant: 'destructive' });
@@ -123,7 +195,6 @@ export default function AdminStudentsPage() {
         toast({ title: 'Student Deleted', description: `${deleteTarget.profile.full_name} has been permanently deleted.` });
       }
     } else {
-      // Soft deactivate
       const { error } = await supabase
         .from('profiles')
         .update({ status: 'inactive' })
@@ -138,6 +209,7 @@ export default function AdminStudentsPage() {
     setIsDeleting(false);
     setDeleteTarget(null);
     fetchProfiles();
+    fetchClassRequests();
   };
 
   const handleEditClass = (profile: Profile) => {
@@ -163,6 +235,67 @@ export default function AdminStudentsPage() {
     }
   };
 
+  const handlePromoteClass = async () => {
+    if (!promoteFromClass || !promoteToClass) {
+      toast({ title: 'Missing selection', description: 'Select both source and target class.', variant: 'destructive' });
+      return;
+    }
+
+    if (promoteFromClass === promoteToClass) {
+      toast({ title: 'Invalid selection', description: 'Source and target class cannot be same.', variant: 'destructive' });
+      return;
+    }
+
+    setIsPromoting(true);
+    const { data, error } = await (supabase as any).rpc('promote_students_class', {
+      from_class: promoteFromClass,
+      to_class: promoteToClass,
+      include_pending: true,
+    });
+    setIsPromoting(false);
+
+    if (error) {
+      console.error('[AdminStudentsPage] class promotion failed:', error);
+      toast({ title: 'Promotion failed', description: error.message || 'Could not promote class.', variant: 'destructive' });
+      return;
+    }
+
+    toast({
+      title: 'Class promoted',
+      description: `${data ?? 0} students moved from ${promoteFromClass} to ${promoteToClass}.`,
+    });
+    fetchProfiles();
+    fetchClassRequests();
+  };
+
+  const processClassRequest = async (request: ClassChangeRequest, nextStatus: 'approved' | 'rejected') => {
+    const override = requestOverrideClass[request.id] || null;
+    setProcessingRequestId(request.id);
+
+    const { error } = await (supabase as any).rpc('process_class_change_request', {
+      request_id: request.id,
+      next_status: nextStatus,
+      admin_note: nextStatus === 'approved' ? 'Approved by admin' : 'Rejected by admin',
+      override_class: nextStatus === 'approved' ? override : null,
+    });
+
+    setProcessingRequestId(null);
+
+    if (error) {
+      console.error('[AdminStudentsPage] request process failed:', error);
+      toast({ title: 'Request failed', description: error.message || 'Could not process request.', variant: 'destructive' });
+      return;
+    }
+
+    toast({
+      title: `Request ${nextStatus}`,
+      description: `${request.student_name}'s class request was ${nextStatus}.`,
+    });
+
+    fetchProfiles();
+    fetchClassRequests();
+  };
+
   const filteredProfiles = profiles.filter((profile) => {
     const matchesSearch =
       profile.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -183,10 +316,25 @@ export default function AdminStudentsPage() {
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-success/10 text-success';
-      case 'pending': return 'bg-pending/10 text-pending';
-      case 'inactive': return 'bg-destructive/10 text-destructive';
-      default: return 'bg-muted text-muted-foreground';
+      case 'approved':
+        return 'bg-success/10 text-success';
+      case 'pending':
+        return 'bg-pending/10 text-pending';
+      case 'inactive':
+        return 'bg-destructive/10 text-destructive';
+      default:
+        return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  const getRequestStatusClass = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'bg-success/10 text-success';
+      case 'rejected':
+        return 'bg-destructive/10 text-destructive';
+      default:
+        return 'bg-secondary text-secondary-foreground';
     }
   };
 
@@ -202,10 +350,122 @@ export default function AdminStudentsPage() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Students</h1>
-        <p className="text-muted-foreground">Manage student approvals and access</p>
+        <p className="text-muted-foreground">Manage students, class changes and one-click promotions</p>
       </div>
 
-      {/* Filters */}
+      <div className="dashboard-card space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Promote Single Class in One Click</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Select value={promoteFromClass} onValueChange={setPromoteFromClass}>
+            <SelectTrigger>
+              <SelectValue placeholder="From class" />
+            </SelectTrigger>
+            <SelectContent>
+              {CLASS_OPTIONS.map((cls) => (
+                <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={promoteToClass} onValueChange={setPromoteToClass}>
+            <SelectTrigger>
+              <SelectValue placeholder="To class" />
+            </SelectTrigger>
+            <SelectContent>
+              {CLASS_OPTIONS.map((cls) => (
+                <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button className="h-12" onClick={handlePromoteClass} disabled={isPromoting}>
+            {isPromoting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ArrowUpCircle className="w-4 h-4 mr-2" />}
+            Promote Class
+          </Button>
+        </div>
+      </div>
+
+      <div className="dashboard-card space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-foreground">Class Change Requests</h2>
+          {isLoadingRequests && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+        </div>
+
+        {classRequests.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No class change requests yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {classRequests.map((request) => {
+              const isProcessing = processingRequestId === request.id;
+              return (
+                <div key={request.id} className="border border-border rounded-lg p-3 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-foreground">{request.student_name}</p>
+                      <p className="text-sm text-muted-foreground">{request.student_mobile}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-1 rounded-full w-fit ${getRequestStatusClass(request.status)}`}>
+                      {request.status}
+                    </span>
+                  </div>
+
+                  <div className="text-sm text-foreground">
+                    <span className="font-medium">{request.current_class}</span> →{' '}
+                    <span className="font-medium">{request.requested_class}</span>
+                  </div>
+
+                  {request.reason && <p className="text-sm text-muted-foreground">Reason: {request.reason}</p>}
+                  {request.admin_response && (
+                    <p className="text-sm text-muted-foreground">Admin note: {request.admin_response}</p>
+                  )}
+
+                  {request.status === 'pending' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-center">
+                      <Select
+                        value={requestOverrideClass[request.id] || request.requested_class}
+                        onValueChange={(value) =>
+                          setRequestOverrideClass((prev) => ({
+                            ...prev,
+                            [request.id]: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Manual class override" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CLASS_OPTIONS.map((cls) => (
+                            <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Button
+                        onClick={() => processClassRequest(request, 'approved')}
+                        disabled={isProcessing}
+                        className="h-12"
+                      >
+                        {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                        Approve
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        onClick={() => processClassRequest(request, 'rejected')}
+                        disabled={isProcessing}
+                        className="h-12"
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
@@ -246,7 +506,6 @@ export default function AdminStudentsPage() {
         </div>
       </div>
 
-      {/* Table */}
       {filteredProfiles.length === 0 ? (
         <div className="dashboard-card text-center py-12">
           <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -341,7 +600,6 @@ export default function AdminStudentsPage() {
         </div>
       )}
 
-      {/* Edit Class Dialog */}
       <Dialog open={!!editingProfile} onOpenChange={() => setEditingProfile(null)}>
         <DialogContent>
           <DialogHeader>
@@ -380,7 +638,6 @@ export default function AdminStudentsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

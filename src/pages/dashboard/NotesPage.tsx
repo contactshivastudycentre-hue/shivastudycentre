@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Eye } from 'lucide-react';
@@ -16,64 +16,78 @@ interface Note {
   created_at: string;
 }
 
+const PAGE_SIZE = 8;
+
 export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterSubject, setFilterSubject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingNote, setViewingNote] = useState<Note | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchNotes();
   }, []);
 
-  const fetchNotes = async () => {
-    // RLS automatically filters by student's class
-    const { data } = await supabase
-      .from('notes')
-      .select('*')
-      .order('created_at', { ascending: false });
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [filterSubject, searchQuery]);
 
-    if (data) {
-      setNotes(data);
+  const fetchNotes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[NotesPage] fetchNotes failed:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load notes. Please refresh.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (data) setNotes(data);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
-  const uniqueSubjects = [...new Set(notes.map((n) => n.subject))];
+  const uniqueSubjects = useMemo(() => [...new Set(notes.map((n) => n.subject))], [notes]);
 
-  const filteredNotes = notes.filter((note) => {
-    if (filterSubject && note.subject !== filterSubject) return false;
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        note.title.toLowerCase().includes(query) ||
-        note.subject.toLowerCase().includes(query)
-      );
-    }
-    return true;
-  });
+  const filteredNotes = useMemo(() => {
+    return notes.filter((note) => {
+      if (filterSubject && note.subject !== filterSubject) return false;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return note.title.toLowerCase().includes(query) || note.subject.toLowerCase().includes(query);
+      }
+      return true;
+    });
+  }, [notes, filterSubject, searchQuery]);
+
+  const visibleNotes = filteredNotes.slice(0, visibleCount);
+  const hasMore = filteredNotes.length > visibleCount;
 
   const handleDownload = async (note: Note) => {
     try {
-      // Extract file path from the URL
       let filePath = note.pdf_url;
       if (note.pdf_url.includes('storage/v1/object/public/notes/')) {
         filePath = note.pdf_url.split('storage/v1/object/public/notes/')[1];
       }
       filePath = decodeURIComponent(filePath);
 
-      // Download the file from Supabase Storage
       const { data, error } = await supabase.storage
         .from('notes')
         .download(filePath);
 
-      if (error || !data) {
-        throw new Error('Failed to download file');
-      }
+      if (error || !data) throw new Error('Failed to download file');
 
-      // Create download link
       const url = URL.createObjectURL(data);
       const link = document.createElement('a');
       link.href = url;
@@ -83,10 +97,7 @@ export default function NotesPage() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast({
-        title: 'Download Started',
-        description: `${note.title} is being downloaded.`,
-      });
+      toast({ title: 'Download Started', description: `${note.title} is being downloaded.` });
     } catch (err) {
       console.error('Download error:', err);
       toast({
@@ -116,7 +127,6 @@ export default function NotesPage() {
         <p className="text-muted-foreground">Download study materials organized by subject</p>
       </div>
 
-      {/* Search and Filters */}
       {notes.length > 0 && (
         <div className="space-y-3">
           <SearchInput
@@ -125,7 +135,7 @@ export default function NotesPage() {
             placeholder="Search notes by title..."
             className="max-w-md"
           />
-          
+
           {uniqueSubjects.length > 1 && (
             <div className="flex flex-wrap gap-2">
               <Button
@@ -161,54 +171,63 @@ export default function NotesPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {filteredNotes.map((note) => (
-            <div key={note.id} className="dashboard-card group">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-6 h-6 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-accent text-accent-foreground">
-                      {note.subject}
-                    </span>
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
-                      {note.class}
-                    </span>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {visibleNotes.map((note) => (
+              <div key={note.id} className="dashboard-card group">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-6 h-6 text-primary" />
                   </div>
-                  <h3 className="font-semibold text-foreground truncate">{note.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {new Date(note.created_at).toLocaleDateString()}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-accent text-accent-foreground">
+                        {note.subject}
+                      </span>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                        {note.class}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-foreground truncate">{note.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {new Date(note.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setViewingNote(note)}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleDownload(note)}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </Button>
                 </div>
               </div>
-              <div className="mt-4 flex gap-2">
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setViewingNote(note)}
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  View
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => handleDownload(note)}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </Button>
-              </div>
+            ))}
+          </div>
+
+          {hasMore && (
+            <div className="flex justify-center">
+              <Button variant="outline" className="h-12" onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}>
+                Load More Notes
+              </Button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
-      {/* PDF Viewer Modal */}
       {viewingNote && (
         <PDFViewer
           storagePath={viewingNote.pdf_url}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +43,7 @@ interface Note {
 export default function AdminNotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [formData, setFormData] = useState({
@@ -51,7 +52,7 @@ export default function AdminNotesPage() {
     class: '',
     pdf_url: '',
   });
-  const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
+
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -60,50 +61,86 @@ export default function AdminNotesPage() {
   }, []);
 
   const fetchNotes = async () => {
-    const { data } = await supabase
-      .from('notes')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (data) {
-      setNotes(data);
+      if (error) {
+        console.error('[AdminNotesPage] fetchNotes failed:', error);
+        toast({ title: 'Error', description: 'Failed to load notes.', variant: 'destructive' });
+        return;
+      }
+
+      if (data) setNotes(data);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.pdf_url) {
-      toast({ title: 'Error', description: 'Please upload a PDF file or enter a URL.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Please upload a PDF first.', variant: 'destructive' });
       return;
     }
 
-    if (editingNote) {
-      const { error } = await supabase
-        .from('notes')
-        .update(formData)
-        .eq('id', editingNote.id);
+    setIsPublishing(true);
+    console.log('[AdminNotesPage] Note publish start:', formData);
 
-      if (error) {
-        toast({ title: 'Error', description: 'Failed to update note.', variant: 'destructive' });
-      } else {
+    try {
+      if (editingNote) {
+        const { error } = await supabase
+          .from('notes')
+          .update(formData)
+          .eq('id', editingNote.id);
+
+        if (error) {
+          console.error('[AdminNotesPage] Update failed:', error);
+          toast({ title: 'Error', description: 'Failed to update note.', variant: 'destructive' });
+          return;
+        }
+
         toast({ title: 'Success', description: 'Note updated successfully.' });
-        fetchNotes();
+        await fetchNotes();
         resetForm();
+        return;
       }
-    } else {
+
+      const { data: duplicateRows } = await supabase
+        .from('notes')
+        .select('id')
+        .eq('title', formData.title)
+        .eq('subject', formData.subject)
+        .eq('class', formData.class)
+        .limit(1);
+
+      if (duplicateRows && duplicateRows.length > 0) {
+        toast({
+          title: 'Duplicate note',
+          description: 'A note with the same title, class, and subject already exists.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('notes')
         .insert({ ...formData, created_by: user?.id });
 
       if (error) {
+        console.error('[AdminNotesPage] Insert failed:', error);
         toast({ title: 'Error', description: 'Failed to add note.', variant: 'destructive' });
-      } else {
-        toast({ title: 'Success', description: 'Note added successfully.' });
-        fetchNotes();
-        resetForm();
+        return;
       }
+
+      toast({ title: 'Success', description: 'Notes uploaded successfully.' });
+      await fetchNotes();
+      resetForm();
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -122,7 +159,6 @@ export default function AdminNotesPage() {
     setFormData({ title: '', subject: '', class: '', pdf_url: '' });
     setEditingNote(null);
     setIsDialogOpen(false);
-    setUploadMode('file');
   };
 
   const openEditDialog = (note: Note) => {
@@ -133,7 +169,6 @@ export default function AdminNotesPage() {
       class: note.class,
       pdf_url: note.pdf_url,
     });
-    setUploadMode('url'); // Show existing URL when editing
     setIsDialogOpen(true);
   };
 
@@ -154,7 +189,7 @@ export default function AdminNotesPage() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => resetForm()}>
+            <Button onClick={resetForm}>
               <Plus className="w-4 h-4 mr-2" />
               Add Note
             </Button>
@@ -174,6 +209,7 @@ export default function AdminNotesPage() {
                   required
                 />
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Subject</Label>
@@ -192,62 +228,30 @@ export default function AdminNotesPage() {
                   />
                 </div>
               </div>
-              
-              {/* Upload Mode Toggle */}
-              <div className="space-y-2">
-                <Label>PDF Source</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant={uploadMode === 'file' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setUploadMode('file')}
-                  >
-                    Upload File
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={uploadMode === 'url' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setUploadMode('url')}
-                  >
-                    Enter URL
-                  </Button>
-                </div>
-              </div>
 
-              {/* File Upload */}
-              {uploadMode === 'file' && (
+              <div className="space-y-2">
+                <Label>PDF File</Label>
                 <FileUploader
                   bucket="notes"
                   accept=".pdf"
-                  maxSizeMB={50}
-                  onUploadComplete={(url) => setFormData({ ...formData, pdf_url: url })}
+                  maxSizeMB={10}
+                  onUploadComplete={(url, fileName) => {
+                    console.log('[AdminNotesPage] Upload success:', fileName, url);
+                    setFormData((prev) => ({
+                      ...prev,
+                      pdf_url: url,
+                      title: prev.title || fileName.replace(/\.pdf$/i, ''),
+                    }));
+                  }}
                   existingUrl={formData.pdf_url}
                 />
-              )}
-
-              {/* URL Input */}
-              {uploadMode === 'url' && (
-                <div className="space-y-2">
-                  <Label htmlFor="pdf_url">PDF URL</Label>
-                  <Input
-                    id="pdf_url"
-                    type="url"
-                    value={formData.pdf_url}
-                    onChange={(e) => setFormData({ ...formData, pdf_url: e.target.value })}
-                    placeholder="https://drive.google.com/file/d/..."
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Use Google Drive share link or any direct PDF URL
-                  </p>
-                </div>
-              )}
+                <p className="text-xs text-muted-foreground">Upload PDF first, then click Publish.</p>
+              </div>
 
               <div className="flex gap-3 pt-4">
-                <Button type="submit" className="flex-1" disabled={!formData.pdf_url}>
-                  {editingNote ? 'Update Note' : 'Add Note'}
+                <Button type="submit" className="flex-1 h-12" disabled={!formData.pdf_url || isPublishing}>
+                  {isPublishing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {editingNote ? 'Update Note' : 'Publish'}
                 </Button>
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Cancel
