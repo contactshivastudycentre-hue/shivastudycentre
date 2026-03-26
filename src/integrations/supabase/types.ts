@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      class_change_requests: {
+        Row: {
+          admin_response: string | null
+          created_at: string
+          current_class: string
+          id: string
+          reason: string | null
+          requested_class: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_response?: string | null
+          created_at?: string
+          current_class: string
+          id?: string
+          reason?: string | null
+          requested_class: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_response?: string | null
+          created_at?: string
+          current_class?: string
+          id?: string
+          reason?: string | null
+          requested_class?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notes: {
         Row: {
           class: string
@@ -404,6 +446,23 @@ export type Database = {
       is_student_approved: {
         Args: { check_user_id?: string }
         Returns: boolean
+      }
+      process_class_change_request: {
+        Args: {
+          admin_note?: string
+          next_status: string
+          override_class?: string
+          request_id: string
+        }
+        Returns: boolean
+      }
+      promote_students_class: {
+        Args: {
+          from_class: string
+          include_pending?: boolean
+          to_class: string
+        }
+        Returns: number
       }
       submit_test_attempt: {
         Args: {
