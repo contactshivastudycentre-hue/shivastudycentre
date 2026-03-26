@@ -185,10 +185,10 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
           </div>
         </div>
 
-        {/* Powered by KAIRAUX */}
+        {/* Powered by LeadPe */}
         <div className="text-center py-1 border-b bg-muted/30 shrink-0">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-            Powered by KAIRAUX
+            Powered by LeadPe
           </span>
         </div>
 
