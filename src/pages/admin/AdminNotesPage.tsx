@@ -6,22 +6,32 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { FileText, Plus, MoreVertical, Edit, Trash2, ExternalLink, Loader2 } from 'lucide-react';
+import { FileText, Plus, MoreVertical, Edit, Trash2, ExternalLink, Loader2, Star, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ClassSelect } from '@/components/ClassSelect';
 import { SubjectSelect } from '@/components/SubjectSelect';
 import { useAuth } from '@/lib/auth';
 import { FileUploader } from '@/components/admin/FileUploader';
+import { detectChapterNumber, detectIsSolution } from '@/lib/notesUtils';
+import { Badge } from '@/components/ui/badge';
 
 interface Note {
   id: string;
@@ -29,9 +39,12 @@ interface Note {
   subject: string;
   class: string;
   chapter_number: number | null;
+  is_solution: boolean;
   pdf_url: string;
   created_at: string;
 }
+
+const CHAPTER_OPTIONS = Array.from({ length: 20 }, (_, i) => i + 1);
 
 export default function AdminNotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -44,15 +57,14 @@ export default function AdminNotesPage() {
     subject: '',
     class: '',
     chapter_number: 1,
+    is_solution: false,
     pdf_url: '',
   });
 
   const { toast } = useToast();
   const { user } = useAuth();
 
-  useEffect(() => {
-    fetchNotes();
-  }, []);
+  useEffect(() => { fetchNotes(); }, []);
 
   const fetchNotes = async () => {
     try {
@@ -68,11 +80,22 @@ export default function AdminNotesPage() {
         toast({ title: 'Error', description: 'Failed to load notes.', variant: 'destructive' });
         return;
       }
-
       if (data) setNotes(data as Note[]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Smart title scan: auto-detect chapter & solution
+  const handleTitleChange = (title: string) => {
+    const chapter = detectChapterNumber(title);
+    const isSol = detectIsSolution(title);
+    setFormData((prev) => ({
+      ...prev,
+      title,
+      ...(chapter !== null ? { chapter_number: chapter } : {}),
+      is_solution: isSol,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,33 +119,25 @@ export default function AdminNotesPage() {
         subject: formData.subject,
         class: formData.class,
         chapter_number: formData.chapter_number,
+        is_solution: formData.is_solution,
         pdf_url: formData.pdf_url,
       };
 
       if (editingNote) {
-        const { error } = await supabase
-          .from('notes')
-          .update(payload)
-          .eq('id', editingNote.id);
-
+        const { error } = await supabase.from('notes').update(payload).eq('id', editingNote.id);
         if (error) {
           console.error('[AdminNotesPage] Update failed:', error);
           toast({ title: 'Error', description: 'Failed to update note.', variant: 'destructive' });
           return;
         }
-
         toast({ title: 'Success', description: 'Note updated successfully.' });
       } else {
-        const { error } = await supabase
-          .from('notes')
-          .insert({ ...payload, created_by: user?.id });
-
+        const { error } = await supabase.from('notes').insert({ ...payload, created_by: user?.id });
         if (error) {
           console.error('[AdminNotesPage] Insert failed:', error);
           toast({ title: 'Error', description: 'Failed to add note.', variant: 'destructive' });
           return;
         }
-
         toast({ title: 'Success', description: 'Notes uploaded successfully.' });
       }
 
@@ -136,7 +151,6 @@ export default function AdminNotesPage() {
   const deleteNote = async (id: string) => {
     if (!window.confirm('Delete this note?')) return;
     const { error } = await supabase.from('notes').delete().eq('id', id);
-
     if (error) {
       toast({ title: 'Error', description: 'Failed to delete note.', variant: 'destructive' });
     } else {
@@ -146,7 +160,7 @@ export default function AdminNotesPage() {
   };
 
   const resetForm = () => {
-    setFormData({ title: '', subject: '', class: '', chapter_number: 1, pdf_url: '' });
+    setFormData({ title: '', subject: '', class: '', chapter_number: 1, is_solution: false, pdf_url: '' });
     setEditingNote(null);
     setIsDialogOpen(false);
   };
@@ -158,6 +172,7 @@ export default function AdminNotesPage() {
       subject: note.subject,
       class: note.class,
       chapter_number: note.chapter_number ?? 1,
+      is_solution: note.is_solution ?? false,
       pdf_url: note.pdf_url,
     });
     setIsDialogOpen(true);
@@ -180,59 +195,76 @@ export default function AdminNotesPage() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); else setIsDialogOpen(true); }}>
           <DialogTrigger asChild>
-            <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} className="w-full sm:w-auto min-h-[44px]">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Note
+            <Button type="button" onClick={() => { resetForm(); setIsDialogOpen(true); }} className="w-full sm:w-auto min-h-[44px]">
+              <Plus className="w-4 h-4 mr-2" /> Add Note
             </Button>
           </DialogTrigger>
           <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle className="text-lg">{editingNote ? 'Edit Note' : 'Add New Note'}</DialogTitle>
+              <DialogDescription>Fill in the details below. Chapter & solution type are auto-detected from the title.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Class *</Label>
-                  <ClassSelect
-                    value={formData.class}
-                    onChange={(value) => setFormData({ ...formData, class: value })}
-                    required
-                  />
+                  <ClassSelect value={formData.class} onChange={(v) => setFormData({ ...formData, class: v })} required />
                 </div>
                 <div className="space-y-2">
                   <Label>Subject *</Label>
-                  <SubjectSelect
-                    value={formData.subject}
-                    onChange={(value) => setFormData({ ...formData, subject: value })}
-                    required
-                  />
+                  <SubjectSelect value={formData.subject} onChange={(v) => setFormData({ ...formData, subject: v })} required />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="title">Title *</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  placeholder="e.g., Chapter 1 Motion Notes"
+                  className="min-h-[44px]"
+                  required
+                />
+                {formData.title && (
+                  <p className="text-xs text-muted-foreground">
+                    Auto-detected: Chapter {formData.chapter_number}
+                    {formData.is_solution && ' • ⭐ Solution'}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="chapter">Chapter No. *</Label>
-                  <Input
-                    id="chapter"
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={formData.chapter_number}
-                    onChange={(e) => setFormData({ ...formData, chapter_number: parseInt(e.target.value) || 1 })}
-                    className="min-h-[44px]"
-                    required
-                  />
+                  <Label>Chapter No. *</Label>
+                  <Select
+                    value={String(formData.chapter_number)}
+                    onValueChange={(v) => setFormData({ ...formData, chapter_number: parseInt(v) })}
+                  >
+                    <SelectTrigger className="min-h-[44px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CHAPTER_OPTIONS.map((n) => (
+                        <SelectItem key={n} value={String(n)}>Chapter {n}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="title">Title *</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="e.g., Motion"
-                    className="min-h-[44px]"
-                    required
-                  />
+                  <Label>Type</Label>
+                  <Select
+                    value={formData.is_solution ? 'solution' : 'notes'}
+                    onValueChange={(v) => setFormData({ ...formData, is_solution: v === 'solution' })}
+                  >
+                    <SelectTrigger className="min-h-[44px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="notes">📄 Notes</SelectItem>
+                      <SelectItem value="solution">⭐ Solution</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -244,10 +276,15 @@ export default function AdminNotesPage() {
                   maxSizeMB={10}
                   onUploadComplete={(url, fileName) => {
                     console.log('[AdminNotesPage] Upload success:', fileName, url);
+                    const newTitle = formData.title || fileName.replace(/\.pdf$/i, '');
+                    const chapter = detectChapterNumber(newTitle);
+                    const isSol = detectIsSolution(newTitle);
                     setFormData((prev) => ({
                       ...prev,
                       pdf_url: url,
-                      title: prev.title || fileName.replace(/\.pdf$/i, ''),
+                      title: prev.title || newTitle,
+                      ...(chapter !== null && !prev.title ? { chapter_number: chapter } : {}),
+                      ...(isSol && !prev.title ? { is_solution: true } : {}),
                     }));
                   }}
                   existingUrl={formData.pdf_url}
@@ -282,16 +319,23 @@ export default function AdminNotesPage() {
               <div key={note.id} className="dashboard-card p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-foreground text-sm truncate">
-                      Ch. {note.chapter_number ?? '–'} – {note.title}
-                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-foreground text-sm truncate">
+                        Ch. {note.chapter_number ?? '–'} – {note.title}
+                      </p>
+                      {note.is_solution && (
+                        <Badge variant="secondary" className="text-xs gap-1">
+                          <Star className="w-3 h-3" /> Solution
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {note.class} • {note.subject}
                     </p>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="flex-shrink-0 h-8 w-8">
+                      <Button type="button" variant="ghost" size="icon" className="flex-shrink-0 h-8 w-8">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -320,6 +364,7 @@ export default function AdminNotesPage() {
                   <tr className="border-b border-border">
                     <th className="text-left p-3 font-medium text-muted-foreground">Ch.</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Title</th>
+                    <th className="text-left p-3 font-medium text-muted-foreground">Type</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Subject</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Class</th>
                     <th className="text-right p-3 font-medium text-muted-foreground">Actions</th>
@@ -330,12 +375,19 @@ export default function AdminNotesPage() {
                     <tr key={note.id} className="border-b border-border last:border-0">
                       <td className="p-3 text-muted-foreground">{note.chapter_number ?? '–'}</td>
                       <td className="p-3 font-medium text-foreground">{note.title}</td>
+                      <td className="p-3">
+                        {note.is_solution ? (
+                          <Badge variant="secondary" className="text-xs gap-1"><Star className="w-3 h-3" /> Solution</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs gap-1"><BookOpen className="w-3 h-3" /> Notes</Badge>
+                        )}
+                      </td>
                       <td className="p-3 text-muted-foreground">{note.subject}</td>
                       <td className="p-3 text-muted-foreground">{note.class}</td>
                       <td className="p-3 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button type="button" variant="ghost" size="icon">
                               <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
