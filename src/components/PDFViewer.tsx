@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { X, Download, Maximize2, Minimize2, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { X, Download, Maximize2, Minimize2, ArrowLeft, Loader2, AlertCircle, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Set worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 interface PDFViewerProps {
-  /** The storage path (e.g., 'notes/filename.pdf') or full URL */
   storagePath: string;
   title: string;
   subject?: string;
@@ -12,58 +15,98 @@ interface PDFViewerProps {
   onClose: () => void;
 }
 
+const ZOOM_STEP = 0.25;
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 3;
+
 export function PDFViewer({ storagePath, title, subject, className, onClose }: PDFViewerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
+  const renderingRef = useRef<Set<number>>(new Set());
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
     loadPDF();
-    
-    // Cleanup blob URL on unmount
     return () => {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-      }
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      pdfDocRef.current?.destroy();
+      observerRef.current?.disconnect();
     };
   }, [storagePath]);
+
+  // Re-render visible pages when zoom changes
+  useEffect(() => {
+    if (!pdfDocRef.current) return;
+    renderingRef.current.clear();
+    // Re-render all currently mounted canvases
+    canvasRefs.current.forEach((_, pageNum) => {
+      renderPage(pageNum);
+    });
+  }, [zoom]);
+
+  // Track current page via scroll
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || totalPages === 0) return;
+
+    const handleScroll = () => {
+      const children = container.querySelectorAll('[data-page]');
+      let closest = 1;
+      let minDist = Infinity;
+      const containerTop = container.scrollTop + container.clientHeight / 3;
+
+      children.forEach((child) => {
+        const el = child as HTMLElement;
+        const dist = Math.abs(el.offsetTop - containerTop);
+        if (dist < minDist) {
+          minDist = dist;
+          closest = parseInt(el.dataset.page || '1');
+        }
+      });
+      setCurrentPage(closest);
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [totalPages]);
+
+  const extractFilePath = (path: string) => {
+    let filePath = path;
+    if (path.includes('storage/v1/object/public/notes/')) {
+      filePath = path.split('storage/v1/object/public/notes/')[1];
+    } else if (path.includes('storage/v1/object/sign/notes/')) {
+      filePath = path.split('storage/v1/object/sign/notes/')[1].split('?')[0];
+    }
+    return decodeURIComponent(filePath);
+  };
 
   const loadPDF = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Extract the file path from the URL if it's a full Supabase URL
-      let filePath = storagePath;
-      
-      // If it's a full Supabase storage URL, extract the path
-      if (storagePath.includes('storage/v1/object/public/notes/')) {
-        filePath = storagePath.split('storage/v1/object/public/notes/')[1];
-      } else if (storagePath.includes('storage/v1/object/sign/notes/')) {
-        filePath = storagePath.split('storage/v1/object/sign/notes/')[1].split('?')[0];
-      }
+      const filePath = extractFilePath(storagePath);
+      const { data, error: downloadError } = await supabase.storage.from('notes').download(filePath);
+      if (downloadError || !data) throw new Error('Failed to load PDF.');
 
-      // Decode the file path in case it's URL encoded
-      filePath = decodeURIComponent(filePath);
-
-      // Download the file from Supabase Storage
-      const { data, error: downloadError } = await supabase.storage
-        .from('notes')
-        .download(filePath);
-
-      if (downloadError) {
-        console.error('Download error:', downloadError);
-        throw new Error('Failed to load PDF. Please try again.');
-      }
-
-      if (!data) {
-        throw new Error('No data received from storage.');
-      }
-
-      // Create a blob URL from the downloaded data
       const url = URL.createObjectURL(data);
       setBlobUrl(url);
+
+      const arrayBuffer = await data.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      pdfDocRef.current = pdf;
+      setTotalPages(pdf.numPages);
+
+      // Render first page immediately
+      // Other pages render via intersection observer
     } catch (err) {
       console.error('Error loading PDF:', err);
       setError(err instanceof Error ? err.message : 'Failed to load PDF');
@@ -72,25 +115,75 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
     }
   };
 
+  const renderPage = useCallback(async (pageNum: number) => {
+    const pdf = pdfDocRef.current;
+    const canvas = canvasRefs.current.get(pageNum);
+    if (!pdf || !canvas || renderingRef.current.has(pageNum)) return;
+
+    renderingRef.current.add(pageNum);
+
+    try {
+      const page = await pdf.getPage(pageNum);
+      const container = containerRef.current;
+      if (!container) return;
+
+      // Calculate scale to fit container width
+      const containerWidth = container.clientWidth - 16; // padding
+      const viewport = page.getViewport({ scale: 1 });
+      const baseScale = containerWidth / viewport.width;
+      const scaledViewport = page.getViewport({ scale: baseScale * zoom });
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = scaledViewport.width * dpr;
+      canvas.height = scaledViewport.height * dpr;
+      canvas.style.width = `${scaledViewport.width}px`;
+      canvas.style.height = `${scaledViewport.height}px`;
+      ctx.scale(dpr, dpr);
+
+      await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+    } catch (err) {
+      console.error(`Error rendering page ${pageNum}:`, err);
+    } finally {
+      renderingRef.current.delete(pageNum);
+    }
+  }, [zoom]);
+
+  const setCanvasRef = useCallback((pageNum: number, el: HTMLCanvasElement | null) => {
+    if (el) {
+      canvasRefs.current.set(pageNum, el);
+      // Use intersection observer for lazy rendering
+      if (!observerRef.current) {
+        observerRef.current = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                const page = parseInt((entry.target as HTMLElement).dataset.page || '0');
+                if (page > 0) renderPage(page);
+              }
+            });
+          },
+          { root: containerRef.current, rootMargin: '200px' }
+        );
+      }
+      const wrapper = el.closest('[data-page]');
+      if (wrapper) observerRef.current.observe(wrapper);
+
+      // Render first 2 pages immediately
+      if (pageNum <= 2) renderPage(pageNum);
+    } else {
+      canvasRefs.current.delete(pageNum);
+    }
+  }, [renderPage]);
+
   const handleDownload = async () => {
     try {
-      // Extract the file path
-      let filePath = storagePath;
-      if (storagePath.includes('storage/v1/object/public/notes/')) {
-        filePath = storagePath.split('storage/v1/object/public/notes/')[1];
-      }
-      filePath = decodeURIComponent(filePath);
+      const filePath = extractFilePath(storagePath);
+      const { data, error } = await supabase.storage.from('notes').download(filePath);
+      if (error || !data) throw new Error('Failed to download');
 
-      // Download the file
-      const { data, error } = await supabase.storage
-        .from('notes')
-        .download(filePath);
-
-      if (error || !data) {
-        throw new Error('Failed to download file');
-      }
-
-      // Create download link
       const url = URL.createObjectURL(data);
       const link = document.createElement('a');
       link.href = url;
@@ -104,96 +197,64 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
     }
   };
 
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
-  };
+  const zoomIn = () => setZoom((z) => Math.min(z + ZOOM_STEP, MAX_ZOOM));
+  const zoomOut = () => setZoom((z) => Math.max(z - ZOOM_STEP, MIN_ZOOM));
+  const resetZoom = () => setZoom(1);
 
   return (
-    <div
-      className={`fixed inset-0 z-50 bg-background animate-fade-in ${
-        isFullscreen ? '' : 'p-0 md:p-4'
-      }`}
-    >
-      <div
-        className={`bg-card shadow-2xl border overflow-hidden flex flex-col h-full ${
-          isFullscreen ? 'rounded-none' : 'md:rounded-xl md:max-w-6xl md:mx-auto'
-        }`}
-      >
+    <div className={`fixed inset-0 z-50 bg-background animate-fade-in ${isFullscreen ? '' : 'p-0 md:p-4'}`}>
+      <div className={`bg-card shadow-2xl border overflow-hidden flex flex-col h-full ${isFullscreen ? 'rounded-none' : 'md:rounded-xl md:max-w-6xl md:mx-auto'}`}>
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-card shrink-0">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="shrink-0"
-            >
-              <ArrowLeft className="w-5 h-5" />
+        <div className="flex items-center justify-between px-3 py-2 border-b bg-card shrink-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0 h-8 w-8">
+              <ArrowLeft className="w-4 h-4" />
             </Button>
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-foreground truncate">
-                {title}
-              </h3>
+              <h3 className="font-semibold text-foreground text-sm truncate">{title}</h3>
               {(subject || className) && (
-                <div className="flex items-center gap-2 mt-0.5">
-                  {subject && (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-accent text-accent-foreground">
-                      {subject}
-                    </span>
-                  )}
-                  {className && (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
-                      {className}
-                    </span>
-                  )}
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {subject && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground">{subject}</span>}
+                  {className && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-secondary text-secondary-foreground">{className}</span>}
                 </div>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleDownload}
-              title="Download PDF"
-              disabled={isLoading || !!error}
-            >
+          <div className="flex items-center gap-0.5 shrink-0">
+            <Button variant="ghost" size="icon" onClick={handleDownload} disabled={isLoading || !!error} className="h-8 w-8">
               <Download className="w-4 h-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleFullscreen}
-              title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-              className="hidden md:flex"
-            >
-              {isFullscreen ? (
-                <Minimize2 className="w-4 h-4" />
-              ) : (
-                <Maximize2 className="w-4 h-4" />
-              )}
+            <Button variant="ghost" size="icon" onClick={() => setIsFullscreen(!isFullscreen)} className="hidden md:flex h-8 w-8">
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              title="Close"
-              className="hidden md:flex"
-            >
+            <Button variant="ghost" size="icon" onClick={onClose} className="hidden md:flex h-8 w-8">
               <X className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        {/* Powered by LeadPe */}
-        <div className="text-center py-1 border-b bg-muted/30 shrink-0">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-            Powered by LeadPe
-          </span>
-        </div>
+        {/* Zoom controls + page indicator */}
+        {totalPages > 0 && !error && (
+          <div className="flex items-center justify-between px-3 py-1.5 border-b bg-muted/30 shrink-0">
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" onClick={zoomOut} disabled={zoom <= MIN_ZOOM} className="h-7 w-7">
+                <ZoomOut className="w-3.5 h-3.5" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={resetZoom} className="h-7 px-2 text-xs font-mono">
+                {Math.round(zoom * 100)}%
+              </Button>
+              <Button variant="ghost" size="icon" onClick={zoomIn} disabled={zoom >= MAX_ZOOM} className="h-7 w-7">
+                <ZoomIn className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+            <span className="text-xs text-muted-foreground font-medium">
+              Page {currentPage} / {totalPages}
+            </span>
+          </div>
+        )}
 
         {/* PDF Content */}
-        <div className="flex-1 relative bg-muted overflow-hidden">
+        <div ref={containerRef} className="flex-1 relative bg-muted overflow-auto">
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
               <div className="flex flex-col items-center gap-3">
@@ -214,24 +275,24 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
                   <p className="text-sm text-muted-foreground mb-4">{error}</p>
                 </div>
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={onClose}>
-                    Go Back
-                  </Button>
-                  <Button onClick={loadPDF}>
-                    Try Again
-                  </Button>
+                  <Button variant="outline" onClick={onClose}>Go Back</Button>
+                  <Button onClick={loadPDF}>Try Again</Button>
                 </div>
               </div>
             </div>
           )}
 
-          {blobUrl && !error && (
-            <iframe
-              src={blobUrl}
-              className="w-full h-full border-0"
-              title={title}
-              style={{ minHeight: '100%' }}
-            />
+          {!error && totalPages > 0 && (
+            <div className="flex flex-col items-center gap-2 p-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                <div key={pageNum} data-page={pageNum} className="w-full flex justify-center">
+                  <canvas
+                    ref={(el) => setCanvasRef(pageNum, el)}
+                    className="shadow-md bg-white max-w-full"
+                  />
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>
