@@ -1,78 +1,85 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { FileText, Download, Eye } from 'lucide-react';
+import { FileText, Download, Eye, ChevronRight } from 'lucide-react';
 import { PDFViewer } from '@/components/PDFViewer';
 import { CardSkeletonGrid } from '@/components/skeletons/CardSkeleton';
 import { SearchInput } from '@/components/SearchInput';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface Note {
   id: string;
   title: string;
   subject: string;
   class: string;
+  chapter_number: number | null;
   pdf_url: string;
   created_at: string;
 }
 
-const PAGE_SIZE = 8;
-
 export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filterSubject, setFilterSubject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingNote, setViewingNote] = useState<Note | null>(null);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [openSubjects, setOpenSubjects] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   useEffect(() => {
     fetchNotes();
   }, []);
 
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [filterSubject, searchQuery]);
-
   const fetchNotes = async () => {
     try {
       const { data, error } = await supabase
         .from('notes')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('class', { ascending: true })
+        .order('subject', { ascending: true })
+        .order('chapter_number', { ascending: true });
 
       if (error) {
         console.error('[NotesPage] fetchNotes failed:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load notes. Please refresh.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Error', description: 'Failed to load notes.', variant: 'destructive' });
         return;
       }
 
-      if (data) setNotes(data);
+      if (data) setNotes(data as Note[]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const uniqueSubjects = useMemo(() => [...new Set(notes.map((n) => n.subject))], [notes]);
-
   const filteredNotes = useMemo(() => {
-    return notes.filter((note) => {
-      if (filterSubject && note.subject !== filterSubject) return false;
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        return note.title.toLowerCase().includes(query) || note.subject.toLowerCase().includes(query);
-      }
-      return true;
-    });
-  }, [notes, filterSubject, searchQuery]);
+    if (!searchQuery) return notes;
+    const q = searchQuery.toLowerCase();
+    return notes.filter(
+      (n) =>
+        n.title.toLowerCase().includes(q) ||
+        n.subject.toLowerCase().includes(q) ||
+        String(n.chapter_number).includes(q)
+    );
+  }, [notes, searchQuery]);
 
-  const visibleNotes = filteredNotes.slice(0, visibleCount);
-  const hasMore = filteredNotes.length > visibleCount;
+  // Group: subject → notes (already filtered by student's class via RLS)
+  const groupedBySubject = useMemo(() => {
+    const map: Record<string, Note[]> = {};
+    for (const note of filteredNotes) {
+      if (!map[note.subject]) map[note.subject] = [];
+      map[note.subject].push(note);
+    }
+    // Sort subjects alphabetically
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredNotes]);
+
+  const toggleSubject = (subject: string) => {
+    setOpenSubjects((prev) => ({ ...prev, [subject]: !prev[subject] }));
+  };
 
   const handleDownload = async (note: Note) => {
     try {
@@ -82,10 +89,7 @@ export default function NotesPage() {
       }
       filePath = decodeURIComponent(filePath);
 
-      const { data, error } = await supabase.storage
-        .from('notes')
-        .download(filePath);
-
+      const { data, error } = await supabase.storage.from('notes').download(filePath);
       if (error || !data) throw new Error('Failed to download file');
 
       const url = URL.createObjectURL(data);
@@ -96,15 +100,10 @@ export default function NotesPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-
       toast({ title: 'Download Started', description: `${note.title} is being downloaded.` });
     } catch (err) {
       console.error('Download error:', err);
-      toast({
-        title: 'Download Failed',
-        description: 'Could not download the file. Please try again.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Download Failed', description: 'Could not download the file.', variant: 'destructive' });
     }
   };
 
@@ -113,7 +112,7 @@ export default function NotesPage() {
       <div className="space-y-6 animate-fade-in">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Notes</h1>
-          <p className="text-muted-foreground">Download study materials organized by subject</p>
+          <p className="text-muted-foreground">Study materials organized by subject & chapter</p>
         </div>
         <CardSkeletonGrid count={4} variant="note" />
       </div>
@@ -121,43 +120,19 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Notes</h1>
-        <p className="text-muted-foreground">Download study materials organized by subject</p>
+        <p className="text-muted-foreground">Study materials organized by subject & chapter</p>
       </div>
 
       {notes.length > 0 && (
-        <div className="space-y-3">
-          <SearchInput
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search notes by title..."
-            className="max-w-md"
-          />
-
-          {uniqueSubjects.length > 1 && (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={!filterSubject ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilterSubject(null)}
-              >
-                All Subjects
-              </Button>
-              {uniqueSubjects.map((subject) => (
-                <Button
-                  key={subject}
-                  variant={filterSubject === subject ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFilterSubject(filterSubject === subject ? null : subject)}
-                >
-                  {subject}
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search by title or chapter..."
+          className="max-w-md"
+        />
       )}
 
       {filteredNotes.length === 0 ? (
@@ -167,65 +142,59 @@ export default function NotesPage() {
           <p className="text-muted-foreground">
             {notes.length === 0
               ? 'Notes will appear here once uploaded by admin.'
-              : 'No notes match your current filters.'}
+              : 'No notes match your search.'}
           </p>
         </div>
       ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {visibleNotes.map((note) => (
-              <div key={note.id} className="dashboard-card group">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-accent text-accent-foreground">
-                        {note.subject}
-                      </span>
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
-                        {note.class}
-                      </span>
+        <div className="space-y-3">
+          {groupedBySubject.map(([subject, subjectNotes]) => (
+            <Collapsible
+              key={subject}
+              open={openSubjects[subject] !== false}
+              onOpenChange={() => toggleSubject(subject)}
+            >
+              <CollapsibleTrigger asChild>
+                <button className="w-full flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:bg-accent/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-primary" />
                     </div>
-                    <h3 className="font-semibold text-foreground truncate">{note.title}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {new Date(note.created_at).toLocaleDateString()}
-                    </p>
+                    <div className="text-left">
+                      <p className="font-semibold text-foreground">{subject}</p>
+                      <p className="text-xs text-muted-foreground">{subjectNotes.length} chapter{subjectNotes.length !== 1 ? 's' : ''}</p>
+                    </div>
                   </div>
+                  <ChevronRight className={`w-5 h-5 text-muted-foreground transition-transform ${openSubjects[subject] !== false ? 'rotate-90' : ''}`} />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="grid gap-3 pt-2 sm:grid-cols-2">
+                  {subjectNotes.map((note) => (
+                    <div key={note.id} className="dashboard-card p-4 group">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-accent text-sm font-bold text-accent-foreground flex-shrink-0">
+                          {note.chapter_number ?? '–'}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-foreground text-sm truncate">{note.title}</h3>
+                          <p className="text-xs text-muted-foreground">Chapter {note.chapter_number ?? '–'}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="default" size="sm" className="flex-1 min-h-[40px]" onClick={() => setViewingNote(note)}>
+                          <Eye className="w-4 h-4 mr-1.5" /> View
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1 min-h-[40px]" onClick={() => handleDownload(note)}>
+                          <Download className="w-4 h-4 mr-1.5" /> Download
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="mt-4 flex gap-2">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setViewingNote(note)}
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    View
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleDownload(note)}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {hasMore && (
-            <div className="flex justify-center">
-              <Button variant="outline" className="h-12" onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}>
-                Load More Notes
-              </Button>
-            </div>
-          )}
-        </>
+              </CollapsibleContent>
+            </Collapsible>
+          ))}
+        </div>
       )}
 
       {viewingNote && (
