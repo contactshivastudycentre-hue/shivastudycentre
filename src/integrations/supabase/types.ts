@@ -58,6 +58,7 @@ export type Database = {
       }
       notes: {
         Row: {
+          chapter_number: number | null
           class: string
           created_at: string
           created_by: string | null
@@ -68,6 +69,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          chapter_number?: number | null
           class: string
           created_at?: string
           created_by?: string | null
@@ -78,6 +80,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          chapter_number?: number | null
           class?: string
           created_at?: string
           created_by?: string | null

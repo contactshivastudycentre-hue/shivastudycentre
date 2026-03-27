@@ -28,6 +28,7 @@ interface Note {
   title: string;
   subject: string;
   class: string;
+  chapter_number: number | null;
   pdf_url: string;
   created_at: string;
 }
@@ -42,6 +43,7 @@ export default function AdminNotesPage() {
     title: '',
     subject: '',
     class: '',
+    chapter_number: 1,
     pdf_url: '',
   });
 
@@ -57,7 +59,9 @@ export default function AdminNotesPage() {
       const { data, error } = await supabase
         .from('notes')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('class', { ascending: true })
+        .order('subject', { ascending: true })
+        .order('chapter_number', { ascending: true });
 
       if (error) {
         console.error('[AdminNotesPage] fetchNotes failed:', error);
@@ -65,7 +69,7 @@ export default function AdminNotesPage() {
         return;
       }
 
-      if (data) setNotes(data);
+      if (data) setNotes(data as Note[]);
     } finally {
       setIsLoading(false);
     }
@@ -78,15 +82,27 @@ export default function AdminNotesPage() {
       toast({ title: 'Error', description: 'Please upload a PDF first.', variant: 'destructive' });
       return;
     }
+    if (!formData.class || !formData.subject || !formData.title) {
+      toast({ title: 'Error', description: 'Please fill all required fields.', variant: 'destructive' });
+      return;
+    }
 
     setIsPublishing(true);
     console.log('[AdminNotesPage] Note publish start:', formData);
 
     try {
+      const payload = {
+        title: formData.title,
+        subject: formData.subject,
+        class: formData.class,
+        chapter_number: formData.chapter_number,
+        pdf_url: formData.pdf_url,
+      };
+
       if (editingNote) {
         const { error } = await supabase
           .from('notes')
-          .update(formData)
+          .update(payload)
           .eq('id', editingNote.id);
 
         if (error) {
@@ -96,39 +112,20 @@ export default function AdminNotesPage() {
         }
 
         toast({ title: 'Success', description: 'Note updated successfully.' });
-        await fetchNotes();
-        resetForm();
-        return;
+      } else {
+        const { error } = await supabase
+          .from('notes')
+          .insert({ ...payload, created_by: user?.id });
+
+        if (error) {
+          console.error('[AdminNotesPage] Insert failed:', error);
+          toast({ title: 'Error', description: 'Failed to add note.', variant: 'destructive' });
+          return;
+        }
+
+        toast({ title: 'Success', description: 'Notes uploaded successfully.' });
       }
 
-      const { data: duplicateRows } = await supabase
-        .from('notes')
-        .select('id')
-        .eq('title', formData.title)
-        .eq('subject', formData.subject)
-        .eq('class', formData.class)
-        .limit(1);
-
-      if (duplicateRows && duplicateRows.length > 0) {
-        toast({
-          title: 'Duplicate note',
-          description: 'A note with the same title, class, and subject already exists.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const { error } = await supabase
-        .from('notes')
-        .insert({ ...formData, created_by: user?.id });
-
-      if (error) {
-        console.error('[AdminNotesPage] Insert failed:', error);
-        toast({ title: 'Error', description: 'Failed to add note.', variant: 'destructive' });
-        return;
-      }
-
-      toast({ title: 'Success', description: 'Notes uploaded successfully.' });
       await fetchNotes();
       resetForm();
     } finally {
@@ -137,6 +134,7 @@ export default function AdminNotesPage() {
   };
 
   const deleteNote = async (id: string) => {
+    if (!window.confirm('Delete this note?')) return;
     const { error } = await supabase.from('notes').delete().eq('id', id);
 
     if (error) {
@@ -148,7 +146,7 @@ export default function AdminNotesPage() {
   };
 
   const resetForm = () => {
-    setFormData({ title: '', subject: '', class: '', pdf_url: '' });
+    setFormData({ title: '', subject: '', class: '', chapter_number: 1, pdf_url: '' });
     setEditingNote(null);
     setIsDialogOpen(false);
   };
@@ -159,6 +157,7 @@ export default function AdminNotesPage() {
       title: note.title,
       subject: note.subject,
       class: note.class,
+      chapter_number: note.chapter_number ?? 1,
       pdf_url: note.pdf_url,
     });
     setIsDialogOpen(true);
@@ -174,15 +173,14 @@ export default function AdminNotesPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in px-1 sm:px-0">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">Notes</h1>
-          <p className="text-sm text-muted-foreground">Manage study materials and PDFs</p>
+          <p className="text-sm text-muted-foreground">Manage study materials by class, subject & chapter</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); else setIsDialogOpen(true); }}>
           <DialogTrigger asChild>
-            <Button onClick={resetForm} className="w-full sm:w-auto min-h-[44px]">
+            <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} className="w-full sm:w-auto min-h-[44px]">
               <Plus className="w-4 h-4 mr-2" />
               Add Note
             </Button>
@@ -192,32 +190,47 @@ export default function AdminNotesPage() {
               <DialogTitle className="text-lg">{editingNote ? 'Edit Note' : 'Add New Note'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title / Chapter Name</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g., Chapter 1 - Motion"
-                  className="min-h-[44px]"
-                  required
-                />
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Subject</Label>
+                  <Label>Class *</Label>
+                  <ClassSelect
+                    value={formData.class}
+                    onChange={(value) => setFormData({ ...formData, class: value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Subject *</Label>
                   <SubjectSelect
                     value={formData.subject}
                     onChange={(value) => setFormData({ ...formData, subject: value })}
                     required
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Class</Label>
-                  <ClassSelect
-                    value={formData.class}
-                    onChange={(value) => setFormData({ ...formData, class: value })}
+                  <Label htmlFor="chapter">Chapter No. *</Label>
+                  <Input
+                    id="chapter"
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={formData.chapter_number}
+                    onChange={(e) => setFormData({ ...formData, chapter_number: parseInt(e.target.value) || 1 })}
+                    className="min-h-[44px]"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="title">Title *</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="e.g., Motion"
+                    className="min-h-[44px]"
                     required
                   />
                 </div>
@@ -239,7 +252,6 @@ export default function AdminNotesPage() {
                   }}
                   existingUrl={formData.pdf_url}
                 />
-                <p className="text-xs text-muted-foreground">Upload PDF first, then click Publish.</p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -256,7 +268,6 @@ export default function AdminNotesPage() {
         </Dialog>
       </div>
 
-      {/* Notes list */}
       {notes.length === 0 ? (
         <div className="dashboard-card text-center py-12">
           <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -271,9 +282,11 @@ export default function AdminNotesPage() {
               <div key={note.id} className="dashboard-card p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-foreground text-sm truncate">{note.title}</p>
+                    <p className="font-medium text-foreground text-sm truncate">
+                      Ch. {note.chapter_number ?? '–'} – {note.title}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {note.subject} • {note.class} • {new Date(note.created_at).toLocaleDateString()}
+                      {note.class} • {note.subject}
                     </p>
                   </div>
                   <DropdownMenu>
@@ -284,19 +297,13 @@ export default function AdminNotesPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => window.open(note.pdf_url, '_blank')}>
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        View PDF
+                        <ExternalLink className="w-4 h-4 mr-2" /> View PDF
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => openEditDialog(note)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
+                        <Edit className="w-4 h-4 mr-2" /> Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => deleteNote(note.id)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
+                      <DropdownMenuItem onClick={() => deleteNote(note.id)} className="text-destructive">
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -311,22 +318,20 @@ export default function AdminNotesPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
+                    <th className="text-left p-3 font-medium text-muted-foreground">Ch.</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Title</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Subject</th>
                     <th className="text-left p-3 font-medium text-muted-foreground">Class</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Added</th>
                     <th className="text-right p-3 font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {notes.map((note) => (
                     <tr key={note.id} className="border-b border-border last:border-0">
+                      <td className="p-3 text-muted-foreground">{note.chapter_number ?? '–'}</td>
                       <td className="p-3 font-medium text-foreground">{note.title}</td>
                       <td className="p-3 text-muted-foreground">{note.subject}</td>
                       <td className="p-3 text-muted-foreground">{note.class}</td>
-                      <td className="p-3 text-muted-foreground">
-                        {new Date(note.created_at).toLocaleDateString()}
-                      </td>
                       <td className="p-3 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -336,19 +341,13 @@ export default function AdminNotesPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => window.open(note.pdf_url, '_blank')}>
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              View PDF
+                              <ExternalLink className="w-4 h-4 mr-2" /> View PDF
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => openEditDialog(note)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
+                              <Edit className="w-4 h-4 mr-2" /> Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => deleteNote(note.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
+                            <DropdownMenuItem onClick={() => deleteNote(note.id)} className="text-destructive">
+                              <Trash2 className="w-4 h-4 mr-2" /> Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
