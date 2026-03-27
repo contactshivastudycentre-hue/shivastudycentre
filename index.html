@@ -98,40 +98,38 @@
         }, 500);
       });
       
-      // Register service worker for PWA with auto-update
+      // Register service worker for PWA — only in production, not in preview/iframe
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-              console.log('SW registered:', registration.scope);
-              
-              // Check for updates periodically
-              setInterval(() => {
-                registration.update();
-              }, 60000); // Check every minute
-              
-              // Listen for new service worker
-              registration.addEventListener('updatefound', () => {
-                const newWorker = registration.installing;
-                if (newWorker) {
-                  newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                      // New version available - dispatch event for toast
-                      window.dispatchEvent(new CustomEvent('pwa-update-available'));
-                    }
-                  });
-                }
-              });
-            })
-            .catch(error => {
-              console.log('SW registration failed:', error);
-            });
-            
-          // Handle controller change (new SW activated)
-          navigator.serviceWorker.addEventListener('controllerchange', () => {
-            // Optionally reload on update
+        var isInIframe = false;
+        try { isInIframe = window.self !== window.top; } catch(e) { isInIframe = true; }
+        var isPreview = window.location.hostname.includes('id-preview--') || window.location.hostname.includes('lovableproject.com');
+
+        if (isPreview || isInIframe) {
+          // Unregister any existing SW in preview to avoid stale cache issues
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            regs.forEach(function(r) { r.unregister(); });
           });
-        });
+        } else {
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js')
+              .then(function(registration) {
+                console.log('SW registered:', registration.scope);
+                setInterval(function() { registration.update(); }, 60000);
+                registration.addEventListener('updatefound', function() {
+                  var newWorker = registration.installing;
+                  if (newWorker) {
+                    newWorker.addEventListener('statechange', function() {
+                      if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        window.dispatchEvent(new CustomEvent('pwa-update-available'));
+                      }
+                    });
+                  }
+                });
+              })
+              .catch(function(error) { console.log('SW registration failed:', error); });
+            navigator.serviceWorker.addEventListener('controllerchange', function() {});
+          });
+        }
       }
     </script>
   </body>
