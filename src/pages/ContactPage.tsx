@@ -328,10 +328,10 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
-      {/* LeadPe Lead Capture Widget */}
+      {/* Kairaux Lead Capture Widget */}
       <section className="py-12 bg-background">
         <div className="container mx-auto px-4 max-w-md">
-          <LeadPeWidget />
+          <KairauxWidget />
         </div>
       </section>
 
@@ -357,7 +357,7 @@ export default function ContactPage() {
   );
 }
 
-function LeadPeWidget() {
+function KairauxWidget() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [interest, setInterest] = useState('');
@@ -402,7 +402,7 @@ function LeadPeWidget() {
         <div className="text-5xl mb-4">✅</div>
         <h3 className="text-xl font-bold text-foreground">Request Received!</h3>
         <p className="text-muted-foreground mt-2">We will call you back within 2 hours.</p>
-        <p className="text-xs text-muted-foreground mt-4">Powered by LeadPe 🌱</p>
+        <p className="text-xs text-muted-foreground mt-4">Powered by Kairaux 🌱</p>
       </div>
     );
   }
@@ -423,7 +423,7 @@ function LeadPeWidget() {
           {status === 'sending' ? 'Sending...' : 'Get Callback 📲'}
         </Button>
         {status === 'error' && <p className="text-sm text-destructive text-center">Error. Please try again.</p>}
-        <p className="text-center text-xs text-muted-foreground">Powered by LeadPe 🌱</p>
+        <p className="text-center text-xs text-muted-foreground">Powered by Kairaux 🌱</p>
       </div>
     </div>
   );
