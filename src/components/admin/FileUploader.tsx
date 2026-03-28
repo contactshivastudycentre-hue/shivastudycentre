@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Upload, File, X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { uploadPdfToNotesStorage, mapUploadErrorToMessage } from '@/lib/notesUpload';
 
 interface FileUploaderProps {
   bucket: string;
@@ -30,6 +31,28 @@ export const FileUploader = forwardRef<FileUploaderHandle, FileUploaderProps>(
     const inputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
+    // ─── Mobile resilience: persist file across page suspensions ───
+    // On mobile, opening the native file picker can suspend the page.
+    // When the page resumes, React may re-render and lose state.
+    // We store the selected file in a ref so it survives re-renders.
+    const fileRef = useRef<globalThis.File | null>(null);
+
+    // Sync ref whenever state changes
+    useEffect(() => {
+      fileRef.current = selectedFile;
+    }, [selectedFile]);
+
+    // Restore file from ref after visibility change (mobile resume)
+    useEffect(() => {
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible' && fileRef.current && !selectedFile) {
+          setSelectedFile(fileRef.current);
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [selectedFile]);
+
     useEffect(() => {
       setUploadedUrl(existingUrl || '');
     }, [existingUrl]);
@@ -46,6 +69,7 @@ export const FileUploader = forwardRef<FileUploaderHandle, FileUploaderProps>(
     const clearFile = useCallback(() => {
       if (isUploading) return;
       setSelectedFile(null);
+      fileRef.current = null;
       setUploadedUrl('');
       setProgress(0);
       setError(null);
@@ -69,44 +93,42 @@ export const FileUploader = forwardRef<FileUploaderHandle, FileUploaderProps>(
         return;
       }
 
+      // Store in both state and ref for mobile resilience
+      fileRef.current = file;
       setSelectedFile(file);
       setUploadedUrl('');
     }, [accept, maxSizeMB]);
 
     const uploadFile = async () => {
-      if (!selectedFile || isUploading) return;
+      // Use ref as fallback if state was lost
+      const fileToUpload = selectedFile || fileRef.current;
+      if (!fileToUpload || isUploading) return;
+
+      // Restore state if it was lost
+      if (!selectedFile && fileRef.current) {
+        setSelectedFile(fileRef.current);
+      }
+
       setIsUploading(true);
       setProgress(0);
       setError(null);
 
-      const filePath = `notes/${Date.now()}-${sanitizeFileName(selectedFile.name)}`;
-      console.log('[FileUploader] Upload start:', selectedFile.name, filePath);
-
-      const ticker = window.setInterval(() => {
-        setProgress((p) => Math.min(p + 4, 90));
-      }, 300);
+      console.log('[FileUploader] Upload start:', fileToUpload.name);
 
       try {
-        const { error: uploadError } = await supabase.storage
-          .from(bucket)
-          .upload(filePath, selectedFile, {
-            cacheControl: '31536000',
-            upsert: true,
-          });
-
-        window.clearInterval(ticker);
-        if (uploadError) throw uploadError;
-
-        const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
+        const result = await uploadPdfToNotesStorage({
+          bucket,
+          file: fileToUpload,
+          onProgress: (p) => setProgress(p),
+        });
 
         setProgress(100);
-        setUploadedUrl(urlData.publicUrl);
-        onUploadComplete(urlData.publicUrl, selectedFile.name);
+        setUploadedUrl(result.publicUrl);
+        onUploadComplete(result.publicUrl, fileToUpload.name);
         toast({ title: '✅ Upload Complete', description: 'PDF uploaded successfully.' });
-        console.log('[FileUploader] Success:', urlData.publicUrl);
+        console.log('[FileUploader] Success:', result.publicUrl);
       } catch (err: any) {
-        window.clearInterval(ticker);
-        const msg = err?.message || 'Upload failed. Please try again.';
+        const msg = mapUploadErrorToMessage(err, maxSizeMB);
         console.error('[FileUploader] Failed:', err);
         setError(msg);
         toast({ title: 'Upload Failed', description: msg, variant: 'destructive' });
@@ -118,7 +140,7 @@ export const FileUploader = forwardRef<FileUploaderHandle, FileUploaderProps>(
     return (
       <div className="space-y-3 w-full">
         {/* Select state */}
-        {!selectedFile && !uploadedUrl && (
+        {!selectedFile && !fileRef.current && !uploadedUrl && (
           <div className="border-2 border-dashed border-border rounded-xl p-6 text-center space-y-3">
             <input ref={inputRef} type="file" accept={accept} onChange={handleFileSelect} className="hidden" />
             <Upload className="w-10 h-10 text-muted-foreground mx-auto" />
@@ -130,15 +152,15 @@ export const FileUploader = forwardRef<FileUploaderHandle, FileUploaderProps>(
         )}
 
         {/* File selected */}
-        {selectedFile && !uploadedUrl && (
+        {(selectedFile || fileRef.current) && !uploadedUrl && (
           <div className="border rounded-xl p-4 bg-muted/50 space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                 <File className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground text-sm truncate">{selectedFile.name}</p>
-                <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                <p className="font-medium text-foreground text-sm truncate">{(selectedFile || fileRef.current)!.name}</p>
+                <p className="text-xs text-muted-foreground">{((selectedFile || fileRef.current)!.size / 1024 / 1024).toFixed(2)} MB</p>
               </div>
               <Button type="button" variant="ghost" size="icon" onClick={clearFile} disabled={isUploading}>
                 <X className="w-4 h-4" />
@@ -165,7 +187,7 @@ export const FileUploader = forwardRef<FileUploaderHandle, FileUploaderProps>(
               <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-foreground text-sm">File Uploaded ✅</p>
-                <p className="text-xs text-muted-foreground truncate">{selectedFile?.name || 'Existing file'}</p>
+                <p className="text-xs text-muted-foreground truncate">{(selectedFile || fileRef.current)?.name || 'Existing file'}</p>
               </div>
               <Button type="button" variant="ghost" size="sm" onClick={clearFile}>Replace</Button>
             </div>
