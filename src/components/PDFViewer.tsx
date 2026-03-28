@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { X, Download, Maximize2, Minimize2, ArrowLeft, Loader2, AlertCircle, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
+import { ArrowLeft, Download, Maximize2, Minimize2, Loader2, AlertCircle, ZoomIn, ZoomOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Set worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 interface PDFViewerProps {
@@ -42,17 +41,14 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
     };
   }, [storagePath]);
 
-  // Re-render visible pages when zoom changes
   useEffect(() => {
     if (!pdfDocRef.current) return;
     renderingRef.current.clear();
-    // Re-render all currently mounted canvases
     canvasRefs.current.forEach((_, pageNum) => {
       renderPage(pageNum);
     });
   }, [zoom]);
 
-  // Track current page via scroll
   useEffect(() => {
     const container = containerRef.current;
     if (!container || totalPages === 0) return;
@@ -104,9 +100,6 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       pdfDocRef.current = pdf;
       setTotalPages(pdf.numPages);
-
-      // Render first page immediately
-      // Other pages render via intersection observer
     } catch (err) {
       console.error('Error loading PDF:', err);
       setError(err instanceof Error ? err.message : 'Failed to load PDF');
@@ -127,8 +120,7 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
       const container = containerRef.current;
       if (!container) return;
 
-      // Calculate scale to fit container width
-      const containerWidth = container.clientWidth - 16; // padding
+      const containerWidth = container.clientWidth - 16;
       const viewport = page.getViewport({ scale: 1 });
       const baseScale = containerWidth / viewport.width;
       const scaledViewport = page.getViewport({ scale: baseScale * zoom });
@@ -154,7 +146,6 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
   const setCanvasRef = useCallback((pageNum: number, el: HTMLCanvasElement | null) => {
     if (el) {
       canvasRefs.current.set(pageNum, el);
-      // Use intersection observer for lazy rendering
       if (!observerRef.current) {
         observerRef.current = new IntersectionObserver(
           (entries) => {
@@ -170,8 +161,6 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
       }
       const wrapper = el.closest('[data-page]');
       if (wrapper) observerRef.current.observe(wrapper);
-
-      // Render first 2 pages immediately
       if (pageNum <= 2) renderPage(pageNum);
     } else {
       canvasRefs.current.delete(pageNum);
@@ -202,13 +191,19 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
   const resetZoom = () => setZoom(1);
 
   return (
-    <div className={`fixed inset-0 z-50 bg-background animate-fade-in ${isFullscreen ? '' : 'p-0 md:p-4'}`}>
-      <div className={`bg-card shadow-2xl border overflow-hidden flex flex-col h-full ${isFullscreen ? 'rounded-none' : 'md:rounded-xl md:max-w-6xl md:mx-auto'}`}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b bg-card shrink-0">
+    <div className="fixed inset-0 z-[100] bg-background animate-fade-in">
+      <div className={`bg-card shadow-2xl border overflow-hidden flex flex-col h-full ${isFullscreen ? 'rounded-none' : 'md:rounded-xl md:max-w-6xl md:mx-auto md:my-4 md:h-[calc(100vh-2rem)]'}`}>
+        {/* Header — prominent back button */}
+        <div className="flex items-center justify-between px-3 py-2.5 border-b bg-card shrink-0 safe-top">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0 h-8 w-8">
-              <ArrowLeft className="w-4 h-4" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="shrink-0 h-9 gap-1.5 px-2 text-primary font-semibold"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm">Back</span>
             </Button>
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-foreground text-sm truncate">{title}</h3>
@@ -221,14 +216,11 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
             </div>
           </div>
           <div className="flex items-center gap-0.5 shrink-0">
-            <Button variant="ghost" size="icon" onClick={handleDownload} disabled={isLoading || !!error} className="h-8 w-8">
-              <Download className="w-4 h-4" />
+            <Button variant="ghost" size="icon" onClick={handleDownload} disabled={isLoading || !!error} className="h-9 w-9">
+              <Download className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsFullscreen(!isFullscreen)} className="hidden md:flex h-8 w-8">
+            <Button variant="ghost" size="icon" onClick={() => setIsFullscreen(!isFullscreen)} className="hidden md:flex h-9 w-9">
               {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={onClose} className="hidden md:flex h-8 w-8">
-              <X className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -283,7 +275,7 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
           )}
 
           {!error && totalPages > 0 && (
-            <div className="flex flex-col items-center gap-2 p-1 sm:p-2 pb-[env(safe-area-inset-bottom,0px)]">
+            <div className="flex flex-col items-center gap-2 p-1 sm:p-2 pb-4">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                 <div key={pageNum} data-page={pageNum} className="w-full flex justify-center overflow-hidden">
                   <canvas
