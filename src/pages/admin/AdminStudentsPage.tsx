@@ -515,89 +515,141 @@ export default function AdminStudentsPage() {
           </p>
         </div>
       ) : (
-        <div className="dashboard-card p-0 overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-[280px]">Student</TableHead>
-                  <TableHead>Mobile</TableHead>
-                  <TableHead>Class</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProfiles.map((profile) => (
-                  <TableRow key={profile.id} className="hover:bg-muted/30">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                          {getInitials(profile.full_name)}
-                        </div>
-                        <span className="font-medium">{profile.full_name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{profile.mobile}</TableCell>
-                    <TableCell>
-                      <span className="text-sm font-medium text-foreground">{profile.class || '-'}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getStatusBadgeClass(profile.status)}`}>
-                        {profile.status.charAt(0).toUpperCase() + profile.status.slice(1)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(profile.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditClass(profile)}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Class
-                          </DropdownMenuItem>
-                          {profile.status !== 'approved' && (
-                            <DropdownMenuItem onClick={() => updateStatus(profile.id, 'approved')}>
-                              <CheckCircle className="w-4 h-4 mr-2 text-success" />
-                              Approve
-                            </DropdownMenuItem>
-                          )}
-                          {profile.status !== 'inactive' && (
-                            <DropdownMenuItem onClick={() => setDeleteTarget({ profile, permanent: false })}>
-                              <Ban className="w-4 h-4 mr-2 text-destructive" />
-                              Deactivate
-                            </DropdownMenuItem>
-                          )}
-                          {profile.status === 'inactive' && (
-                            <DropdownMenuItem onClick={() => updateStatus(profile.id, 'pending')}>
-                              <Undo className="w-4 h-4 mr-2" />
-                              Set to Pending
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => setDeleteTarget({ profile, permanent: true })}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete Permanently
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+        <>
+          {/* Mobile card view */}
+          <div className="space-y-3 sm:hidden">
+            {filteredProfiles.map((profile) => (
+              <div key={profile.id} className="dashboard-card p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm shrink-0">
+                      {getInitials(profile.full_name)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground truncate">{profile.full_name}</p>
+                      <p className="text-sm text-muted-foreground">{profile.mobile}</p>
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="shrink-0">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEditClass(profile)}>
+                        <Edit className="w-4 h-4 mr-2" /> Edit Class
+                      </DropdownMenuItem>
+                      {profile.status !== 'approved' && (
+                        <DropdownMenuItem onClick={() => updateStatus(profile.id, 'approved')}>
+                          <CheckCircle className="w-4 h-4 mr-2 text-success" /> Approve
+                        </DropdownMenuItem>
+                      )}
+                      {profile.status !== 'inactive' && (
+                        <DropdownMenuItem onClick={() => setDeleteTarget({ profile, permanent: false })}>
+                          <Ban className="w-4 h-4 mr-2 text-destructive" /> Deactivate
+                        </DropdownMenuItem>
+                      )}
+                      {profile.status === 'inactive' && (
+                        <DropdownMenuItem onClick={() => updateStatus(profile.id, 'pending')}>
+                          <Undo className="w-4 h-4 mr-2" /> Set to Pending
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTarget({ profile, permanent: true })}>
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-foreground bg-secondary px-2 py-1 rounded-full">{profile.class || '-'}</span>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusBadgeClass(profile.status)}`}>
+                    {profile.status.charAt(0).toUpperCase() + profile.status.slice(1)}
+                  </span>
+                  <span className="text-xs text-muted-foreground ml-auto">{new Date(profile.created_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+
+          {/* Desktop table view */}
+          <div className="dashboard-card p-0 overflow-hidden hidden sm:block">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-[280px]">Student</TableHead>
+                    <TableHead>Mobile</TableHead>
+                    <TableHead>Class</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Joined</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProfiles.map((profile) => (
+                    <TableRow key={profile.id} className="hover:bg-muted/30">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+                            {getInitials(profile.full_name)}
+                          </div>
+                          <span className="font-medium">{profile.full_name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{profile.mobile}</TableCell>
+                      <TableCell>
+                        <span className="text-sm font-medium text-foreground">{profile.class || '-'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getStatusBadgeClass(profile.status)}`}>
+                          {profile.status.charAt(0).toUpperCase() + profile.status.slice(1)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(profile.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditClass(profile)}>
+                              <Edit className="w-4 h-4 mr-2" /> Edit Class
+                            </DropdownMenuItem>
+                            {profile.status !== 'approved' && (
+                              <DropdownMenuItem onClick={() => updateStatus(profile.id, 'approved')}>
+                                <CheckCircle className="w-4 h-4 mr-2 text-success" /> Approve
+                              </DropdownMenuItem>
+                            )}
+                            {profile.status !== 'inactive' && (
+                              <DropdownMenuItem onClick={() => setDeleteTarget({ profile, permanent: false })}>
+                                <Ban className="w-4 h-4 mr-2 text-destructive" /> Deactivate
+                              </DropdownMenuItem>
+                            )}
+                            {profile.status === 'inactive' && (
+                              <DropdownMenuItem onClick={() => updateStatus(profile.id, 'pending')}>
+                                <Undo className="w-4 h-4 mr-2" /> Set to Pending
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTarget({ profile, permanent: true })}>
+                              <Trash2 className="w-4 h-4 mr-2" /> Delete Permanently
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </>
       )}
 
       <Dialog open={!!editingProfile} onOpenChange={() => setEditingProfile(null)}>

@@ -128,7 +128,7 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-5 animate-fade-in overflow-hidden">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Notes</h1>
         <p className="text-muted-foreground">Study materials organized by subject & chapter</p>
@@ -190,9 +190,9 @@ export default function NotesPage() {
                           </Badge>
                         )}
                       </h4>
-                      <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="grid gap-2 grid-cols-1 sm:grid-cols-2">
                         {files.map((note) => (
-                          <div key={note.id} className="dashboard-card p-3 group">
+                          <div key={note.id} className="dashboard-card p-3 group overflow-hidden">
                             <div className="flex items-center gap-3 mb-2">
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -206,10 +206,10 @@ export default function NotesPage() {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <Button variant="default" size="sm" className="flex-1 min-h-[40px]" onClick={() => setViewingNote(note)}>
+                              <Button variant="default" size="sm" className="flex-1 min-h-[44px]" onClick={() => setViewingNote(note)}>
                                 <Eye className="w-4 h-4 mr-1.5" /> View
                               </Button>
-                              <Button variant="outline" size="sm" className="flex-1 min-h-[40px]" onClick={() => handleDownload(note)}>
+                              <Button variant="outline" size="sm" className="flex-1 min-h-[44px]" onClick={() => handleDownload(note)}>
                                 <Download className="w-4 h-4 mr-1.5" /> Download
                               </Button>
                             </div>

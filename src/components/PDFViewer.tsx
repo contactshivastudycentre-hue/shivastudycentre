@@ -254,7 +254,7 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
         )}
 
         {/* PDF Content */}
-        <div ref={containerRef} className="flex-1 relative bg-muted overflow-auto">
+        <div ref={containerRef} className="flex-1 relative bg-muted overflow-y-auto overflow-x-hidden" style={{ touchAction: 'pan-y pinch-zoom', WebkitOverflowScrolling: 'touch' }}>
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
               <div className="flex flex-col items-center gap-3">
@@ -283,9 +283,9 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
           )}
 
           {!error && totalPages > 0 && (
-            <div className="flex flex-col items-center gap-2 p-2">
+            <div className="flex flex-col items-center gap-2 p-1 sm:p-2 pb-[env(safe-area-inset-bottom,0px)]">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                <div key={pageNum} data-page={pageNum} className="w-full flex justify-center">
+                <div key={pageNum} data-page={pageNum} className="w-full flex justify-center overflow-hidden">
                   <canvas
                     ref={(el) => setCanvasRef(pageNum, el)}
                     className="shadow-md bg-white max-w-full"
