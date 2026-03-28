@@ -150,7 +150,7 @@ export function DashboardLayout() {
               Shiva Study Center
             </span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Powered by LEADPE
+              Powered by KAIRAUX
             </span>
           </div>
         </Link>
