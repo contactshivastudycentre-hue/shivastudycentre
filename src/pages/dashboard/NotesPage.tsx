@@ -41,7 +41,8 @@ export default function NotesPage() {
         .select('*')
         .order('class', { ascending: true })
         .order('subject', { ascending: true })
-        .order('chapter_number', { ascending: true });
+        .order('chapter_number', { ascending: true })
+        .order('created_at', { ascending: true });
 
       if (error) {
         console.error('[NotesPage] fetchNotes failed:', error);

@@ -254,7 +254,7 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
         )}
 
         {/* PDF Content */}
-        <div ref={containerRef} className="flex-1 relative bg-muted overflow-y-auto overflow-x-hidden" style={{ touchAction: 'pan-y pinch-zoom', WebkitOverflowScrolling: 'touch' }}>
+        <div ref={containerRef} className="flex-1 relative overflow-y-auto overflow-x-hidden" style={{ touchAction: 'pan-y pinch-zoom', WebkitOverflowScrolling: 'touch', background: 'hsl(224 71% 6%)' }}>
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
               <div className="flex flex-col items-center gap-3">
