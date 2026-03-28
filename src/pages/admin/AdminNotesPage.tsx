@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,7 +24,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { FileText, Plus, MoreVertical, Edit, Trash2, ExternalLink, Loader2, Star, BookOpen } from 'lucide-react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+  FileText, Plus, MoreVertical, Edit, Trash2, ExternalLink,
+  Loader2, Star, BookOpen, ChevronRight, Filter, X,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ClassSelect } from '@/components/ClassSelect';
 import { SubjectSelect } from '@/components/SubjectSelect';
@@ -32,6 +40,8 @@ import { useAuth } from '@/lib/auth';
 import { FileUploader } from '@/components/admin/FileUploader';
 import { detectChapterNumber, detectIsSolution } from '@/lib/notesUtils';
 import { Badge } from '@/components/ui/badge';
+import { CLASSES } from '@/components/ClassSelect';
+import { SUBJECTS } from '@/components/SubjectSelect';
 
 interface Note {
   id: string;
@@ -52,6 +62,10 @@ export default function AdminNotesPage() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [filterClass, setFilterClass] = useState('');
+  const [filterSubject, setFilterSubject] = useState('');
+  const [openClasses, setOpenClasses] = useState<Record<string, boolean>>({});
+  const [openSubjects, setOpenSubjects] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState({
     title: '',
     subject: '',
@@ -86,7 +100,40 @@ export default function AdminNotesPage() {
     }
   };
 
-  // Smart title scan: auto-detect chapter & solution
+  // Apply filters
+  const filteredNotes = useMemo(() => {
+    let result = notes;
+    if (filterClass) result = result.filter((n) => n.class === filterClass);
+    if (filterSubject) result = result.filter((n) => n.subject === filterSubject);
+    return result;
+  }, [notes, filterClass, filterSubject]);
+
+  // Group: class → subject → chapter → notes[]
+  const grouped = useMemo(() => {
+    const classMap: Record<string, Record<string, Record<number, Note[]>>> = {};
+    for (const note of filteredNotes) {
+      if (!classMap[note.class]) classMap[note.class] = {};
+      if (!classMap[note.class][note.subject]) classMap[note.class][note.subject] = {};
+      const ch = note.chapter_number ?? 0;
+      if (!classMap[note.class][note.subject][ch]) classMap[note.class][note.subject][ch] = [];
+      classMap[note.class][note.subject][ch].push(note);
+    }
+
+    return Object.entries(classMap)
+      .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+      .map(([cls, subjects]) => ({
+        class: cls,
+        subjects: Object.entries(subjects)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([subject, chapters]) => ({
+            subject,
+            chapters: Object.entries(chapters)
+              .map(([ch, files]) => ({ chapter: parseInt(ch), files }))
+              .sort((a, b) => a.chapter - b.chapter),
+          })),
+      }));
+  }, [filteredNotes]);
+
   const handleTitleChange = (title: string) => {
     const chapter = detectChapterNumber(title);
     const isSol = detectIsSolution(title);
@@ -100,7 +147,6 @@ export default function AdminNotesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!formData.pdf_url) {
       toast({ title: 'Error', description: 'Please upload a PDF first.', variant: 'destructive' });
       return;
@@ -111,8 +157,6 @@ export default function AdminNotesPage() {
     }
 
     setIsPublishing(true);
-    console.log('[AdminNotesPage] Note publish start:', formData);
-
     try {
       const payload = {
         title: formData.title,
@@ -126,7 +170,6 @@ export default function AdminNotesPage() {
       if (editingNote) {
         const { error } = await supabase.from('notes').update(payload).eq('id', editingNote.id);
         if (error) {
-          console.error('[AdminNotesPage] Update failed:', error);
           toast({ title: 'Error', description: 'Failed to update note.', variant: 'destructive' });
           return;
         }
@@ -134,13 +177,11 @@ export default function AdminNotesPage() {
       } else {
         const { error } = await supabase.from('notes').insert({ ...payload, created_by: user?.id });
         if (error) {
-          console.error('[AdminNotesPage] Insert failed:', error);
           toast({ title: 'Error', description: 'Failed to add note.', variant: 'destructive' });
           return;
         }
         toast({ title: 'Success', description: 'Notes uploaded successfully.' });
       }
-
       await fetchNotes();
       resetForm();
     } finally {
@@ -178,6 +219,14 @@ export default function AdminNotesPage() {
     setIsDialogOpen(true);
   };
 
+  const toggleClass = (cls: string) =>
+    setOpenClasses((prev) => ({ ...prev, [cls]: prev[cls] === false ? true : prev[cls] === undefined ? false : !prev[cls] }));
+
+  const toggleSubject = (key: string) =>
+    setOpenSubjects((prev) => ({ ...prev, [key]: prev[key] === false ? true : prev[key] === undefined ? false : !prev[key] }));
+
+  const hasFilters = filterClass || filterSubject;
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -188,10 +237,13 @@ export default function AdminNotesPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in px-1 sm:px-0">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">Notes</h1>
-          <p className="text-sm text-muted-foreground">Manage study materials by class, subject & chapter</p>
+          <p className="text-sm text-muted-foreground">
+            {notes.length} note{notes.length !== 1 ? 's' : ''} • Organized by Class → Subject → Chapter
+          </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { if (open) { setIsDialogOpen(true); } else if (!isPublishing) { resetForm(); } }}>
           <DialogTrigger asChild>
@@ -275,7 +327,6 @@ export default function AdminNotesPage() {
                   accept=".pdf"
                   maxSizeMB={10}
                   onUploadComplete={(url, fileName) => {
-                    console.log('[AdminNotesPage] Upload success:', fileName, url);
                     const newTitle = formData.title || fileName.replace(/\.pdf$/i, '');
                     const chapter = detectChapterNumber(newTitle);
                     const isSol = detectIsSolution(newTitle);
@@ -305,111 +356,157 @@ export default function AdminNotesPage() {
         </Dialog>
       </div>
 
-      {notes.length === 0 ? (
+      {/* Filters */}
+      {notes.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <div className="w-36">
+            <Select value={filterClass} onValueChange={setFilterClass}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue placeholder="All Classes" />
+              </SelectTrigger>
+              <SelectContent>
+                {CLASSES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-36">
+            <Select value={filterSubject} onValueChange={setFilterSubject}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue placeholder="All Subjects" />
+              </SelectTrigger>
+              <SelectContent>
+                {SUBJECTS.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {hasFilters && (
+            <Button type="button" variant="ghost" size="sm" className="h-9 text-xs gap-1" onClick={() => { setFilterClass(''); setFilterSubject(''); }}>
+              <X className="w-3 h-3" /> Clear
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Grouped Notes */}
+      {filteredNotes.length === 0 ? (
         <div className="dashboard-card text-center py-12">
           <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">No Notes Yet</h3>
-          <p className="text-muted-foreground">Add study materials for students.</p>
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            {notes.length === 0 ? 'No Notes Yet' : 'No Notes Match Filters'}
+          </h3>
+          <p className="text-muted-foreground">
+            {notes.length === 0 ? 'Add study materials for students.' : 'Try adjusting your filters.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {/* Mobile card list */}
-          <div className="block sm:hidden space-y-3">
-            {notes.map((note) => (
-              <div key={note.id} className="dashboard-card p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-foreground text-sm truncate">
-                        Ch. {note.chapter_number ?? '–'} – {note.title}
-                      </p>
-                      {note.is_solution && (
-                        <Badge variant="secondary" className="text-xs gap-1">
-                          <Star className="w-3 h-3" /> Solution
-                        </Badge>
-                      )}
+          {grouped.map(({ class: cls, subjects }) => (
+            <Collapsible
+              key={cls}
+              open={openClasses[cls] !== false}
+              onOpenChange={() => toggleClass(cls)}
+            >
+              {/* Class Header */}
+              <CollapsibleTrigger asChild>
+                <button className="w-full flex items-center justify-between p-3 sm:p-4 rounded-xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
+                      <BookOpen className="w-5 h-5 text-primary" />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {note.class} • {note.subject}
-                    </p>
+                    <div className="text-left">
+                      <p className="font-bold text-foreground">{cls}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {subjects.length} subject{subjects.length !== 1 ? 's' : ''} •{' '}
+                        {subjects.reduce((sum, s) => sum + s.chapters.reduce((cs, c) => cs + c.files.length, 0), 0)} files
+                      </p>
+                    </div>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button type="button" variant="ghost" size="icon" className="flex-shrink-0 h-8 w-8">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => window.open(note.pdf_url, '_blank')}>
-                        <ExternalLink className="w-4 h-4 mr-2" /> View PDF
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => openEditDialog(note)}>
-                        <Edit className="w-4 h-4 mr-2" /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => deleteNote(note.id)} className="text-destructive">
-                        <Trash2 className="w-4 h-4 mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            ))}
-          </div>
+                  <ChevronRight className={`w-5 h-5 text-muted-foreground transition-transform ${openClasses[cls] !== false ? 'rotate-90' : ''}`} />
+                </button>
+              </CollapsibleTrigger>
 
-          {/* Desktop table */}
-          <div className="hidden sm:block dashboard-card p-0 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left p-3 font-medium text-muted-foreground">Ch.</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Title</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Type</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Subject</th>
-                    <th className="text-left p-3 font-medium text-muted-foreground">Class</th>
-                    <th className="text-right p-3 font-medium text-muted-foreground">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {notes.map((note) => (
-                    <tr key={note.id} className="border-b border-border last:border-0">
-                      <td className="p-3 text-muted-foreground">{note.chapter_number ?? '–'}</td>
-                      <td className="p-3 font-medium text-foreground">{note.title}</td>
-                      <td className="p-3">
-                        {note.is_solution ? (
-                          <Badge variant="secondary" className="text-xs gap-1"><Star className="w-3 h-3" /> Solution</Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs gap-1"><BookOpen className="w-3 h-3" /> Notes</Badge>
-                        )}
-                      </td>
-                      <td className="p-3 text-muted-foreground">{note.subject}</td>
-                      <td className="p-3 text-muted-foreground">{note.class}</td>
-                      <td className="p-3 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button type="button" variant="ghost" size="icon">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => window.open(note.pdf_url, '_blank')}>
-                              <ExternalLink className="w-4 h-4 mr-2" /> View PDF
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEditDialog(note)}>
-                              <Edit className="w-4 h-4 mr-2" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => deleteNote(note.id)} className="text-destructive">
-                              <Trash2 className="w-4 h-4 mr-2" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+              <CollapsibleContent>
+                <div className="space-y-2 pt-2 pl-2 sm:pl-4">
+                  {subjects.map(({ subject, chapters }) => {
+                    const subjectKey = `${cls}::${subject}`;
+                    return (
+                      <Collapsible
+                        key={subjectKey}
+                        open={openSubjects[subjectKey] !== false}
+                        onOpenChange={() => toggleSubject(subjectKey)}
+                      >
+                        {/* Subject Header */}
+                        <CollapsibleTrigger asChild>
+                          <button className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg bg-card border border-border hover:bg-accent/50 transition-colors">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-md bg-accent flex items-center justify-center">
+                                <FileText className="w-4 h-4 text-accent-foreground" />
+                              </div>
+                              <div className="text-left">
+                                <p className="font-semibold text-foreground text-sm">{subject}</p>
+                                <p className="text-[11px] text-muted-foreground">
+                                  {chapters.length} chapter{chapters.length !== 1 ? 's' : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${openSubjects[subjectKey] !== false ? 'rotate-90' : ''}`} />
+                          </button>
+                        </CollapsibleTrigger>
+
+                        <CollapsibleContent>
+                          <div className="space-y-1.5 pt-1.5 pl-2 sm:pl-4">
+                            {chapters.map(({ chapter, files }) => (
+                              <div key={chapter} className="space-y-1">
+                                <p className="text-xs font-semibold text-muted-foreground px-2 pt-1">
+                                  Chapter {chapter || '–'}
+                                </p>
+                                {files.map((note) => (
+                                  <div key={note.id} className="flex items-center justify-between gap-2 px-2 py-2 rounded-lg hover:bg-muted/50 transition-colors group">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                                      <span className="text-sm text-foreground truncate">{note.title}</span>
+                                      {note.is_solution && (
+                                        <Badge variant="secondary" className="text-[10px] gap-0.5 px-1.5 py-0 shrink-0">
+                                          <Star className="w-2.5 h-2.5" /> Sol
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0 opacity-60 group-hover:opacity-100">
+                                          <MoreVertical className="w-4 h-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => window.open(note.pdf_url, '_blank')}>
+                                          <ExternalLink className="w-4 h-4 mr-2" /> View PDF
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => openEditDialog(note)}>
+                                          <Edit className="w-4 h-4 mr-2" /> Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => deleteNote(note.id)} className="text-destructive">
+                                          <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          ))}
         </div>
       )}
     </div>

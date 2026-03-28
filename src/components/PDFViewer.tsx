@@ -191,10 +191,10 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
   const resetZoom = () => setZoom(1);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-background animate-fade-in">
+    <div className="fixed inset-0 z-[9999] bg-background animate-fade-in" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className={`bg-card shadow-2xl border overflow-hidden flex flex-col h-full ${isFullscreen ? 'rounded-none' : 'md:rounded-xl md:max-w-6xl md:mx-auto md:my-4 md:h-[calc(100vh-2rem)]'}`}>
         {/* Header — prominent back button */}
-        <div className="flex items-center justify-between px-3 py-2.5 border-b bg-card shrink-0 safe-top">
+        <div className="flex items-center justify-between px-3 py-2.5 border-b bg-card shrink-0">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Button
               variant="ghost"
