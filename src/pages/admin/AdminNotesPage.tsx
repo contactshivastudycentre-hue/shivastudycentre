@@ -193,13 +193,13 @@ export default function AdminNotesPage() {
           <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">Notes</h1>
           <p className="text-sm text-muted-foreground">Manage study materials by class, subject & chapter</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); else setIsDialogOpen(true); }}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (open) { setIsDialogOpen(true); } else if (!isPublishing) { resetForm(); } }}>
           <DialogTrigger asChild>
             <Button type="button" onClick={() => { resetForm(); setIsDialogOpen(true); }} className="w-full sm:w-auto min-h-[44px]">
               <Plus className="w-4 h-4 mr-2" /> Add Note
             </Button>
           </DialogTrigger>
-          <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6" onInteractOutside={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle className="text-lg">{editingNote ? 'Edit Note' : 'Add New Note'}</DialogTitle>
               <DialogDescription>Fill in the details below. Chapter & solution type are auto-detected from the title.</DialogDescription>
