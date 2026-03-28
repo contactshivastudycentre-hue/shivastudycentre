@@ -385,86 +385,99 @@ export default function AdminStudentsPage() {
         </div>
       </div>
 
-      <div className="dashboard-card space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">Class Change Requests</h2>
-          {isLoadingRequests && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+      <Collapsible>
+        <div className="dashboard-card space-y-4">
+          <CollapsibleTrigger asChild>
+            <button className="w-full flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground">Class Change Requests</h2>
+              <div className="flex items-center gap-2">
+                {classRequests.filter(r => r.status === 'pending').length > 0 && (
+                  <span className="text-xs font-medium px-2 py-1 rounded-full bg-pending/10 text-pending">
+                    {classRequests.filter(r => r.status === 'pending').length} pending
+                  </span>
+                )}
+                {isLoadingRequests && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform" />
+              </div>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            {classRequests.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No class change requests yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {classRequests.map((request) => {
+                  const isProcessing = processingRequestId === request.id;
+                  return (
+                    <div key={request.id} className="border border-border rounded-lg p-3 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                          <p className="font-medium text-foreground">{request.student_name}</p>
+                          <p className="text-sm text-muted-foreground">{request.student_mobile}</p>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded-full w-fit ${getRequestStatusClass(request.status)}`}>
+                          {request.status}
+                        </span>
+                      </div>
+
+                      <div className="text-sm text-foreground">
+                        <span className="font-medium">{request.current_class}</span> →{' '}
+                        <span className="font-medium">{request.requested_class}</span>
+                      </div>
+
+                      {request.reason && <p className="text-sm text-muted-foreground">Reason: {request.reason}</p>}
+                      {request.admin_response && (
+                        <p className="text-sm text-muted-foreground">Admin note: {request.admin_response}</p>
+                      )}
+
+                      {request.status === 'pending' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-center">
+                          <Select
+                            value={requestOverrideClass[request.id] || request.requested_class}
+                            onValueChange={(value) =>
+                              setRequestOverrideClass((prev) => ({
+                                ...prev,
+                                [request.id]: value,
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Manual class override" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {CLASS_OPTIONS.map((cls) => (
+                                <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          <Button
+                            onClick={() => processClassRequest(request, 'approved')}
+                            disabled={isProcessing}
+                            className="h-12"
+                          >
+                            {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                            Approve
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            onClick={() => processClassRequest(request, 'rejected')}
+                            disabled={isProcessing}
+                            className="h-12"
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CollapsibleContent>
         </div>
-
-        {classRequests.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No class change requests yet.</p>
-        ) : (
-          <div className="space-y-3">
-            {classRequests.map((request) => {
-              const isProcessing = processingRequestId === request.id;
-              return (
-                <div key={request.id} className="border border-border rounded-lg p-3 space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-foreground">{request.student_name}</p>
-                      <p className="text-sm text-muted-foreground">{request.student_mobile}</p>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-full w-fit ${getRequestStatusClass(request.status)}`}>
-                      {request.status}
-                    </span>
-                  </div>
-
-                  <div className="text-sm text-foreground">
-                    <span className="font-medium">{request.current_class}</span> →{' '}
-                    <span className="font-medium">{request.requested_class}</span>
-                  </div>
-
-                  {request.reason && <p className="text-sm text-muted-foreground">Reason: {request.reason}</p>}
-                  {request.admin_response && (
-                    <p className="text-sm text-muted-foreground">Admin note: {request.admin_response}</p>
-                  )}
-
-                  {request.status === 'pending' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2 items-center">
-                      <Select
-                        value={requestOverrideClass[request.id] || request.requested_class}
-                        onValueChange={(value) =>
-                          setRequestOverrideClass((prev) => ({
-                            ...prev,
-                            [request.id]: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Manual class override" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CLASS_OPTIONS.map((cls) => (
-                            <SelectItem key={cls} value={cls}>{cls}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Button
-                        onClick={() => processClassRequest(request, 'approved')}
-                        disabled={isProcessing}
-                        className="h-12"
-                      >
-                        {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                        Approve
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        onClick={() => processClassRequest(request, 'rejected')}
-                        disabled={isProcessing}
-                        className="h-12"
-                      >
-                        Reject
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      </Collapsible>
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row gap-4">
