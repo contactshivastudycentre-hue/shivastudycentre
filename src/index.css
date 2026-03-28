@@ -128,6 +128,10 @@
     @apply border-border;
   }
 
+  html, body {
+    @apply overflow-x-hidden;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
@@ -231,7 +235,7 @@
 
   /* Dashboard Card */
   .dashboard-card {
-    @apply bg-card rounded-2xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow duration-300;
+    @apply bg-card rounded-2xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden;
   }
 
   /* Stat Card */
