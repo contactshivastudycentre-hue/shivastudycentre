@@ -43,6 +43,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   Users,
   Search,
   MoreVertical,
@@ -53,6 +58,7 @@ import {
   Trash2,
   ArrowUpCircle,
   Loader2,
+  ChevronDown,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
