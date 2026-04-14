@@ -428,7 +428,3 @@ function LeadPeWidget() {
     </div>
   );
 }
-      </div>
-    </div>
-  );
-}
