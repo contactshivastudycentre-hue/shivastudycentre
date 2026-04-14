@@ -328,10 +328,10 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
-      {/* Kairaux Lead Capture Widget */}
+      {/* LeadPe Lead Capture Widget */}
       <section className="py-12 bg-background">
         <div className="container mx-auto px-4 max-w-md">
-          <KairauxWidget />
+          <LeadPeWidget />
         </div>
       </section>
 
@@ -357,7 +357,7 @@ export default function ContactPage() {
   );
 }
 
-function KairauxWidget() {
+function LeadPeWidget() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [interest, setInterest] = useState('');
@@ -398,17 +398,17 @@ function KairauxWidget() {
 
   if (status === 'success') {
     return (
-      <div className="text-center p-10 bg-primary/5 rounded-2xl border-2 border-primary/20">
+      <div className="text-center p-10 bg-[#16A34A]/5 rounded-2xl border-2 border-[#16A34A]/20">
         <div className="text-5xl mb-4">✅</div>
         <h3 className="text-xl font-bold text-foreground">Request Received!</h3>
         <p className="text-muted-foreground mt-2">We will call you back within 2 hours.</p>
-        <p className="text-xs text-muted-foreground mt-4">Powered by Kairaux 🌱</p>
+        <p className="text-xs text-muted-foreground mt-4">Powered by <span className="text-[#111827] font-semibold">Lead</span><span className="text-[#16A34A] font-semibold">Pe</span></p>
       </div>
     );
   }
 
   return (
-    <div className="bg-card border-2 border-primary/30 rounded-2xl p-6 shadow-lg">
+    <div className="bg-card border-2 border-[#16A34A]/30 rounded-2xl p-6 shadow-lg">
       <h3 className="text-xl font-bold text-foreground mb-1">Get Free Consultation 📞</h3>
       <p className="text-sm text-muted-foreground mb-5">Leave your details. We'll call you back!</p>
       <div className="space-y-3">
@@ -418,12 +418,12 @@ function KairauxWidget() {
         <Button
           onClick={handleSubmit}
           disabled={status === 'sending'}
-          className="w-full min-h-[48px] text-base"
+          className="w-full min-h-[48px] text-base bg-[#16A34A] hover:bg-[#15803d] text-white"
         >
           {status === 'sending' ? 'Sending...' : 'Get Callback 📲'}
         </Button>
         {status === 'error' && <p className="text-sm text-destructive text-center">Error. Please try again.</p>}
-        <p className="text-center text-xs text-muted-foreground">Powered by Kairaux 🌱</p>
+        <p className="text-center text-xs text-muted-foreground">Powered by <span className="text-[#111827] font-semibold">Lead</span><span className="text-[#16A34A] font-semibold">Pe</span></p>
       </div>
     </div>
   );

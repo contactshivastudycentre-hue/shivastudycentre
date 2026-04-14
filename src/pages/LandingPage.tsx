@@ -474,36 +474,36 @@ export default function LandingPage() {
                 {/* Photo */}
                 <div className="flex-shrink-0">
                   <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden bg-muted">
-                    <img src={swaritImage} alt="Swarit Roy - Founder & CEO of Kairaux" className="w-full h-full object-cover" />
+                    <img src={swaritImage} alt="Swarit Roy - Founder, LeadPe" className="w-full h-full object-cover" />
                   </div>
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 text-center md:text-left">
                   <div className="mb-1">
-                    <span className="text-sm font-medium text-primary">Founder & CEO – Kairaux</span>
+                    <span className="text-sm font-medium text-primary">Founder – LeadPe</span>
                   </div>
                   <h3 className="text-xl md:text-2xl font-display font-bold text-foreground mb-4">
                     Swarit Roy
                   </h3>
                   <p className="text-muted-foreground leading-relaxed mb-6">
-                    Swarit Roy, Founder & CEO of Kairaux, is focused on building modern skill-based learning systems 
-                    that combine education with technology and AI. This platform is designed to help students not only 
-                    study better, but also learn real-world skills using smart digital tools.
+                    Swarit Roy is the creator of LeadPe, a platform designed to help businesses build modern websites 
+                    that capture real customer leads. LeadPe focuses on turning websites into customer engines by enabling 
+                    direct WhatsApp inquiries, calls, and lead forms that instantly connect businesses with potential customers.
                   </p>
 
-                   {/* Kairaux Branding */}
+                   {/* LeadPe Branding */}
                    <div className="bg-accent/50 rounded-xl p-5 mb-6">
-                     <p className="text-sm text-foreground font-medium mb-2">Powered by KAIRAUX</p>
+                     <p className="text-sm text-foreground font-medium mb-2">Powered by <span className="text-[#111827]">Lead</span><span className="text-[#16A34A]">Pe</span></p>
                      <p className="text-sm text-muted-foreground leading-relaxed">
-                       A skills and AI-driven learning ecosystem focused on helping learners build practical skills 
-                       and use intelligent tools for growth.
+                       LeadPe helps businesses generate real customer inquiries through modern websites built for lead generation. 
+                       Each website created with LeadPe is optimized for WhatsApp leads, phone calls, and smart contact forms.
                      </p>
                    </div>
 
                    {/* CTA */}
-                   <a href="https://kairaux.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors">
-                     Visit KAIRAUX.COM
+                   <a href="https://leadpe.tech" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[#16A34A] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#15803d] transition-colors">
+                     Visit LeadPe
                      <ExternalLink className="w-4 h-4" />
                    </a>
                 </div>
