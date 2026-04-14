@@ -365,7 +365,7 @@ export default function VideoWatchPage() {
 
               {/* Branding */}
               <p className="text-xs text-muted-foreground/60">
-                Powered by <span className="font-medium">KAIRAUX</span>
+                Powered by <span className="font-medium">LeadPe</span>
               </p>
             </div>
 

@@ -87,8 +87,8 @@ export function Footer() {
           <div className="flex gap-4 items-center text-xs text-muted-foreground">
             <Link to="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link>
             <span className="text-border">|</span>
-            <a href="https://leadpe.in" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-               Powered by LEADPE
+            <a href="https://leadpe.tech" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+               Powered by LeadPe
              </a>
           </div>
         </div>
