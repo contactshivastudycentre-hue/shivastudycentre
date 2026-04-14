@@ -92,6 +92,12 @@ export function Footer() {
              </a>
           </div>
         </div>
+        <p className="text-center mt-4" style={{ fontSize: '12px', color: '#999999' }}>
+          Built with LeadPe 🌱 — Get your free website at{' '}
+          <a href="https://leadpe.tech" target="_blank" rel="noopener noreferrer" style={{ color: '#999999', textDecoration: 'underline' }}>
+            leadpe.tech
+          </a>
+        </p>
       </div>
     </footer>;
 }

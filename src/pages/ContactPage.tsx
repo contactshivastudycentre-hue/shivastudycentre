@@ -1,12 +1,6 @@
-import { useState, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Phone, Mail, MapPin, Clock, Send, MessageCircle, CheckCircle, AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ClassSelect } from '@/components/ClassSelect';
-import emailjs from '@emailjs/browser';
+import { useEffect } from 'react';
+import { Phone, Mail, MapPin, Clock, MessageCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const contactInfo = [
   {
@@ -35,91 +29,41 @@ const contactInfo = [
   },
 ];
 
-// EmailJS Configuration
-const EMAILJS_SERVICE_ID = 'service_ssc';
-const EMAILJS_TEMPLATE_ID = 'template_813jm07';
-const EMAILJS_PUBLIC_KEY = 'rgW5TjWx7RqdCNoxW';
-
-// Initialize EmailJS
-emailjs.init(EMAILJS_PUBLIC_KEY);
-
 export default function ContactPage() {
-  const formRef = useRef<HTMLFormElement>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formStatus, setFormStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [selectedClass, setSelectedClass] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const validateForm = (formData: FormData): boolean => {
-    const newErrors: Record<string, string> = {};
-    
-    const name = formData.get('name') as string;
-    const phone = formData.get('phone') as string;
-    const message = formData.get('message') as string;
-
-    if (!name || name.trim().length < 2) {
-      newErrors.name = 'Please enter your full name';
-    }
-
-    if (!phone || !/^\d{10}$/.test(phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Please enter a valid 10-digit phone number';
-    }
-
-    if (!selectedClass) {
-      newErrors.class = 'Please select a class';
-    }
-
-    if (!message || message.trim().length < 10) {
-      newErrors.message = 'Please enter a message (at least 10 characters)';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    const formData = new FormData(e.currentTarget);
-    
-    if (!validateForm(formData)) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    setFormStatus('idle');
-    setErrors({});
-
-    try {
-      const templateParams = {
-        name: formData.get('name') as string,
-        phone: formData.get('phone') as string,
-        class: selectedClass,
-        message: formData.get('message') as string,
-      };
-
-      await emailjs.send(
-        EMAILJS_SERVICE_ID,
-        EMAILJS_TEMPLATE_ID,
-        templateParams,
-        EMAILJS_PUBLIC_KEY
-      );
-
-      setFormStatus('success');
-      formRef.current?.reset();
-      setSelectedClass('');
-      
-      // Reset success message after 5 seconds
-      setTimeout(() => {
-        setFormStatus('idle');
-      }, 5000);
-    } catch (error) {
-      console.error('EmailJS Error:', error);
-      setFormStatus('error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  useEffect(() => {
+    // Inject the official LeadPe widget script
+    const script = document.createElement('script');
+    script.textContent = `
+async function submitLeadPeLead(){
+  var n=document.getElementById('lp-name').value;
+  var p=document.getElementById('lp-phone').value;
+  var i=document.getElementById('lp-interest').value;
+  if(!n||!p){alert('Please fill name and phone');return}
+  if(p.replace(/\\D/g,'').length!==10){alert('Enter 10 digit number');return}
+  var btn=document.querySelector('#leadpe-widget button');
+  btn.textContent='Sending...';btn.disabled=true;
+  try{
+    var res=await fetch('https://vlmdctanuarrmngkrvng.supabase.co/rest/v1/leads',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsbWRjdGFudWFycm1uZ2tydm5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc0NjQsImV4cCI6MjA4ODA4MzQ2NH0.W9MoPMjK9eWHq7lFqX54Cqe6ZlF7oR62OwJ76A_a7Q8','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsbWRjdGFudWFycm1uZ2tydm5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc0NjQsImV4cCI6MjA4ODA4MzQ2NH0.W9MoPMjK9eWHq7lFqX54Cqe6ZlF7oR62OwJ76A_a7Q8','Prefer':'return=minimal'},
+      body:JSON.stringify({business_id:'1dba39f7-2be6-4d63-8fa1-be6a33874bf3',customer_name:n,phone:p.replace(/\\D/g,''),message:i,source:'website',status:'new'})
+    });
+    if(res.ok){
+      var w=document.getElementById('leadpe-widget');
+      while(w.firstChild)w.removeChild(w.firstChild);
+      var d=document.createElement('div');
+      d.style.cssText='text-align:center;padding:40px 20px;background:#F0FFF4;border-radius:16px;border:2px solid #00C853';
+      var e1=document.createElement('div');e1.style.fontSize='48px';e1.textContent='✅';d.appendChild(e1);
+      var e2=document.createElement('h3');e2.style.color='#1A1A1A';e2.textContent='Request Received!';d.appendChild(e2);
+      var e3=document.createElement('p');e3.style.color='#666';e3.textContent='We will call you back within 2 hours.';d.appendChild(e3);
+      var e4=document.createElement('p');e4.style.cssText='color:#999;font-size:11px';e4.textContent='Powered by LeadPe 🌱';d.appendChild(e4);
+      w.appendChild(d);
+    }else{btn.textContent='Get Callback 📲';btn.disabled=false;alert('Error. Please try again.')}
+  }catch(e){btn.textContent='Get Callback 📲';btn.disabled=false;alert('Error. Please try again.')}
+}`;
+    document.body.appendChild(script);
+    return () => { document.body.removeChild(script); };
+  }, []);
 
   return (
     <div className="overflow-hidden">
@@ -198,140 +142,28 @@ export default function ContactPage() {
               </div>
             </motion.div>
 
-            {/* Contact Form */}
+            {/* Official LeadPe Lead Capture Widget */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="bg-card p-6 md:p-8 rounded-xl border border-border"
             >
-              <h2 className="text-xl md:text-2xl font-display font-bold text-foreground mb-6">
-                Send us a Message
-              </h2>
-
-              {/* Status Messages */}
-              <AnimatePresence>
-                {formStatus === 'success' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-start gap-3"
-                  >
-                    <CheckCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-foreground">Thank you for contacting Shiva Study Center!</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        We have received your enquiry and will contact you shortly.
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-
-                {formStatus === 'error' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-xl flex items-start gap-3"
-                  >
-                    <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-foreground">Something went wrong</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Please try again or contact us directly via phone.
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-foreground">Full Name</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      placeholder="Your full name"
-                      className={`h-11 rounded-lg ${errors.name ? 'border-destructive' : ''}`}
-                    />
-                    {errors.name && (
-                      <p className="text-xs text-destructive">{errors.name}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-foreground">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      placeholder="10-digit mobile number"
-                      maxLength={10}
-                      className={`h-11 rounded-lg ${errors.phone ? 'border-destructive' : ''}`}
-                    />
-                    {errors.phone && (
-                      <p className="text-xs text-destructive">{errors.phone}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-foreground">Class</Label>
-                  <ClassSelect
-                    value={selectedClass}
-                    onChange={setSelectedClass}
-                    placeholder="Select class for enquiry"
-                  />
-                  {errors.class && (
-                    <p className="text-xs text-destructive">{errors.class}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="message" className="text-foreground">Message</Label>
-                  <Textarea
-                    id="message"
-                    name="message"
-                    placeholder="Your message or enquiry..."
-                    rows={4}
-                    className={`resize-none rounded-lg ${errors.message ? 'border-destructive' : ''}`}
-                  />
-                  {errors.message && (
-                    <p className="text-xs text-destructive">{errors.message}</p>
-                  )}
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="w-full h-12 text-base rounded-lg"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-2">
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                        className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
-                      />
-                      Sending...
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <Send className="w-4 h-4" />
-                      Send Message
-                    </span>
-                  )}
-                </Button>
-              </form>
+              <div
+                id="leadpe-widget"
+                dangerouslySetInnerHTML={{
+                  __html: `<div style="background:#fff;border:2px solid #00C853;border-radius:16px;padding:24px;max-width:400px;margin:20px auto;font-family:sans-serif;box-shadow:0 4px 20px rgba(0,200,83,0.15)">
+    <h3 style="color:#1A1A1A;margin:0 0 8px;font-size:20px">Get Free Consultation 📞</h3>
+    <p style="color:#666;margin:0 0 20px;font-size:14px">Leave your details. We'll call you back!</p>
+    <input id="lp-name" type="text" placeholder="Your Name" style="width:100%;padding:12px 16px;border:1px solid #E0E0E0;border-radius:10px;font-size:16px;margin-bottom:12px;box-sizing:border-box;outline:none"/>
+    <input id="lp-phone" type="tel" placeholder="WhatsApp Number" style="width:100%;padding:12px 16px;border:1px solid #E0E0E0;border-radius:10px;font-size:16px;margin-bottom:12px;box-sizing:border-box;outline:none"/>
+    <input id="lp-interest" type="text" placeholder="What are you looking for?" style="width:100%;padding:12px 16px;border:1px solid #E0E0E0;border-radius:10px;font-size:16px;margin-bottom:16px;box-sizing:border-box;outline:none"/>
+    <button onclick="submitLeadPeLead()" style="width:100%;background:#00C853;color:white;border:none;border-radius:10px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer">Get Callback 📲</button>
+    <p style="text-align:center;margin:12px 0 0;font-size:11px;color:#999">Powered by LeadPe 🌱</p>
+  </div>`
+                }}
+              />
             </motion.div>
           </div>
-        </div>
-      </section>
-      {/* LeadPe Lead Capture Widget */}
-      <section className="py-12 bg-background">
-        <div className="container mx-auto px-4 max-w-md">
-          <LeadPeWidget />
         </div>
       </section>
 
@@ -353,78 +185,6 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
-    </div>
-  );
-}
-
-function LeadPeWidget() {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [interest, setInterest] = useState('');
-  const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
-
-  const handleSubmit = async () => {
-    if (!name || !phone) { alert('Please fill name and phone'); return; }
-    if (phone.replace(/\D/g, '').length !== 10) { alert('Enter 10 digit number'); return; }
-
-    setStatus('sending');
-    try {
-      const res = await fetch('https://vlmdctanuarrmngkrvng.supabase.co/rest/v1/leads', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsbWRjdGFudWFycm1uZ2tydm5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc0NjQsImV4cCI6MjA4ODA4MzQ2NH0.W9MoPMjK9eWHq7lFqX54Cqe6ZlF7oR62OwJ76A_a7Q8',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsbWRjdGFudWFycm1uZ2tydm5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1MDc0NjQsImV4cCI6MjA4ODA4MzQ2NH0.W9MoPMjK9eWHq7lFqX54Cqe6ZlF7oR62OwJ76A_a7Q8',
-          'Prefer': 'return=minimal',
-        },
-        body: JSON.stringify({
-          business_id: '639a70bb-d5c7-46bf-b685-5c12cba12ee8',
-          customer_name: name,
-          phone: phone.replace(/\D/g, ''),
-          message: interest,
-          source: 'website',
-          status: 'new',
-        }),
-      });
-      if (res.ok) {
-        setStatus('success');
-      } else {
-        setStatus('error');
-      }
-    } catch {
-      setStatus('error');
-    }
-  };
-
-  if (status === 'success') {
-    return (
-      <div className="text-center p-10 bg-[#16A34A]/5 rounded-2xl border-2 border-[#16A34A]/20">
-        <div className="text-5xl mb-4">✅</div>
-        <h3 className="text-xl font-bold text-foreground">Request Received!</h3>
-        <p className="text-muted-foreground mt-2">We will call you back within 2 hours.</p>
-        <p className="text-xs text-muted-foreground mt-4">Powered by <span className="text-[#111827] font-semibold">Lead</span><span className="text-[#16A34A] font-semibold">Pe</span></p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-card border-2 border-[#16A34A]/30 rounded-2xl p-6 shadow-lg">
-      <h3 className="text-xl font-bold text-foreground mb-1">Get Free Consultation 📞</h3>
-      <p className="text-sm text-muted-foreground mb-5">Leave your details. We'll call you back!</p>
-      <div className="space-y-3">
-        <Input placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="min-h-[44px]" />
-        <Input type="tel" placeholder="WhatsApp Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="min-h-[44px]" />
-        <Input placeholder="What are you looking for?" value={interest} onChange={(e) => setInterest(e.target.value)} className="min-h-[44px]" />
-        <Button
-          onClick={handleSubmit}
-          disabled={status === 'sending'}
-          className="w-full min-h-[48px] text-base bg-[#16A34A] hover:bg-[#15803d] text-white"
-        >
-          {status === 'sending' ? 'Sending...' : 'Get Callback 📲'}
-        </Button>
-        {status === 'error' && <p className="text-sm text-destructive text-center">Error. Please try again.</p>}
-        <p className="text-center text-xs text-muted-foreground">Powered by <span className="text-[#111827] font-semibold">Lead</span><span className="text-[#16A34A] font-semibold">Pe</span></p>
-      </div>
     </div>
   );
 }
