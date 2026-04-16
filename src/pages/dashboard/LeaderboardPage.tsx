@@ -28,13 +28,12 @@ export default function LeaderboardPage() {
     queryKey: ['student-leaderboard', eventId],
     queryFn: async () => {
       if (!event?.test_id) return [];
-      const { data: attempts } = await supabase
+      const { data: attempts } = await (supabase
         .from('test_attempts')
         .select('id, user_id, score, mcq_score, started_at, submitted_at')
         .eq('test_id', event.test_id)
-        .eq('is_banned' as any, false)
         .not('submitted_at', 'is', null)
-        .order('score', { ascending: false });
+        .order('score', { ascending: false }) as any);
       if (!attempts?.length) return [];
 
       const userIds = [...new Set(attempts.map(a => a.user_id))];
