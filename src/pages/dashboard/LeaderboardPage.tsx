@@ -36,7 +36,7 @@ export default function LeaderboardPage() {
         .order('score', { ascending: false }) as any);
       if (!attempts?.length) return [];
 
-      const userIds = [...new Set(attempts.map(a => a.user_id))];
+      const userIds = [...new Set(attempts.map((a: any) => a.user_id))] as string[];
       const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, class').in('user_id', userIds);
       const pm = new Map((profiles || []).map(p => [p.user_id, p]));
 
