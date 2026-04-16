@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      banners: {
+        Row: {
+          created_at: string
+          description: string | null
+          event_id: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_universal: boolean
+          priority: number
+          target_class: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          event_id?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_universal?: boolean
+          priority?: number
+          target_class?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          event_id?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_universal?: boolean
+          priority?: number
+          target_class?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banners_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "test_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_change_requests: {
         Row: {
           admin_response: string | null
@@ -55,6 +105,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      event_prizes: {
+        Row: {
+          created_at: string
+          event_id: string
+          extra_reward: string | null
+          first_prize: string | null
+          id: string
+          second_prize: string | null
+          third_prize: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          extra_reward?: string | null
+          first_prize?: string | null
+          id?: string
+          second_prize?: string | null
+          third_prize?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          extra_reward?: string | null
+          first_prize?: string | null
+          id?: string
+          second_prize?: string | null
+          third_prize?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_prizes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "test_events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notes: {
         Row: {
@@ -215,6 +306,7 @@ export type Database = {
           evaluated_by: string | null
           evaluation_status: string | null
           id: string
+          is_banned: boolean
           manual_score: number | null
           mcq_score: number | null
           score: number | null
@@ -229,6 +321,7 @@ export type Database = {
           evaluated_by?: string | null
           evaluation_status?: string | null
           id?: string
+          is_banned?: boolean
           manual_score?: number | null
           mcq_score?: number | null
           score?: number | null
@@ -243,6 +336,7 @@ export type Database = {
           evaluated_by?: string | null
           evaluation_status?: string | null
           id?: string
+          is_banned?: boolean
           manual_score?: number | null
           mcq_score?: number | null
           score?: number | null
@@ -254,6 +348,62 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "test_attempts_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_events: {
+        Row: {
+          banner_image: string | null
+          created_at: string
+          description: string | null
+          end_date: string
+          event_name: string
+          id: string
+          is_universal: boolean
+          results_approved: boolean
+          start_date: string
+          status: string
+          target_class: string | null
+          test_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          banner_image?: string | null
+          created_at?: string
+          description?: string | null
+          end_date: string
+          event_name: string
+          id?: string
+          is_universal?: boolean
+          results_approved?: boolean
+          start_date: string
+          status?: string
+          target_class?: string | null
+          test_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          banner_image?: string | null
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          event_name?: string
+          id?: string
+          is_universal?: boolean
+          results_approved?: boolean
+          start_date?: string
+          status?: string
+          target_class?: string | null
+          test_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_events_test_id_fkey"
             columns: ["test_id"]
             isOneToOne: false
             referencedRelation: "tests"
