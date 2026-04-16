@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
+import { BannerCarousel } from '@/components/dashboard/BannerCarousel';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -76,6 +77,9 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Banner Carousel */}
+      <BannerCarousel />
+
       {/* Welcome Section */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
