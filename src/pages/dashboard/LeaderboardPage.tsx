@@ -14,7 +14,11 @@ export default function LeaderboardPage() {
   const { data: event } = useQuery({
     queryKey: ['event-detail', eventId],
     queryFn: async () => {
-      const { data } = await supabase.from('test_events').select('*, event_prizes(*)').eq('id', eventId!).single();
+      const { data } = await supabase.from('test_events').select('*').eq('id', eventId!).single() as any;
+      if (data) {
+        const { data: prizes } = await supabase.from('event_prizes').select('*').eq('event_id', data.id);
+        data.event_prizes = prizes || [];
+      }
       return data;
     },
     enabled: !!eventId,
