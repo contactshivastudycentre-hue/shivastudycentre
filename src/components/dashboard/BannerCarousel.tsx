@@ -8,6 +8,8 @@ type BannerRow = {
   id: string;
   image_url: string | null;
   cta_link: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 };
 
 export function BannerCarousel() {
@@ -17,10 +19,13 @@ export function BannerCarousel() {
   const { data: banners } = useQuery({
     queryKey: ['student-banners', profile?.class],
     queryFn: async () => {
+      const nowIso = new Date().toISOString();
       const { data } = await supabase
         .from('banners')
-        .select('id, image_url, cta_link')
+        .select('id, image_url, cta_link, start_date, end_date')
         .eq('is_active', true)
+        .or(`start_date.is.null,start_date.lte.${nowIso}`)
+        .or(`end_date.is.null,end_date.gte.${nowIso}`)
         .order('priority', { ascending: false })
         .limit(5);
       return ((data || []) as BannerRow[]).filter(b => !!b.image_url);
