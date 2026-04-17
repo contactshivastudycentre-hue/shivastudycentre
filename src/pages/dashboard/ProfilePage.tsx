@@ -9,7 +9,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ClassSelect, CLASSES } from '@/components/ClassSelect';
 import { RoleBadge } from '@/components/RoleBadge';
-import { useAuth as useAuthForRole } from '@/lib/auth';
 import {
   AlertDialog,
   AlertDialogAction,
