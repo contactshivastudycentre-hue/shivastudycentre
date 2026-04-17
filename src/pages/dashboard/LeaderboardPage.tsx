@@ -27,31 +27,21 @@ export default function LeaderboardPage() {
   const { data: leaderboard, isLoading } = useQuery({
     queryKey: ['student-leaderboard', eventId],
     queryFn: async () => {
-      if (!event?.test_id) return [];
-      const { data: attempts } = await (supabase
-        .from('test_attempts')
-        .select('id, user_id, score, mcq_score, started_at, submitted_at')
-        .eq('test_id', event.test_id)
-        .not('submitted_at', 'is', null)
-        .order('score', { ascending: false }) as any);
-      if (!attempts?.length) return [];
-
-      const userIds = [...new Set(attempts.map((a: any) => a.user_id))] as string[];
-      const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, class').in('user_id', userIds);
-      const pm = new Map((profiles || []).map(p => [p.user_id, p]));
-
-      return attempts.map((a, i) => ({
-        rank: i + 1,
-        user_id: a.user_id,
-        name: pm.get(a.user_id)?.full_name || 'Student',
-        score: a.score ?? a.mcq_score ?? 0,
-        time: a.submitted_at && a.started_at
-          ? Math.round((new Date(a.submitted_at).getTime() - new Date(a.started_at).getTime()) / 1000)
-          : 0,
-        isMe: a.user_id === user?.id,
+      const { data, error } = await supabase.rpc('get_event_leaderboard' as any, { p_event_id: eventId });
+      if (error) {
+        console.error('[Leaderboard] RPC error:', error);
+        return [];
+      }
+      return ((data as any[]) || []).map((row) => ({
+        rank: Number(row.rank),
+        user_id: row.user_id,
+        name: row.full_name,
+        score: row.score ?? 0,
+        time: row.time_seconds ?? 0,
+        isMe: row.user_id === user?.id,
       }));
     },
-    enabled: !!event?.test_id && event?.results_approved,
+    enabled: !!eventId && !!event?.results_approved,
   });
 
   const prize = event?.event_prizes?.[0];
