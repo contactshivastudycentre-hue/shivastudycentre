@@ -174,6 +174,16 @@ export default function AdminEventsPage() {
                 <Input value={form.event_name} onChange={e => setForm(p => ({ ...p, event_name: e.target.value }))} required />
               </div>
               <div>
+                <Label>Event Type *</Label>
+                <Select value={form.event_type} onValueChange={(v: 'standard' | 'sunday_special') => setForm(p => ({ ...p, event_type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="standard">📝 Standard Event</SelectItem>
+                    <SelectItem value="sunday_special">🏆 Sunday Special Test</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label>Description</Label>
                 <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} />
               </div>
@@ -253,7 +263,10 @@ export default function AdminEventsPage() {
                   <CardContent className="p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          {ev.event_type === 'sunday_special' && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-sm">🏆 Sunday Special</span>
+                          )}
                           <h3 className="font-display font-bold text-foreground truncate">{ev.event_name}</h3>
                           <StatusBadge start={ev.start_date} end={ev.end_date} />
                           {ev.results_approved && <Badge variant="secondary" className="bg-green-100 text-green-700">Results Published</Badge>}

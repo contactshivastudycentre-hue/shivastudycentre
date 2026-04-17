@@ -444,6 +444,18 @@ export default function LandingPage() {
                 </Button>
               </Link>
             </div>
+            <div className="mt-8 flex justify-center">
+              <a
+                href="https://leadpe.tech?utm_source=ssc&utm_medium=landing&utm_campaign=brand"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-colors text-sm font-medium"
+              >
+                <Sparkles className="w-4 h-4 text-yellow-300" />
+                Built by LeadPe.tech — Build apps faster
+                <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+              </a>
+            </div>
           </motion.div>
         </div>
       </section>

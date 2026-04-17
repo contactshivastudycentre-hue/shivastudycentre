@@ -465,6 +465,9 @@ export default function StudentAuthPage() {
               </TabsContent>
             </Tabs>
           </motion.div>
+          <div className="mt-4">
+            <LeadPeAd variant="footer-line" />
+          </div>
         </motion.div>
       </div>
 
