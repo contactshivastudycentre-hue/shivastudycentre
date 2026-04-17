@@ -83,7 +83,15 @@ export default function VideoWatchPage() {
     }
 
     setVideo(videoData);
-    
+
+    // Track resume-learning activity (fire and forget)
+    supabase.rpc('track_activity', {
+      p_content_type: 'video',
+      p_content_id: videoData.id,
+      p_title: videoData.title,
+      p_subtitle: `${videoData.subject} · Class ${videoData.class}`,
+    });
+
     // Fetch related videos (same class and subject)
     const { data: related } = await supabase
       .from('videos')

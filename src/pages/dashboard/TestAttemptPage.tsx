@@ -296,6 +296,14 @@ export default function TestAttemptPage() {
       setTest(testData);
       setTimeLeft(testData.duration_minutes * 60);
 
+      // Track resume-learning activity (fire and forget)
+      supabase.rpc('track_activity', {
+        p_content_type: 'test',
+        p_content_id: testData.id,
+        p_title: testData.title,
+        p_subtitle: `${testData.duration_minutes} min test`,
+      });
+
       const { data: questionsData } = await supabase
         .from('questions')
         .select('*')
