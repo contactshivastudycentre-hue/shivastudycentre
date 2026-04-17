@@ -647,6 +647,16 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: string
       }
+      get_event_leaderboard: {
+        Args: { p_event_id: string }
+        Returns: {
+          full_name: string
+          rank: number
+          score: number
+          time_seconds: number
+          user_id: string
+        }[]
+      }
       get_student_status: {
         Args: { check_user_id?: string }
         Returns: Database["public"]["Enums"]["student_status"]
