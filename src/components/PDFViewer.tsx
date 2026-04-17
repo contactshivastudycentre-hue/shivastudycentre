@@ -227,23 +227,37 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
           </div>
         </div>
 
-        {/* Zoom controls + page indicator */}
+        {/* Zoom controls + page indicator + page jump */}
         {totalPages > 0 && !error && (
-          <div className="flex items-center justify-between px-3 py-1.5 border-b bg-muted/30 shrink-0">
+          <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b bg-muted/30 shrink-0">
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" onClick={zoomOut} disabled={zoom <= MIN_ZOOM} className="h-7 w-7">
-                <ZoomOut className="w-3.5 h-3.5" />
+              <Button variant="ghost" size="icon" onClick={zoomOut} disabled={zoom <= MIN_ZOOM} className="h-9 w-9">
+                <ZoomOut className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={resetZoom} className="h-7 px-2 text-xs font-mono">
+              <Button variant="ghost" size="sm" onClick={resetZoom} className="h-9 px-2 text-xs font-mono min-w-[52px]">
                 {Math.round(zoom * 100)}%
               </Button>
-              <Button variant="ghost" size="icon" onClick={zoomIn} disabled={zoom >= MAX_ZOOM} className="h-7 w-7">
-                <ZoomIn className="w-3.5 h-3.5" />
+              <Button variant="ghost" size="icon" onClick={zoomIn} disabled={zoom >= MAX_ZOOM} className="h-9 w-9">
+                <ZoomIn className="w-4 h-4" />
               </Button>
             </div>
-            <span className="text-xs text-muted-foreground font-medium">
-              Page {currentPage} / {totalPages}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={currentPage}
+                onChange={(e) => {
+                  const n = Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1));
+                  setCurrentPage(n);
+                  const el = containerRef.current?.querySelector(`[data-page="${n}"]`) as HTMLElement | null;
+                  el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+                className="h-8 w-12 text-xs text-center font-medium rounded-md border border-border bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                aria-label="Jump to page"
+              />
+              <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">/ {totalPages}</span>
+            </div>
           </div>
         )}
 
