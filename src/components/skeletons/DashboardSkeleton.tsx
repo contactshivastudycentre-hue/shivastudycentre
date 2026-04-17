@@ -2,35 +2,26 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export function DashboardSkeleton() {
   return (
-    <div className="space-y-8 animate-pulse">
-      {/* Welcome Section Skeleton */}
-      <div className="rounded-3xl bg-gradient-to-r from-primary/20 to-primary/10 p-8 md:p-10">
-        <Skeleton className="h-6 w-32 rounded-full mb-4 bg-white/20" />
-        <Skeleton className="h-10 w-64 mb-3 bg-white/20" />
-        <Skeleton className="h-6 w-96 max-w-full bg-white/20" />
-      </div>
+    <div className="space-y-6 max-w-3xl mx-auto animate-pulse">
+      {/* Banner */}
+      <Skeleton className="w-full rounded-2xl" style={{ aspectRatio: '3 / 1' }} />
 
-      {/* Stats Skeleton */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="stat-card">
-            <Skeleton className="h-4 w-24 mb-2" />
-            <Skeleton className="h-9 w-16" />
-          </div>
+      {/* Resume card */}
+      <Skeleton className="h-[112px] w-full rounded-2xl" />
+
+      {/* Stats grid 2x2 */}
+      <div className="grid grid-cols-2 gap-3">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-[100px] rounded-2xl" />
         ))}
       </div>
 
-      {/* Quick Access Skeleton */}
+      {/* Quick access */}
       <div>
-        <Skeleton className="h-7 w-32 mb-5" />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <Skeleton className="h-5 w-28 mb-3" />
+        <div className="grid grid-cols-3 gap-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="dashboard-card">
-              <Skeleton className="w-14 h-14 rounded-2xl mb-5" />
-              <Skeleton className="h-6 w-20 mb-2" />
-              <Skeleton className="h-4 w-full mb-3" />
-              <Skeleton className="h-4 w-24" />
-            </div>
+            <Skeleton key={i} className="h-[112px] rounded-2xl" />
           ))}
         </div>
       </div>
