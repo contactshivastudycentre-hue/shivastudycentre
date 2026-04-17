@@ -17,6 +17,7 @@ import {
   FileText
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import ChallengeFriendButton from '@/components/ChallengeFriendButton';
 
 type QuestionType = 'mcq_single' | 'mcq_multiple' | 'true_false' | 'short_answer' | 'long_answer';
 
@@ -462,9 +463,22 @@ export default function TestResultPage() {
         })}
       </div>
 
+      {/* Challenge a Friend */}
+      {!isPending && (
+        <div className="mt-8">
+          <ChallengeFriendButton
+            testId={test.id}
+            attemptId={attempt.id}
+            score={attempt.mcq_score ?? attempt.score}
+            totalMarks={test.total_marks}
+            testTitle={test.title}
+          />
+        </div>
+      )}
+
       {/* Back Button */}
-      <div className="mt-8 text-center">
-        <Button onClick={() => navigate('/dashboard/tests')} size="lg">
+      <div className="mt-6 text-center">
+        <Button onClick={() => navigate('/dashboard/tests')} size="lg" variant="outline">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Tests
         </Button>
