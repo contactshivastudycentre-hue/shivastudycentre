@@ -1,10 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ClipboardList, User, BookOpen } from 'lucide-react';
+import { Home, ClipboardList, FileText, Play, User } from 'lucide-react';
 
 const navItems = [
   { name: 'Home', path: '/dashboard', icon: Home, exact: true },
   { name: 'Tests', path: '/dashboard/tests', icon: ClipboardList },
-  { name: 'Content', path: '/dashboard/content', icon: BookOpen, alt: ['/dashboard/notes', '/dashboard/videos'] },
+  { name: 'Notes', path: '/dashboard/notes', icon: FileText },
+  { name: 'Videos', path: '/dashboard/videos', icon: Play },
   { name: 'Profile', path: '/dashboard/profile', icon: User },
 ];
 
@@ -13,8 +14,7 @@ export function BottomNav() {
 
   const isActive = (item: typeof navItems[number]) => {
     if (item.exact) return location.pathname === item.path;
-    if (location.pathname.startsWith(item.path)) return true;
-    return item.alt?.some((p) => location.pathname.startsWith(p)) ?? false;
+    return location.pathname.startsWith(item.path);
   };
 
   return (
