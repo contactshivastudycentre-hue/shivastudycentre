@@ -48,6 +48,8 @@ export function BannerCarousel() {
       return data || [];
     },
     enabled: !!profile,
+    refetchInterval: 60000,
+    refetchOnWindowFocus: true,
   });
 
   // Auto-slide every 5 seconds

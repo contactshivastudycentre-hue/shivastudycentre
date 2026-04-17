@@ -13,8 +13,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Trophy, Calendar, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { FileUploader } from '@/components/admin/FileUploader';
 
 const CLASSES = ['4', '5', '6', '7', '8', '9', '10', '11', '12'];
+const NONE = '__none__';
 
 function getEventStatus(start: string, end: string) {
   const now = new Date();
@@ -41,7 +43,7 @@ export default function AdminEventsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [form, setForm] = useState({
-    event_name: '', description: '', test_id: '', target_class: '',
+    event_name: '', description: '', test_id: NONE, target_class: NONE,
     is_universal: false, start_date: '', end_date: '', banner_image: '',
     first_prize: '', second_prize: '', third_prize: '', extra_reward: '',
   });
@@ -69,10 +71,12 @@ export default function AdminEventsPage() {
   const saveMutation = useMutation({
     mutationFn: async (f: typeof form & { id?: string }) => {
       const eventData = {
-        event_name: f.event_name, description: f.description,
-        test_id: f.test_id || null, target_class: f.target_class || null,
+        event_name: f.event_name.trim(),
+        description: f.description?.trim() || null,
+        test_id: !f.test_id || f.test_id === NONE ? null : f.test_id,
+        target_class: f.is_universal || !f.target_class || f.target_class === NONE ? null : f.target_class,
         is_universal: f.is_universal, start_date: f.start_date, end_date: f.end_date,
-        banner_image: f.banner_image || null, status: 'active',
+        banner_image: f.banner_image?.trim() || null, status: 'active',
       };
       let eventId = f.id;
       if (eventId) {
@@ -123,7 +127,7 @@ export default function AdminEventsPage() {
   });
 
   function resetForm() {
-    setForm({ event_name: '', description: '', test_id: '', target_class: '', is_universal: false, start_date: '', end_date: '', banner_image: '', first_prize: '', second_prize: '', third_prize: '', extra_reward: '' });
+    setForm({ event_name: '', description: '', test_id: NONE, target_class: NONE, is_universal: false, start_date: '', end_date: '', banner_image: '', first_prize: '', second_prize: '', third_prize: '', extra_reward: '' });
     setEditingEvent(null);
     setDialogOpen(false);
   }
@@ -132,7 +136,7 @@ export default function AdminEventsPage() {
     const prize = ev.event_prizes?.[0] || {};
     setForm({
       event_name: ev.event_name, description: ev.description || '',
-      test_id: ev.test_id || '', target_class: ev.target_class || '',
+      test_id: ev.test_id || NONE, target_class: ev.target_class || NONE,
       is_universal: ev.is_universal, start_date: ev.start_date?.slice(0, 16) || '',
       end_date: ev.end_date?.slice(0, 16) || '', banner_image: ev.banner_image || '',
       first_prize: prize.first_prize || '', second_prize: prize.second_prize || '',
@@ -153,7 +157,11 @@ export default function AdminEventsPage() {
           <DialogTrigger asChild>
             <Button><Plus className="w-4 h-4 mr-2" />Create Event</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent
+            className="w-[calc(100vw-2rem)] max-w-lg max-h-[90vh] overflow-y-auto"
+            onInteractOutside={(e) => e.preventDefault()}
+            onPointerDownOutside={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle>{editingEvent ? 'Edit Event' : 'Create Event'}</DialogTitle>
             </DialogHeader>
@@ -171,13 +179,14 @@ export default function AdminEventsPage() {
                 <Select value={form.test_id} onValueChange={v => setForm(p => ({ ...p, test_id: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select test" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value={NONE}>None (no test linked)</SelectItem>
                     {tests?.map(t => <SelectItem key={t.id} value={t.id}>{t.title} ({t.class} - {t.subject})</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <Switch checked={form.is_universal} onCheckedChange={v => setForm(p => ({ ...p, is_universal: v }))} />
+                  <Switch checked={form.is_universal} onCheckedChange={v => setForm(p => ({ ...p, is_universal: v, target_class: v ? NONE : p.target_class }))} />
                   <Label>All Classes</Label>
                 </div>
                 {!form.is_universal && (
@@ -199,9 +208,16 @@ export default function AdminEventsPage() {
                   <Input type="datetime-local" value={form.end_date} onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))} required />
                 </div>
               </div>
-              <div>
-                <Label>Banner Image URL</Label>
-                <Input value={form.banner_image} onChange={e => setForm(p => ({ ...p, banner_image: e.target.value }))} placeholder="https://..." />
+              <div className="space-y-2">
+                <Label>Banner Image</Label>
+                <FileUploader
+                  bucket="banner-images"
+                  accept="image/*"
+                  maxSizeMB={5}
+                  isImage
+                  existingUrl={form.banner_image}
+                  onUploadComplete={(url) => setForm(p => ({ ...p, banner_image: url }))}
+                />
               </div>
               <div className="border-t pt-4">
                 <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2"><Trophy className="w-4 h-4" />Prize Pool</h4>

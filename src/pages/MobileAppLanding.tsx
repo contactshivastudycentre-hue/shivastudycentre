@@ -128,14 +128,14 @@ export default function MobileAppLanding() {
             Student Login
           </Button>
         </Link>
-        <Link to="/admin-login" className="block">
-          <Button variant="outline" className="w-full h-14 text-base rounded-xl">
-            <Shield className="w-5 h-5 mr-2" />
-            Admin Login
-          </Button>
-        </Link>
-        <div className="flex justify-center pt-2">
+        <div className="flex justify-center pt-1">
           <SmallPWAButton variant="landing" />
+        </div>
+        <div className="text-center pt-2">
+          <Link to="/admin-login" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <Shield className="w-3 h-3" />
+            Admin? Sign in here
+          </Link>
         </div>
       </motion.div>
     </div>

@@ -191,19 +191,21 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
   const resetZoom = () => setZoom(1);
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-background animate-fade-in" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="fixed inset-0 z-[9999] bg-background animate-fade-in flex flex-col">
       <div className={`bg-card shadow-2xl border overflow-hidden flex flex-col h-full ${isFullscreen ? 'rounded-none' : 'md:rounded-xl md:max-w-6xl md:mx-auto md:my-4 md:h-[calc(100vh-2rem)]'}`}>
-        {/* Header — prominent back button */}
-        <div className="flex items-center justify-between px-3 py-2.5 border-b bg-card shrink-0">
+        {/* Header — solid bg covers safe-area, prominent back button */}
+        <div
+          className="flex items-center justify-between gap-2 px-3 border-b bg-card shrink-0"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)', paddingBottom: '0.5rem' }}
+        >
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Button
               variant="ghost"
-              size="sm"
               onClick={onClose}
-              className="shrink-0 h-9 gap-1.5 px-2 text-primary font-semibold"
+              className="shrink-0 h-11 px-3 gap-2 text-primary font-semibold hover:bg-primary/10"
             >
               <ArrowLeft className="w-5 h-5" />
-              <span className="text-sm">Back</span>
+              <span className="text-base">Back</span>
             </Button>
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-foreground text-sm truncate">{title}</h3>
@@ -216,10 +218,10 @@ export function PDFViewer({ storagePath, title, subject, className, onClose }: P
             </div>
           </div>
           <div className="flex items-center gap-0.5 shrink-0">
-            <Button variant="ghost" size="icon" onClick={handleDownload} disabled={isLoading || !!error} className="h-9 w-9">
+            <Button variant="ghost" size="icon" onClick={handleDownload} disabled={isLoading || !!error} className="h-10 w-10">
               <Download className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsFullscreen(!isFullscreen)} className="hidden md:flex h-9 w-9">
+            <Button variant="ghost" size="icon" onClick={() => setIsFullscreen(!isFullscreen)} className="hidden md:flex h-10 w-10">
               {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </Button>
           </div>

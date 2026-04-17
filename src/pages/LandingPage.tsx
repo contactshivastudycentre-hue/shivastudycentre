@@ -172,7 +172,7 @@ export default function LandingPage() {
           }} transition={{
             duration: 0.8,
             delay: 0.6
-          }} className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
+          }} className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-4">
               <Link to="/student-login">
                 <Button size="lg" className="btn-hero text-lg px-8 h-14 rounded-xl group w-full sm:w-auto">
                   <UserCircle className="w-5 h-5 mr-2" />
@@ -187,11 +187,11 @@ export default function LandingPage() {
                   </motion.span>
                 </Button>
               </Link>
-              <Link to="/admin-login">
-                <Button size="lg" className="btn-ghost-white text-lg px-8 h-14 rounded-xl w-full sm:w-auto">
-                  <Shield className="w-5 h-5 mr-2" />
-                  Admin Login
-                </Button>
+            </motion.div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="text-center mb-6">
+              <Link to="/admin-login" className="inline-flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors underline-offset-4 hover:underline">
+                <Shield className="w-3.5 h-3.5" />
+                Admin? Sign in here
               </Link>
             </motion.div>
 

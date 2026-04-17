@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
-import { Users, FileText, Play, ClipboardList, LogOut, Home, KeyRound, BarChart3, BookOpen, CalendarDays, Image, Trophy } from 'lucide-react';
+import { Users, FileText, Play, ClipboardList, LogOut, Home, KeyRound, BarChart3, CalendarDays, Image as ImageIcon, Trophy, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { Logo, LogoIcon } from '@/components/Logo';
@@ -12,16 +12,20 @@ const sidebarItems = [
   { name: 'Tests', path: '/admin/tests', icon: ClipboardList },
   { name: 'Results', path: '/admin/results', icon: BarChart3 },
   { name: 'Events', path: '/admin/events', icon: CalendarDays },
-  { name: 'Banners', path: '/admin/banners', icon: Image },
+  { name: 'Banners', path: '/admin/banners', icon: ImageIcon },
   { name: 'Leaderboard', path: '/admin/leaderboard', icon: Trophy },
   { name: 'Notes', path: '/admin/notes', icon: FileText },
   { name: 'Videos', path: '/admin/videos', icon: Play },
   { name: 'Password Resets', path: '/admin/password-resets', icon: KeyRound },
 ];
 
-const contentItems = [
-  { name: 'Notes', path: '/admin/notes', icon: FileText, description: 'Manage study materials' },
-  { name: 'Videos', path: '/admin/videos', icon: Play, description: 'Manage video lectures' },
+const moreItems = [
+  { name: 'Events', path: '/admin/events', icon: CalendarDays, description: 'Sunday tests & specials' },
+  { name: 'Banners', path: '/admin/banners', icon: ImageIcon, description: 'Dashboard announcements' },
+  { name: 'Leaderboard', path: '/admin/leaderboard', icon: Trophy, description: 'Approve results & rankings' },
+  { name: 'Notes', path: '/admin/notes', icon: FileText, description: 'Study materials' },
+  { name: 'Videos', path: '/admin/videos', icon: Play, description: 'Video lectures' },
+  { name: 'Password Resets', path: '/admin/password-resets', icon: KeyRound, description: 'Reset student passwords' },
 ];
 
 export function AdminLayout() {
@@ -166,8 +170,8 @@ export function AdminLayout() {
             <span className="text-xs font-medium">Tests</span>
           </Link>
 
-          {/* Content (Notes + Videos) */}
-          <ContentSheet isActive={isActive} />
+          {/* More (Events / Banners / Leaderboard / Notes / Videos / Resets) */}
+          <MoreSheet isActive={isActive} />
 
           {/* Results */}
           <Link
@@ -192,47 +196,47 @@ export function AdminLayout() {
   );
 }
 
-// Content Sheet Component for Mobile Nav
-function ContentSheet({ isActive }: { isActive: (path: string) => boolean }) {
+// More Sheet — exposes Events, Banners, Leaderboard, Notes, Videos, Password Resets
+function MoreSheet({ isActive }: { isActive: (path: string) => boolean }) {
   const [open, setOpen] = useState(false);
-  const isContentActive = contentItems.some(item => isActive(item.path));
+  const isAnyActive = moreItems.some(item => isActive(item.path));
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <button
           className={`flex flex-col items-center justify-center gap-1 p-2 ${
-            isContentActive ? 'text-primary' : 'text-muted-foreground'
+            isAnyActive ? 'text-primary' : 'text-muted-foreground'
           }`}
         >
-          <BookOpen className="w-5 h-5" />
-          <span className="text-xs font-medium">Content</span>
+          <MoreHorizontal className="w-5 h-5" />
+          <span className="text-xs font-medium">More</span>
         </button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="rounded-t-3xl pb-8">
+      <SheetContent side="bottom" className="rounded-t-3xl pb-8 max-h-[85vh] overflow-y-auto">
         <SheetHeader className="pb-4">
-          <SheetTitle className="text-lg font-display">Manage Content</SheetTitle>
+          <SheetTitle className="text-lg font-display">Admin Tools</SheetTitle>
         </SheetHeader>
-        <div className="grid grid-cols-2 gap-4">
-          {contentItems.map((item) => (
+        <div className="grid grid-cols-2 gap-3">
+          {moreItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
               onClick={() => setOpen(false)}
-              className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all ${
+              className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
                 isActive(item.path)
                   ? 'border-primary bg-primary/10 text-primary'
                   : 'border-border bg-card hover:border-primary/50 hover:bg-accent'
               }`}
             >
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
                 isActive(item.path) ? 'bg-primary text-primary-foreground' : 'bg-muted'
               }`}>
-                <item.icon className="w-7 h-7" />
+                <item.icon className="w-6 h-6" />
               </div>
               <div className="text-center">
-                <p className="font-semibold">{item.name}</p>
-                <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
+                <p className="font-semibold text-sm">{item.name}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{item.description}</p>
               </div>
             </Link>
           ))}
