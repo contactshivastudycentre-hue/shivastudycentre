@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { LoginSuccessOverlay } from '@/components/LoginSuccessOverlay';
+import { LeadPeAd } from '@/components/LeadPeAd';
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -396,6 +397,9 @@ export default function AdminAuthPage() {
             Not an admin?{' '}
             <Link to="/student-login" className="text-primary hover:underline">Go to Student Login</Link>
           </p>
+          <div className="mt-4">
+            <LeadPeAd variant="footer-line" className="text-slate-500" />
+          </div>
         </motion.div>
       </div>
     </div>
