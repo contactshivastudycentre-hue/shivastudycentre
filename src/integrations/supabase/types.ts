@@ -355,9 +355,12 @@ export type Database = {
           full_name: string
           id: string
           mobile: string
+          profile_completed: boolean
+          school_name: string | null
           status: Database["public"]["Enums"]["student_status"]
           updated_at: string
           user_id: string
+          verified: boolean
         }
         Insert: {
           class?: string | null
@@ -365,9 +368,12 @@ export type Database = {
           full_name: string
           id?: string
           mobile: string
+          profile_completed?: boolean
+          school_name?: string | null
           status?: Database["public"]["Enums"]["student_status"]
           updated_at?: string
           user_id: string
+          verified?: boolean
         }
         Update: {
           class?: string | null
@@ -375,9 +381,12 @@ export type Database = {
           full_name?: string
           id?: string
           mobile?: string
+          profile_completed?: boolean
+          school_name?: string | null
           status?: Database["public"]["Enums"]["student_status"]
           updated_at?: string
           user_id?: string
+          verified?: boolean
         }
         Relationships: []
       }
@@ -717,6 +726,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_content: { Args: { check_user_id?: string }; Returns: boolean }
       delete_student: { Args: { student_user_id: string }; Returns: boolean }
       get_email_by_user_id: {
         Args: { target_user_id: string }
@@ -769,6 +779,10 @@ export type Database = {
         }
         Returns: number
       }
+      set_student_verified: {
+        Args: { is_verified: boolean; target_user_id: string }
+        Returns: boolean
+      }
       submit_test_attempt: {
         Args: {
           p_answers: Json
@@ -778,6 +792,10 @@ export type Database = {
           p_score: number
         }
         Returns: Json
+      }
+      toggle_event_results_published: {
+        Args: { event_id: string; publish: boolean }
+        Returns: boolean
       }
       track_activity: {
         Args: {
