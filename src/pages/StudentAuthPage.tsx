@@ -58,71 +58,45 @@ export default function StudentAuthPage() {
     );
   }
 
-  // Redirect if already logged in and approved
+  // Redirect if already logged in
   if (user && profile) {
     if (isAdmin) {
       return <Navigate to="/admin" replace />;
     }
+    // Auto-onboarding: if profile not complete, send to /complete-profile.
+    // Otherwise straight to dashboard.
+    const profileCompleted = (profile as any).profile_completed !== false;
+    if (!profileCompleted) {
+      return <Navigate to="/complete-profile" replace />;
+    }
     if (profile.status === 'approved') {
       return <Navigate to="/dashboard" replace />;
     }
-  }
-
-  // Show pending/inactive message if logged in but not approved
-  if (user && profile && profile.status !== 'approved') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex flex-col">
-        <div className="p-6">
-          <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group">
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            Back to Home
-          </Link>
-        </div>
-        <div className="flex-1 flex items-center justify-center px-4">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-md bg-card rounded-2xl p-8 shadow-xl border border-border text-center"
-          >
-            <div className="flex justify-center mb-6">
-              {profile.status === 'pending' ? (
-                <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center">
-                  <Clock className="w-10 h-10 text-amber-600" />
-                </div>
-              ) : (
+    if (profile.status === 'inactive') {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex flex-col">
+          <div className="p-6">
+            <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group">
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+              Back to Home
+            </Link>
+          </div>
+          <div className="flex-1 flex items-center justify-center px-4">
+            <div className="w-full max-w-md bg-card rounded-2xl p-8 shadow-xl border border-border text-center">
+              <div className="flex justify-center mb-6">
                 <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
                   <AlertCircle className="w-10 h-10 text-red-600" />
                 </div>
-              )}
-            </div>
-            
-            <h1 className="text-2xl font-display font-bold text-foreground mb-3">
-              {profile.status === 'pending' ? 'Approval Pending' : 'Account Inactive'}
-            </h1>
-            
-            <p className="text-muted-foreground mb-6">
-              {profile.status === 'pending' 
-                ? 'Your registration request has been sent for approval. Please wait for the admin to approve your account.'
-                : 'Your account is not active. Please contact the institute for assistance.'}
-            </p>
-
-            <div className="p-4 bg-accent rounded-xl mb-6">
-              <p className="text-sm text-muted-foreground">
-                <strong>Name:</strong> {profile.full_name}<br />
-                <strong>Class:</strong> {profile.class || 'Not specified'}<br />
-                <strong>Status:</strong> <span className={profile.status === 'pending' ? 'text-amber-600' : 'text-red-600'}>
-                  {profile.status.charAt(0).toUpperCase() + profile.status.slice(1)}
-                </span>
+              </div>
+              <h1 className="text-2xl font-display font-bold text-foreground mb-3">Account Inactive</h1>
+              <p className="text-muted-foreground mb-6">
+                Your account is not active. Please contact the institute for assistance.
               </p>
             </div>
-
-            <Button variant="outline" className="w-full" onClick={() => window.location.reload()}>
-              Check Status Again
-            </Button>
-          </motion.div>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -293,9 +267,11 @@ export default function StudentAuthPage() {
         toast({ title: 'Registration Failed', description: error.message, variant: 'destructive' });
       }
     } else {
-      toast({ title: 'Registration Successful!', description: 'Your request has been sent for approval.' });
+      toast({ title: 'Account created! 🎉', description: 'Just one quick step to complete your profile.' });
       setStudentClass('');
       (e.target as HTMLFormElement).reset();
+      // Profile redirect is handled by the auth state listener via the
+      // <Navigate to="/complete-profile" /> guard above.
     }
 
     setIsLoading(false);
@@ -457,9 +433,9 @@ export default function StudentAuthPage() {
                     ) : 'Register'}
                   </Button>
 
-                  <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                    <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                    <p className="text-xs text-amber-700">After registration, your account will be reviewed and approved by the admin.</p>
+                  <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                    <Sparkles className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <p className="text-xs text-emerald-700">Instant access — no waiting for approval. Just complete your profile after signup.</p>
                   </div>
                 </form>
               </TabsContent>
