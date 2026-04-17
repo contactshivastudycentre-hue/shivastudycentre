@@ -23,6 +23,7 @@ import NotFound from "@/pages/NotFound";
 // Auth Pages
 import StudentAuthPage from "@/pages/StudentAuthPage";
 import AdminAuthPage from "@/pages/AdminAuthPage";
+import CompleteProfilePage from "@/pages/CompleteProfilePage";
 
 // Student Dashboard
 import StudentDashboard from "@/pages/dashboard/StudentDashboard";
@@ -75,6 +76,7 @@ const App = () => (
             {/* Auth Routes - Separate for Student and Admin */}
             <Route path="/student-login" element={<StudentAuthPage />} />
             <Route path="/admin-login" element={<AdminAuthPage />} />
+            <Route path="/complete-profile" element={<CompleteProfilePage />} />
             {/* Legacy route redirect */}
             <Route path="/auth" element={<StudentAuthPage />} />
 

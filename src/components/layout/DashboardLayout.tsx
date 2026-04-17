@@ -45,29 +45,12 @@ export function DashboardLayout() {
     );
   }
 
-  if (profile.status === 'pending') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-md w-full text-center">
-          <div className="w-20 h-20 rounded-full bg-pending/10 flex items-center justify-center mx-auto mb-6">
-            <BookOpen className="w-10 h-10 text-pending" />
-          </div>
-          <h2 className="text-2xl font-display font-bold mb-2">Waiting for Approval</h2>
-          <p className="text-muted-foreground mb-6">
-            Your account is pending approval from the admin. You'll receive access once approved.
-          </p>
-          <div className="bg-pending/10 rounded-xl p-4 mb-6">
-            <p className="text-sm text-pending font-medium">
-              Status: Pending Approval
-            </p>
-          </div>
-          <Button variant="outline" onClick={signOut}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
-      </div>
-    );
+  // Force users to complete their profile before accessing the dashboard.
+  // (status='approved' but profile_completed=false means they signed up
+  // but haven't filled the required school/grade/phone fields yet.)
+  const profileCompleted = (profile as any).profile_completed !== false;
+  if (!profileCompleted) {
+    return <Navigate to="/complete-profile" replace />;
   }
 
   if (profile.status === 'inactive') {
