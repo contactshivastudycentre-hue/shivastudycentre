@@ -800,7 +800,7 @@ export default function TestAttemptPage() {
     );
   }
 
-  const currentQuestion = questions[currentIndex];
+  const currentQuestion = shuffledQuestions[currentIndex];
   const currentAnswer = answers[currentQuestion?.id];
   const isMarked = markedForReview.has(currentQuestion?.id);
 
@@ -1002,7 +1002,7 @@ export default function TestAttemptPage() {
       {showNavigator && (
         <div className="mt-4 p-4 bg-card rounded-xl border">
           <div className="flex flex-wrap gap-2">
-            {questions.map((q, index) => {
+            {shuffledQuestions.map((q, index) => {
               const answered = (() => {
                 const ans = answers[q.id];
                 if (['mcq_single', 'mcq_multiple', 'true_false'].includes(q.question_type)) {
