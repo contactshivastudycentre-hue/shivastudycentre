@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { Logo, LogoIcon } from '@/components/Logo';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { NotificationBell } from '@/components/NotificationBell';
+import { RoleBadge } from '@/components/RoleBadge';
 
 const sidebarItems = [
   { name: 'Dashboard', path: '/admin', icon: Home },
@@ -81,9 +83,12 @@ export function AdminLayout() {
               </div>
             </div>
           </Link>
-          <p className="text-[10px] text-muted-foreground mt-2 uppercase tracking-wider">
-            Powered by LeadPe
-          </p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Powered by LeadPe
+            </p>
+            <RoleBadge role="admin" />
+          </div>
         </div>
 
         {/* Navigation */}
@@ -129,9 +134,12 @@ export function AdminLayout() {
             </span>
           </div>
         </Link>
-        <Button variant="ghost" size="sm" onClick={signOut}>
-          <LogOut className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <Button variant="ghost" size="sm" onClick={signOut}>
+            <LogOut className="w-4 h-4" />
+          </Button>
+        </div>
       </header>
 
       {/* Mobile Navigation */}
