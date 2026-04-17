@@ -1,16 +1,18 @@
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Crown, Medal, Award, Trophy } from 'lucide-react';
+import { ArrowLeft, Crown, Medal, Award, Trophy, EyeOff, Eye, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ChallengeFriendButton from '@/components/ChallengeFriendButton';
+import { toast } from '@/hooks/use-toast';
 
 export default function LeaderboardPage() {
   const { eventId } = useParams();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const qc = useQueryClient();
 
   const { data: event } = useQuery({
     queryKey: ['event-detail', eventId],
@@ -42,7 +44,30 @@ export default function LeaderboardPage() {
         isMe: row.user_id === user?.id,
       }));
     },
-    enabled: !!eventId && !!event?.results_approved,
+    enabled: !!eventId && (!!event?.results_approved || isAdmin),
+  });
+
+  const togglePublish = useMutation({
+    mutationFn: async (publish: boolean) => {
+      const { error } = await supabase.rpc('toggle_event_results_published' as any, {
+        event_id: eventId,
+        publish,
+      });
+      if (error) throw error;
+      return publish;
+    },
+    onSuccess: (publish) => {
+      qc.invalidateQueries({ queryKey: ['event-detail', eventId] });
+      qc.invalidateQueries({ queryKey: ['student-leaderboard', eventId] });
+      qc.invalidateQueries({ queryKey: ['admin-events'] });
+      toast({
+        title: publish ? 'Results published 🎉' : 'Results unpublished',
+        description: publish
+          ? 'Students can now see the leaderboard.'
+          : 'Leaderboard is hidden. You can publish again anytime.',
+      });
+    },
+    onError: (e: any) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   });
 
   const prize = event?.event_prizes?.[0];
@@ -55,7 +80,7 @@ export default function LeaderboardPage() {
     return <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"><span className="font-bold text-muted-foreground">#{rank}</span></div>;
   };
 
-  if (!event?.results_approved) {
+  if (!event?.results_approved && !isAdmin) {
     return (
       <div className="space-y-4">
         <Link to="/dashboard"><Button variant="ghost"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button></Link>
@@ -66,7 +91,43 @@ export default function LeaderboardPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button></Link>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button></Link>
+        {isAdmin && event && (
+          event.results_approved ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2 text-amber-600 border-amber-300 hover:bg-amber-50"
+              onClick={() => {
+                if (confirm('Unpublish results? Students will no longer see this leaderboard until you publish again.')) {
+                  togglePublish.mutate(false);
+                }
+              }}
+              disabled={togglePublish.isPending}
+            >
+              {togglePublish.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <EyeOff className="w-4 h-4" />}
+              Unpublish Results
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => togglePublish.mutate(true)}
+              disabled={togglePublish.isPending}
+            >
+              {togglePublish.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+              Publish Results
+            </Button>
+          )
+        )}
+      </div>
+
+      {isAdmin && !event?.results_approved && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <strong>Admin preview:</strong> Results are currently <span className="font-semibold">unpublished</span>. Students cannot see this leaderboard.
+        </div>
+      )}
 
       {/* Event Header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl hero-gradient p-6 text-white">

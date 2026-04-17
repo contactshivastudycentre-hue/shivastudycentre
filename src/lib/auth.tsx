@@ -9,6 +9,9 @@ interface Profile {
   mobile: string;
   class: string | null;
   status: 'pending' | 'approved' | 'inactive';
+  school_name?: string | null;
+  profile_completed?: boolean;
+  verified?: boolean;
   created_at: string;
   updated_at: string;
 }
