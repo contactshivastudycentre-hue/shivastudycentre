@@ -59,6 +59,7 @@ import {
   ArrowUpCircle,
   Loader2,
   ChevronDown,
+  ShieldCheck,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
@@ -70,6 +71,9 @@ interface Profile {
   mobile: string;
   class: string | null;
   status: 'pending' | 'approved' | 'inactive';
+  school_name?: string | null;
+  profile_completed?: boolean;
+  verified?: boolean;
   created_at: string;
 }
 
@@ -185,6 +189,23 @@ export default function AdminStudentsPage() {
       toast({ title: 'Error', description: 'Failed to update student status.', variant: 'destructive' });
     } else {
       toast({ title: 'Status Updated', description: `Student status changed to ${newStatus}.` });
+      fetchProfiles();
+    }
+  };
+
+  const toggleVerified = async (profile: Profile) => {
+    const next = !profile.verified;
+    const { error } = await supabase.rpc('set_student_verified' as any, {
+      target_user_id: profile.user_id,
+      is_verified: next,
+    });
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({
+        title: next ? 'Marked as Verified ✓' : 'Verification removed',
+        description: `${profile.full_name} is ${next ? 'now a verified coaching student' : 'no longer verified'}.`,
+      });
       fetchProfiles();
     }
   };
@@ -316,6 +337,7 @@ export default function AdminStudentsPage() {
     pending: profiles.filter((p) => p.status === 'pending' && (classFilter === 'all' || p.class === classFilter)).length,
     approved: profiles.filter((p) => p.status === 'approved' && (classFilter === 'all' || p.class === classFilter)).length,
     inactive: profiles.filter((p) => p.status === 'inactive' && (classFilter === 'all' || p.class === classFilter)).length,
+    verified: profiles.filter((p) => p.verified === true && (classFilter === 'all' || p.class === classFilter)).length,
   };
 
   const getInitials = (name: string) => name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
