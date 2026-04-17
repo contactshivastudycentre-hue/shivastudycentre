@@ -120,6 +120,11 @@ export default function StudentDashboard() {
           ))}
         </div>
       </motion.div>
+
+      {/* Trending Content */}
+      <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.2 }}>
+        <TrendingContent />
+      </motion.div>
     </div>
   );
 }
