@@ -1,5 +1,5 @@
 import { useAuth } from '@/lib/auth';
-import { ClipboardList, FileText, Play, TrendingUp, Sparkles, ArrowRight } from 'lucide-react';
+import { ClipboardList, FileText, Play, TrendingUp, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
@@ -46,7 +46,7 @@ const quickLinks = [
 ];
 
 export default function StudentDashboard() {
-  const { profile, user, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['student-stats', user?.id],
@@ -79,45 +79,6 @@ export default function StudentDashboard() {
     <div className="space-y-8">
       {/* Banner Carousel */}
       <BannerCarousel />
-
-      {/* Welcome Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl hero-gradient p-8 md:p-10"
-      >
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -ml-24 -mb-24 blur-3xl" />
-        
-        <div className="relative z-10">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-1.5 mb-4"
-          >
-            <Sparkles className="w-4 h-4 text-yellow-300" />
-            <span className="text-sm font-medium text-white">Student Dashboard</span>
-          </motion.div>
-          
-          <motion.h1 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="text-2xl md:text-4xl font-display font-bold text-white mb-3"
-          >
-            Welcome back, {profile?.full_name?.split(' ')[0]}! 👋
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="text-white/80 text-lg max-w-xl"
-          >
-            Continue your learning journey with tests, notes, and videos.
-          </motion.p>
-        </div>
-      </motion.div>
 
       {/* Stats Cards */}
       {stats && (
