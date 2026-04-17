@@ -70,7 +70,7 @@ export function BannerCarousel() {
       alt=""
       loading="lazy"
       decoding="async"
-      className="w-full h-auto block"
+      className="w-full h-full object-cover object-center block"
     />
   );
 
@@ -79,9 +79,10 @@ export function BannerCarousel() {
       className="relative w-full overflow-hidden rounded-2xl bg-muted"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
+      style={{ aspectRatio: '16 / 7' }}
     >
       {banner.cta_link ? (
-        <Link to={banner.cta_link} className="block w-full">
+        <Link to={banner.cta_link} className="block w-full h-full">
           {ImageEl}
         </Link>
       ) : (
