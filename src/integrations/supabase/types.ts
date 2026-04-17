@@ -16,7 +16,10 @@ export type Database = {
     Tables: {
       banners: {
         Row: {
+          background_color: string | null
           created_at: string
+          cta_link: string | null
+          cta_text: string | null
           description: string | null
           event_id: string | null
           id: string
@@ -24,12 +27,17 @@ export type Database = {
           is_active: boolean
           is_universal: boolean
           priority: number
+          subtitle: string | null
           target_class: string | null
+          template: string
           title: string
           updated_at: string
         }
         Insert: {
+          background_color?: string | null
           created_at?: string
+          cta_link?: string | null
+          cta_text?: string | null
           description?: string | null
           event_id?: string | null
           id?: string
@@ -37,12 +45,17 @@ export type Database = {
           is_active?: boolean
           is_universal?: boolean
           priority?: number
+          subtitle?: string | null
           target_class?: string | null
+          template?: string
           title: string
           updated_at?: string
         }
         Update: {
+          background_color?: string | null
           created_at?: string
+          cta_link?: string | null
+          cta_text?: string | null
           description?: string | null
           event_id?: string | null
           id?: string
@@ -50,7 +63,9 @@ export type Database = {
           is_active?: boolean
           is_universal?: boolean
           priority?: number
+          subtitle?: string | null
           target_class?: string | null
+          template?: string
           title?: string
           updated_at?: string
         }
