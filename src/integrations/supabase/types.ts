@@ -162,6 +162,39 @@ export type Database = {
           },
         ]
       }
+      last_activity: {
+        Row: {
+          content_id: string
+          content_subtitle: string | null
+          content_title: string | null
+          content_type: string
+          created_at: string
+          id: string
+          last_opened: string
+          user_id: string
+        }
+        Insert: {
+          content_id: string
+          content_subtitle?: string | null
+          content_title?: string | null
+          content_type: string
+          created_at?: string
+          id?: string
+          last_opened?: string
+          user_id: string
+        }
+        Update: {
+          content_id?: string
+          content_subtitle?: string | null
+          content_title?: string | null
+          content_type?: string
+          created_at?: string
+          id?: string
+          last_opened?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notes: {
         Row: {
           chapter_number: number | null
@@ -644,6 +677,15 @@ export type Database = {
           p_score: number
         }
         Returns: Json
+      }
+      track_activity: {
+        Args: {
+          p_content_id: string
+          p_content_type: string
+          p_subtitle?: string
+          p_title?: string
+        }
+        Returns: undefined
       }
       user_has_liked_video: {
         Args: { check_user_id?: string; video_uuid: string }

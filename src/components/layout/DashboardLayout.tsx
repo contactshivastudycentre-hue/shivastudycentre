@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
-import { Home, FileText, Play, ClipboardList, User, LogOut, BookOpen } from 'lucide-react';
+import { Home, FileText, Play, ClipboardList, User, LogOut, BookOpen, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { BottomNav } from './BottomNav';
@@ -142,21 +142,27 @@ export function DashboardLayout() {
       </aside>
 
       {/* Mobile Header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-40 flex items-center justify-between px-4">
-        <Link to="/dashboard" className="flex items-center gap-2">
-          <LogoIcon size={32} />
-          <div className="flex flex-col">
-            <span className="font-display text-base font-bold text-foreground leading-tight">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-[60px] bg-card border-b border-border z-40 flex items-center justify-between px-3">
+        <Link to="/dashboard" className="flex items-center gap-2 min-w-0">
+          <LogoIcon size={36} />
+          <div className="flex flex-col min-w-0">
+            <span className="font-display text-[15px] font-bold text-foreground leading-tight truncate">
               Shiva Study Center
             </span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider leading-tight">
               Powered by LeadPe
             </span>
           </div>
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            aria-label="Notifications"
+            className="relative h-11 w-11 flex items-center justify-center rounded-xl text-foreground hover:bg-accent active:scale-95 transition"
+          >
+            <Bell className="w-5 h-5" />
+          </button>
           <SmallPWAButton variant="header" />
-          <span className="text-sm text-muted-foreground hidden sm:block">{profile.full_name}</span>
         </div>
       </header>
 
