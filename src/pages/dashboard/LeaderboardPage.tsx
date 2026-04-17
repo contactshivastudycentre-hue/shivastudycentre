@@ -1,16 +1,18 @@
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Crown, Medal, Award, Trophy } from 'lucide-react';
+import { ArrowLeft, Crown, Medal, Award, Trophy, EyeOff, Eye, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ChallengeFriendButton from '@/components/ChallengeFriendButton';
+import { toast } from '@/hooks/use-toast';
 
 export default function LeaderboardPage() {
   const { eventId } = useParams();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const qc = useQueryClient();
 
   const { data: event } = useQuery({
     queryKey: ['event-detail', eventId],
@@ -42,7 +44,30 @@ export default function LeaderboardPage() {
         isMe: row.user_id === user?.id,
       }));
     },
-    enabled: !!eventId && !!event?.results_approved,
+    enabled: !!eventId && (!!event?.results_approved || isAdmin),
+  });
+
+  const togglePublish = useMutation({
+    mutationFn: async (publish: boolean) => {
+      const { error } = await supabase.rpc('toggle_event_results_published' as any, {
+        event_id: eventId,
+        publish,
+      });
+      if (error) throw error;
+      return publish;
+    },
+    onSuccess: (publish) => {
+      qc.invalidateQueries({ queryKey: ['event-detail', eventId] });
+      qc.invalidateQueries({ queryKey: ['student-leaderboard', eventId] });
+      qc.invalidateQueries({ queryKey: ['admin-events'] });
+      toast({
+        title: publish ? 'Results published 🎉' : 'Results unpublished',
+        description: publish
+          ? 'Students can now see the leaderboard.'
+          : 'Leaderboard is hidden. You can publish again anytime.',
+      });
+    },
+    onError: (e: any) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   });
 
   const prize = event?.event_prizes?.[0];
