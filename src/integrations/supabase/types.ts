@@ -21,12 +21,14 @@ export type Database = {
           cta_link: string | null
           cta_text: string | null
           description: string | null
+          end_date: string | null
           event_id: string | null
           id: string
           image_url: string | null
           is_active: boolean
           is_universal: boolean
           priority: number
+          start_date: string | null
           subtitle: string | null
           target_class: string | null
           template: string
@@ -39,12 +41,14 @@ export type Database = {
           cta_link?: string | null
           cta_text?: string | null
           description?: string | null
+          end_date?: string | null
           event_id?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           is_universal?: boolean
           priority?: number
+          start_date?: string | null
           subtitle?: string | null
           target_class?: string | null
           template?: string
@@ -57,12 +61,14 @@ export type Database = {
           cta_link?: string | null
           cta_text?: string | null
           description?: string | null
+          end_date?: string | null
           event_id?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           is_universal?: boolean
           priority?: number
+          start_date?: string | null
           subtitle?: string | null
           target_class?: string | null
           template?: string

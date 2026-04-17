@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { BannerCarousel } from '@/components/dashboard/BannerCarousel';
+import { TrendingContent } from '@/components/dashboard/TrendingContent';
 import { ResumeLearning } from '@/components/dashboard/ResumeLearning';
 import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { Link } from 'react-router-dom';
@@ -118,6 +119,11 @@ export default function StudentDashboard() {
             </Link>
           ))}
         </div>
+      </motion.div>
+
+      {/* Trending Content */}
+      <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.2 }}>
+        <TrendingContent />
       </motion.div>
     </div>
   );

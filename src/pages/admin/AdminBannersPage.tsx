@@ -7,11 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Image as ImageIcon, CalendarIcon, X } from 'lucide-react';
 import { FileUploader } from '@/components/admin/FileUploader';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const CLASSES = ['4', '5', '6', '7', '8', '9', '10', '11', '12'];
 const NONE = '__none__';
@@ -23,10 +27,13 @@ type FormState = {
   is_universal: boolean;
   is_active: boolean;
   priority: number;
+  start_date: Date | null;
+  end_date: Date | null;
 };
 
 const INITIAL: FormState = {
   image_url: '', cta_link: '', target_class: NONE, is_universal: true, is_active: true, priority: 0,
+  start_date: null, end_date: null,
 };
 
 export default function AdminBannersPage() {
@@ -51,7 +58,6 @@ export default function AdminBannersPage() {
     mutationFn: async (f: FormState & { id?: string }) => {
       if (!f.image_url) throw new Error('Please upload a banner image');
       const payload = {
-        // Required column
         title: 'banner',
         image_url: f.image_url.trim(),
         cta_link: f.cta_link?.trim() || null,
@@ -59,6 +65,8 @@ export default function AdminBannersPage() {
         is_universal: f.is_universal,
         is_active: f.is_active,
         priority: f.priority,
+        start_date: f.start_date ? f.start_date.toISOString() : null,
+        end_date: f.end_date ? f.end_date.toISOString() : null,
         // Clear legacy text fields so nothing is overlaid
         subtitle: null,
         description: null,
@@ -121,6 +129,8 @@ export default function AdminBannersPage() {
       is_universal: b.is_universal,
       is_active: b.is_active,
       priority: b.priority,
+      start_date: b.start_date ? new Date(b.start_date) : null,
+      end_date: b.end_date ? new Date(b.end_date) : null,
     });
     setEditing(b);
     setDialogOpen(true);
@@ -173,6 +183,52 @@ export default function AdminBannersPage() {
                 />
                 <p className="text-xs text-muted-foreground mt-1">Where students go when they tap the banner.</p>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Start Date (optional)</Label>
+                  <div className="flex items-center gap-1">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button type="button" variant="outline" className={cn('flex-1 justify-start text-left font-normal', !form.start_date && 'text-muted-foreground')}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {form.start_date ? format(form.start_date, 'PPP') : 'Anytime'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={form.start_date ?? undefined} onSelect={(d) => setForm(p => ({ ...p, start_date: d ?? null }))} initialFocus className="p-3 pointer-events-auto" />
+                      </PopoverContent>
+                    </Popover>
+                    {form.start_date && (
+                      <Button type="button" size="icon" variant="ghost" onClick={() => setForm(p => ({ ...p, start_date: null }))}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>End Date (optional)</Label>
+                  <div className="flex items-center gap-1">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button type="button" variant="outline" className={cn('flex-1 justify-start text-left font-normal', !form.end_date && 'text-muted-foreground')}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {form.end_date ? format(form.end_date, 'PPP') : 'Forever'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={form.end_date ?? undefined} onSelect={(d) => setForm(p => ({ ...p, end_date: d ?? null }))} initialFocus className="p-3 pointer-events-auto" />
+                      </PopoverContent>
+                    </Popover>
+                    {form.end_date && (
+                      <Button type="button" size="icon" variant="ghost" onClick={() => setForm(p => ({ ...p, end_date: null }))}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground -mt-2">Leave empty to show the banner indefinitely.</p>
 
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
@@ -230,6 +286,13 @@ export default function AdminBannersPage() {
                     <Badge variant={b.is_active ? 'default' : 'secondary'}>{b.is_active ? 'Active' : 'Inactive'}</Badge>
                     <Badge variant="outline">Priority {b.priority}</Badge>
                   </div>
+                  {(b.start_date || b.end_date) && (
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {b.start_date ? format(new Date(b.start_date), 'MMM d') : '—'}
+                      {' → '}
+                      {b.end_date ? format(new Date(b.end_date), 'MMM d') : 'forever'}
+                    </p>
+                  )}
                   {b.cta_link && <p className="text-xs text-muted-foreground truncate">→ {b.cta_link}</p>}
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">

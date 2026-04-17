@@ -33,6 +33,7 @@ import NotesPage from "@/pages/dashboard/NotesPage";
 import VideosPage from "@/pages/dashboard/VideosPage";
 import VideoWatchPage from "@/pages/dashboard/VideoWatchPage";
 import ProfilePage from "@/pages/dashboard/ProfilePage";
+import ContentHubPage from "@/pages/dashboard/ContentHubPage";
 
 // Admin Dashboard
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -86,6 +87,7 @@ const App = () => (
               <Route path="notes" element={<NotesPage />} />
               <Route path="videos" element={<VideosPage />} />
               <Route path="videos/:videoId" element={<VideoWatchPage />} />
+              <Route path="content" element={<ContentHubPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="leaderboard/:eventId" element={<LeaderboardPage />} />
             </Route>
