@@ -85,6 +85,45 @@ export type Database = {
           },
         ]
       }
+      challenge_shares: {
+        Row: {
+          attempt_id: string | null
+          challenger_name: string | null
+          created_at: string
+          id: string
+          referral_code: string
+          score: number | null
+          share_method: string
+          student_id: string
+          test_id: string | null
+          test_title: string | null
+        }
+        Insert: {
+          attempt_id?: string | null
+          challenger_name?: string | null
+          created_at?: string
+          id?: string
+          referral_code?: string
+          score?: number | null
+          share_method?: string
+          student_id: string
+          test_id?: string | null
+          test_title?: string | null
+        }
+        Update: {
+          attempt_id?: string | null
+          challenger_name?: string | null
+          created_at?: string
+          id?: string
+          referral_code?: string
+          score?: number | null
+          share_method?: string
+          student_id?: string
+          test_id?: string | null
+          test_title?: string | null
+        }
+        Relationships: []
+      }
       class_change_requests: {
         Row: {
           admin_response: string | null
