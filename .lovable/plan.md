@@ -1,61 +1,79 @@
 
 
-# Comprehensive Mobile Responsiveness & Notes System Fix
+## Root causes found
 
-## Overview
-Fix mobile responsiveness across the entire LMS, improve the PDF viewer for mobile, make the admin Students page use cards on mobile, and clean up the promotion section.
+1. **Mobile admin can't reach Events / Banners / Leaderboard**
+   AdminLayout's mobile bottom nav only has Home, Students, Tests, Content, Results — there's literally no entry point on mobile. That's why "no sunday test and banner uploading from admin" works on desktop but not phone.
 
-## Plan
+2. **Banner dialog crashes silently** (`AdminBannersPage.tsx`)
+   - `<SelectItem value="">None</SelectItem>` — Radix Select throws because empty-string values are forbidden. Dialog breaks on open.
+   - On submit, `event_id: ''` and `target_class: ''` are passed as empty strings to UUID/text columns → Postgres rejects ("invalid input syntax for uuid"). Same in AdminEventsPage when "All Classes" is on but `target_class` was previously set.
 
-### 1. PDF Viewer Mobile Optimization
-**File:** `src/components/PDFViewer.tsx`
-- Make the PDF content area use `overflow-x: hidden` to prevent horizontal scroll
-- On mobile, auto-set zoom to fit width (default zoom can stay at 1 since `baseScale` already fits container width)
-- Add `touch-action: pan-y pinch-zoom` on the container for better mobile gestures
-- Ensure the viewer takes full viewport on mobile with no padding
-- Add safe-area padding at the bottom for iOS devices
+3. **Admins can only paste an image URL** — no actual upload widget for banner / event banner images. Should upload to Supabase Storage.
 
-### 2. Student Notes Page Mobile Polish
-**File:** `src/pages/dashboard/NotesPage.tsx`
-- Make note cards stack single-column on mobile (`grid-cols-1` instead of `sm:grid-cols-2` on small screens)
-- Increase button touch targets to `min-h-[44px]`
-- Ensure search input is full-width on mobile
-- Add `overflow-hidden` to prevent any horizontal scroll
+4. **Banner not showing on student dashboard**
+   - Carousel query `.eq('is_active', true)` works, but if banner has `event_id = null` the `test_events(*, event_prizes(*))` join still returns the row — that part is fine.
+   - Real reason nothing appears: no banner ever got created (because of #2).
 
-### 3. Admin Notes Page — Already Good
-The admin notes page already has mobile cards vs desktop table, responsive dialog, and full-width buttons. Minor tweaks only:
-- Ensure dialog doesn't overflow on very small screens
+5. **PDF upload fails on mobile** (`FileUploader.tsx`)
+   - `visibilitychange` only restores UI when `status === 'idle'`. On Android Chrome the input `onChange` fires AFTER visibility flips back, so the ref is set but state may have been reset by a parent re-render (the surrounding Dialog in AdminNotesPage uses controlled state that closes when focus is lost on some browsers). The form is also wrapped in a `<form>` whose submit can be triggered by the upload button.
+   - Need: keep the file in BOTH ref + state, lift the dialog out of any auto-closing parent, and ensure the button is `type="button"`.
 
-### 4. Admin Students Page — Mobile Cards
-**File:** `src/pages/admin/AdminStudentsPage.tsx`
-- Add a mobile card view (hidden on `sm+`) similar to admin notes
-- Each card shows: avatar/initials, name, mobile, class, status badge, action menu
-- Hide the desktop table on mobile (`hidden sm:block`)
-- Move the class change requests section into a collapsible or dialog behind a "View Requests" button to reduce page clutter
-- Move promotion history into a dialog/modal behind a button
+6. **PDF viewer not visible cleanly on mobile**
+   - Uses `paddingTop: env(safe-area-inset-top)` on the fixed container which adds whitespace above the dark canvas area. The header sits below the safe area but the dashboard mobile header (`z-40`) is below `z-[9999]` so that's fine. The actual issue is the back arrow can be small / hard to tap and the PDF area background bleeds into the safe area making header look detached.
 
-### 5. Admin Layout Mobile Nav — Already Good
-The admin layout already has bottom nav with Content sheet. No changes needed.
+7. **Landing page admin button** — user wants to reduce friction so students don't accidentally tap "Admin Login". Solution: move Admin Login to a small subtle link in the landing footer area instead of a big primary button on both desktop and mobile landing.
 
-### 6. Dashboard Layout — Already Good
-Header is fixed, bottom nav exists, sidebar on desktop. No changes needed.
+---
 
-### 7. Global CSS Tweaks
-**File:** `src/index.css`
-- Add `overflow-x: hidden` on `body` / `html` to globally prevent horizontal scroll
-- Ensure `.dashboard-card` has `overflow: hidden`
+## Fix plan
 
-## Technical Details
+### A. AdminLayout mobile nav — add access to new pages
+Replace the static 5 buttons with a "More" sheet that exposes: Events, Banners, Leaderboard, Notes, Videos, Password Resets. Keep Home, Students, Tests, Results as direct buttons; "More" replaces the Content sheet.
 
-### Files to modify:
-1. **`src/components/PDFViewer.tsx`** — Add `overflow-x-hidden`, touch-action, safe-area bottom padding
-2. **`src/pages/dashboard/NotesPage.tsx`** — Single-column cards on mobile, larger touch targets, full-width search
-3. **`src/pages/admin/AdminStudentsPage.tsx`** — Add mobile card view, hide table on mobile, wrap class requests in expandable section
-4. **`src/index.css`** — Add global `overflow-x: hidden` on html/body
+### B. AdminBannersPage — fix dialog + add image upload
+- Replace `<SelectItem value="">None</SelectItem>` with `<SelectItem value="__none__">None</SelectItem>` and convert to `null` on submit.
+- Sanitize payload: convert empty strings to `null` for `event_id`, `target_class`, `image_url`.
+- Add a proper image uploader (reuse `FileUploader` but with `accept="image/*"` and a new `images` storage bucket OR reuse `notes` bucket under `banners/` prefix). Upload returns a public URL → stored as `image_url`.
 
-### Estimated changes:
-- PDFViewer: ~5 lines changed
-- NotesPage: ~10 lines changed  
-- AdminStudentsPage: ~80 lines added (mobile card layout)
-- index.css: ~3 lines added
+### C. AdminEventsPage — same fixes
+- Sanitize empty strings to null for `test_id`, `target_class`.
+- Add image upload widget for `banner_image`.
+
+### D. New storage bucket for banner images
+Create public `banner-images` bucket via migration with admin-only insert/update/delete RLS. Make `FileUploader` accept arbitrary `accept` and validate accordingly (currently hardcoded to PDF).
+
+### E. FileUploader — mobile upload bug
+- Mirror the file into React state `selectedFile` (not just ref) so unmount/remount restores correctly.
+- Add `key` based on bucket so the component doesn't lose state between dialogs.
+- Wrap upload action so it cannot trigger a form submit (`type="button"` is already there — also stop propagation on input change).
+- Make AdminNotesPage's note dialog NOT close on outside click during upload (`onPointerDownOutside` preventDefault when uploading).
+
+### F. PDFViewer — cleaner mobile header
+- Move `paddingTop: env(safe-area-inset-top)` from outer container to the header `<div>` only, and give header a solid `bg-card` so the safe-area zone is filled.
+- Increase Back button hit area to `h-11 px-3` and bump font size.
+- Confirmed `z-[9999]` is above mobile header (`z-40`) and bottom nav.
+
+### G. Landing page — soften Admin Login
+- On `MobileAppLanding`: replace the full-width "Admin Login" button with a small text link at the bottom: "Admin? Sign in here" (smaller font, muted color).
+- On desktop `LandingPage` hero: keep Student Login as the only large CTA; move Admin Login to a small ghost link beside "Learn more about us".
+
+### H. BannerCarousel safety
+- Add a console-visible empty state hint for admins so they know none are active (already returns null — keep, but ensure query refetches every minute via `refetchInterval`).
+
+---
+
+## Files to change
+- `src/components/layout/AdminLayout.tsx` — add "More" sheet with Events/Banners/Leaderboard/Notes/Videos/Resets
+- `src/pages/admin/AdminBannersPage.tsx` — fix Select bug, sanitize payload, add image upload
+- `src/pages/admin/AdminEventsPage.tsx` — sanitize payload, add banner image upload
+- `src/components/admin/FileUploader.tsx` — mobile robustness + accept arbitrary mime
+- `src/pages/admin/AdminNotesPage.tsx` — prevent dialog close during upload
+- `src/components/PDFViewer.tsx` — header safe-area + bigger back button
+- `src/pages/MobileAppLanding.tsx` — admin link instead of button
+- `src/pages/LandingPage.tsx` — admin link instead of button
+- `src/components/dashboard/BannerCarousel.tsx` — refetchInterval
+- New migration — `banner-images` public bucket + admin RLS
+
+After approval, implementing all of the above in one pass.
 
