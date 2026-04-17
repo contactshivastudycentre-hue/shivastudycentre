@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { BannerCarousel } from '@/components/dashboard/BannerCarousel';
+import { TrendingContent } from '@/components/dashboard/TrendingContent';
 import { ResumeLearning } from '@/components/dashboard/ResumeLearning';
 import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { Link } from 'react-router-dom';
