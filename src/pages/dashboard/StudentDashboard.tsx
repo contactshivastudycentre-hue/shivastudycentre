@@ -46,7 +46,7 @@ const quickLinks = [
 ];
 
 export default function StudentDashboard() {
-  const { profile, user, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['student-stats', user?.id],
