@@ -10,6 +10,7 @@ import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send, Shi
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAntiCheat } from '@/hooks/useAntiCheat';
+import { seededShuffle } from '@/lib/shuffle';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,7 +76,13 @@ export default function TestAttemptPage() {
   const [showNavigator, setShowNavigator] = useState(false);
   const [violationCount, setViolationCount] = useState(0);
   const [hasDescriptiveQuestions, setHasDescriptiveQuestions] = useState(false);
-  
+
+  // Per-student question shuffle (deterministic — same student sees same order
+  // on refresh, different students see different orders). Seed = attemptId.
+  const shuffledQuestions = attemptId
+    ? seededShuffle(questions, attemptId)
+    : questions;
+
   // Simplified submit states
   const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'slow' | 'offline' | 'failed' | 'success'>('idle');
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
