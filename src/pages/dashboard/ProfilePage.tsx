@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ClassSelect, CLASSES } from '@/components/ClassSelect';
+import { RoleBadge } from '@/components/RoleBadge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -185,7 +186,8 @@ export default function ProfilePage() {
           </div>
           <div>
             <h2 className="text-xl font-semibold text-foreground">{profile?.full_name}</h2>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <RoleBadge role="student" />
               <span
                 className={`text-xs font-medium px-2 py-1 rounded-full ${
                   profile?.status === 'approved'

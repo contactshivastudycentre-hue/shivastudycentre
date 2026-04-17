@@ -8,6 +8,7 @@ import { TrendingContent } from '@/components/dashboard/TrendingContent';
 import { EventLeaderboards } from '@/components/dashboard/EventLeaderboards';
 import { ResumeLearning } from '@/components/dashboard/ResumeLearning';
 import { StatsGrid } from '@/components/dashboard/StatsGrid';
+import { LeadPeAd } from '@/components/LeadPeAd';
 import { Link } from 'react-router-dom';
 import { ClipboardList, FileText, Play, ArrowRight } from 'lucide-react';
 
@@ -130,6 +131,11 @@ export default function StudentDashboard() {
       {/* Trending Content */}
       <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.22 }}>
         <TrendingContent />
+      </motion.div>
+
+      {/* LeadPe Promotional Ad */}
+      <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.26 }}>
+        <LeadPeAd variant="card" />
       </motion.div>
     </div>
   );

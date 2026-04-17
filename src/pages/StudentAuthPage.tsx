@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ClassSelect } from '@/components/ClassSelect';
 import { ForgotPasswordModal } from '@/components/ForgotPasswordModal';
 import { LoginSuccessOverlay } from '@/components/LoginSuccessOverlay';
+import { LeadPeAd } from '@/components/LeadPeAd';
 
 const loginSchema = z.object({
   identifier: z.string().min(1, 'Please enter your email or mobile number'),
@@ -464,6 +465,9 @@ export default function StudentAuthPage() {
               </TabsContent>
             </Tabs>
           </motion.div>
+          <div className="mt-4">
+            <LeadPeAd variant="footer-line" />
+          </div>
         </motion.div>
       </div>
 

@@ -10,6 +10,7 @@ import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send, Shi
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAntiCheat } from '@/hooks/useAntiCheat';
+import { seededShuffle } from '@/lib/shuffle';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,7 +76,13 @@ export default function TestAttemptPage() {
   const [showNavigator, setShowNavigator] = useState(false);
   const [violationCount, setViolationCount] = useState(0);
   const [hasDescriptiveQuestions, setHasDescriptiveQuestions] = useState(false);
-  
+
+  // Per-student question shuffle (deterministic — same student sees same order
+  // on refresh, different students see different orders). Seed = attemptId.
+  const shuffledQuestions = attemptId
+    ? seededShuffle(questions, attemptId)
+    : questions;
+
   // Simplified submit states
   const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'slow' | 'offline' | 'failed' | 'success'>('idle');
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
@@ -793,7 +800,7 @@ export default function TestAttemptPage() {
     );
   }
 
-  const currentQuestion = questions[currentIndex];
+  const currentQuestion = shuffledQuestions[currentIndex];
   const currentAnswer = answers[currentQuestion?.id];
   const isMarked = markedForReview.has(currentQuestion?.id);
 
@@ -995,7 +1002,7 @@ export default function TestAttemptPage() {
       {showNavigator && (
         <div className="mt-4 p-4 bg-card rounded-xl border">
           <div className="flex flex-wrap gap-2">
-            {questions.map((q, index) => {
+            {shuffledQuestions.map((q, index) => {
               const answered = (() => {
                 const ans = answers[q.id];
                 if (['mcq_single', 'mcq_multiple', 'true_false'].includes(q.question_type)) {

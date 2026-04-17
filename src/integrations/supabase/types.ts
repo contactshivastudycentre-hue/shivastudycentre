@@ -240,6 +240,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          link: string | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       password_reset_requests: {
         Row: {
           admin_notes: string | null
@@ -416,6 +449,7 @@ export type Database = {
           description: string | null
           end_date: string
           event_name: string
+          event_type: string
           id: string
           is_universal: boolean
           results_approved: boolean
@@ -431,6 +465,7 @@ export type Database = {
           description?: string | null
           end_date: string
           event_name: string
+          event_type?: string
           id?: string
           is_universal?: boolean
           results_approved?: boolean
@@ -446,6 +481,7 @@ export type Database = {
           description?: string | null
           end_date?: string
           event_name?: string
+          event_type?: string
           id?: string
           is_universal?: boolean
           results_approved?: boolean
@@ -666,6 +702,16 @@ export type Database = {
       is_student_approved: {
         Args: { check_user_id?: string }
         Returns: boolean
+      }
+      notify_class: {
+        Args: {
+          p_body?: string
+          p_class: string
+          p_link?: string
+          p_title: string
+          p_type: string
+        }
+        Returns: number
       }
       process_class_change_request: {
         Args: {

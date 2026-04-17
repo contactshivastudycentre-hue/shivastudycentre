@@ -1,11 +1,13 @@
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
-import { Home, FileText, Play, ClipboardList, User, LogOut, BookOpen, Bell } from 'lucide-react';
+import { Home, FileText, Play, ClipboardList, User, LogOut, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { BottomNav } from './BottomNav';
 import { Logo, LogoIcon } from '@/components/Logo';
 import { SmallPWAButton } from '@/components/pwa/SmallPWAButton';
 import { DesktopBlockGuard } from '@/components/guards/DesktopBlockGuard';
+import { NotificationBell } from '@/components/NotificationBell';
+import { RoleBadge } from '@/components/RoleBadge';
 
 const sidebarItems = [
   { name: 'Dashboard', path: '/dashboard', icon: Home },
@@ -130,9 +132,12 @@ export function DashboardLayout() {
 
         {/* User Info & Logout */}
         <div className="p-4 border-t border-border">
-          <div className="mb-3 px-4">
-            <p className="font-semibold text-foreground truncate">{profile.full_name}</p>
-            <p className="text-sm text-muted-foreground truncate">{profile.class || 'Student'}</p>
+          <div className="mb-3 px-4 flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-semibold text-foreground truncate">{profile.full_name}</p>
+              <p className="text-sm text-muted-foreground truncate">{profile.class || 'Student'}</p>
+            </div>
+            <RoleBadge role="student" />
           </div>
           <Button variant="ghost" className="w-full justify-start" onClick={signOut}>
             <LogOut className="w-4 h-4 mr-2" />
@@ -155,13 +160,7 @@ export function DashboardLayout() {
           </div>
         </Link>
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="relative h-11 w-11 flex items-center justify-center rounded-xl text-foreground hover:bg-accent active:scale-95 transition"
-          >
-            <Bell className="w-5 h-5" />
-          </button>
+          <NotificationBell />
           <SmallPWAButton variant="header" />
         </div>
       </header>
