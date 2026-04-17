@@ -207,7 +207,15 @@ export default function NotesPage() {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <Button variant="default" size="sm" className="flex-1 min-h-[44px]" onClick={() => setViewingNote(note)}>
+                              <Button variant="default" size="sm" className="flex-1 min-h-[44px]" onClick={() => {
+                                setViewingNote(note);
+                                supabase.rpc('track_activity', {
+                                  p_content_type: 'note',
+                                  p_content_id: note.id,
+                                  p_title: note.title,
+                                  p_subtitle: `${note.subject}${note.chapter_number ? ` · Ch ${note.chapter_number}` : ''}`,
+                                });
+                              }}>
                                 <Eye className="w-4 h-4 mr-1.5" /> View
                               </Button>
                               <Button variant="outline" size="sm" className="flex-1 min-h-[44px]" onClick={() => handleDownload(note)}>
