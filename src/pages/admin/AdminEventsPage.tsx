@@ -117,15 +117,25 @@ export default function AdminEventsPage() {
     },
   });
 
-  const approveResults = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('test_events').update({ results_approved: true }).eq('id', id);
+  const togglePublish = useMutation({
+    mutationFn: async ({ id, publish }: { id: string; publish: boolean }) => {
+      const { error } = await supabase
+        .from('test_events')
+        .update({ results_approved: publish })
+        .eq('id', id);
       if (error) throw error;
+      return publish;
     },
-    onSuccess: () => {
+    onSuccess: (publish) => {
       qc.invalidateQueries({ queryKey: ['admin-events'] });
-      toast({ title: 'Results approved and published!' });
+      toast({
+        title: publish ? 'Results published!' : 'Results unpublished',
+        description: publish
+          ? 'Leaderboard is now visible to students.'
+          : 'Leaderboard is hidden from students. You can publish again anytime.',
+      });
     },
+    onError: (e: any) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   });
 
   function resetForm() {
@@ -278,11 +288,33 @@ export default function AdminEventsPage() {
                           {prize?.first_prize && <span className="flex items-center gap-1"><Trophy className="w-3 h-3" />🥇 {prize.first_prize}</span>}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {getEventStatus(ev.start_date, ev.end_date) === 'ended' && !ev.results_approved && (
-                          <Button size="sm" variant="outline" className="text-green-600 border-green-300" onClick={() => approveResults.mutate(ev.id)}>
-                            Approve Results
-                          </Button>
+                      <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                        {getEventStatus(ev.start_date, ev.end_date) === 'ended' && (
+                          ev.results_approved ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                              onClick={() => {
+                                if (confirm('Unpublish results? Students will no longer see the leaderboard until you publish again.')) {
+                                  togglePublish.mutate({ id: ev.id, publish: false });
+                                }
+                              }}
+                              disabled={togglePublish.isPending}
+                            >
+                              Unpublish
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 border-green-300 hover:bg-green-50"
+                              onClick={() => togglePublish.mutate({ id: ev.id, publish: true })}
+                              disabled={togglePublish.isPending}
+                            >
+                              {ev.results_approved === false ? 'Publish Results' : 'Publish Results'}
+                            </Button>
+                          )
                         )}
                         <Button size="icon" variant="ghost" onClick={() => openEdit(ev)}><Pencil className="w-4 h-4" /></Button>
                         <Button size="icon" variant="ghost" className="text-destructive" onClick={() => { if (confirm('Delete this event?')) deleteMutation.mutate(ev.id); }}><Trash2 className="w-4 h-4" /></Button>
