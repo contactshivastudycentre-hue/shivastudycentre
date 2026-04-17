@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Crown, Medal, Award, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
+import ChallengeFriendButton from '@/components/ChallengeFriendButton';
 
 export default function LeaderboardPage() {
   const { eventId } = useParams();
@@ -143,6 +144,19 @@ export default function LeaderboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Challenge a Friend (if current user is on the board) */}
+      {leaderboard?.some(e => e.isMe) && (() => {
+        const me = leaderboard.find(e => e.isMe)!;
+        return (
+          <ChallengeFriendButton
+            testId={event?.test_id || undefined}
+            score={me.score}
+            testTitle={event?.event_name}
+            rank={me.rank}
+          />
+        );
+      })()}
     </div>
   );
 }
