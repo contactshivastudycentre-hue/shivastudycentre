@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ClipboardList, FileText, Play, Users, UserCircle, Shield, BookOpen, Target, Award } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { SmallPWAButton } from '@/components/pwa/SmallPWAButton';
+import ChallengeBanner from '@/components/ChallengeBanner';
 
 const features = [
   {
@@ -52,6 +53,7 @@ export default function MobileAppLanding() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <ChallengeBanner />
       {/* Top Section - Logo & Brand */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
