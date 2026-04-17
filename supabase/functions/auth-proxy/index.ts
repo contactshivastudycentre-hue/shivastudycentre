@@ -18,26 +18,22 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Use anon client for auth operations (respects auth flow)
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    // Service role client for profile operations
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
     if (action === "signIn") {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
       if (error) {
         return new Response(
           JSON.stringify({ error: { message: error.message, status: (error as any).status } }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-
       return new Response(
         JSON.stringify({
           session: {
@@ -67,15 +63,21 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Create profile using service role
+      // Auto-onboarding: create profile with status='approved' but profile_completed=false
+      // so the user can immediately access the platform but is forced to /complete-profile
+      // until they fill the remaining fields (school_name).
       if (data.user && fullName && mobile) {
-        await supabaseAdmin.from("profiles").insert({
-          user_id: data.user.id,
-          full_name: fullName,
-          mobile: mobile,
-          class: studentClass || null,
-          status: "pending",
-        });
+        await supabaseAdmin.from("profiles").upsert(
+          {
+            user_id: data.user.id,
+            full_name: fullName,
+            mobile: mobile,
+            class: studentClass || null,
+            status: "approved",
+            profile_completed: false,
+          },
+          { onConflict: "user_id" }
+        );
       }
 
       return new Response(
@@ -96,7 +98,6 @@ Deno.serve(async (req) => {
     }
 
     if (action === "health") {
-      // Quick health check
       const t0 = Date.now();
       const res = await fetch(`${supabaseUrl}/auth/v1/health`, {
         headers: { apikey: supabaseKey },
