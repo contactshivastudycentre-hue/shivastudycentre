@@ -3,33 +3,72 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Clock, Trophy, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trophy, BookOpen, Award, Sparkles, FileText, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 
-function getEventStatus(start: string, end: string) {
-  const now = new Date();
-  if (now < new Date(start)) return 'upcoming';
-  if (now <= new Date(end)) return 'active';
-  return 'ended';
-}
+type BannerRow = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  cta_text: string | null;
+  cta_link: string | null;
+  image_url: string | null;
+  background_color: string | null;
+  template: string;
+  event_id: string | null;
+  test_events: any;
+};
 
-function Countdown({ target }: { target: string }) {
-  const [diff, setDiff] = useState('');
-  useEffect(() => {
-    const tick = () => {
-      const ms = new Date(target).getTime() - Date.now();
-      if (ms <= 0) { setDiff('Starting now!'); return; }
-      const d = Math.floor(ms / 86400000);
-      const h = Math.floor((ms % 86400000) / 3600000);
-      const m = Math.floor((ms % 3600000) / 60000);
-      setDiff(`${d > 0 ? d + 'd ' : ''}${h}h ${m}m`);
-    };
-    tick();
-    const id = setInterval(tick, 60000);
-    return () => clearInterval(id);
-  }, [target]);
-  return <span className="text-sm font-medium text-white/90">{diff}</span>;
+const TEMPLATE_THEMES: Record<string, { bg: string; icon: any; accent: string }> = {
+  test_announcement: {
+    bg: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
+    icon: Trophy,
+    accent: '#FBBF24',
+  },
+  result_announcement: {
+    bg: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+    icon: Award,
+    accent: '#FEF3C7',
+  },
+  topper_banner: {
+    bg: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)',
+    icon: Sparkles,
+    accent: '#FFFFFF',
+  },
+  notes_update: {
+    bg: 'linear-gradient(135deg, #0EA5E9 0%, #06B6D4 100%)',
+    icon: BookOpen,
+    accent: '#E0F2FE',
+  },
+  scholarship_banner: {
+    bg: 'linear-gradient(135deg, #DB2777 0%, #E11D48 100%)',
+    icon: FileText,
+    accent: '#FECACA',
+  },
+};
+
+function getEventCTA(banner: BannerRow): { text: string; link: string | null } | null {
+  // Custom CTA wins
+  if (banner.cta_text && banner.cta_link) {
+    return { text: banner.cta_text, link: banner.cta_link };
+  }
+  // Event-derived CTA
+  const event = banner.test_events;
+  if (!event) return banner.cta_text ? { text: banner.cta_text, link: null } : null;
+
+  const now = new Date();
+  if (now < new Date(event.start_date)) {
+    return { text: 'Starts Soon', link: null };
+  }
+  if (now <= new Date(event.end_date) && event.test_id) {
+    return { text: 'Attempt Now', link: `/dashboard/tests/${event.test_id}` };
+  }
+  if (event.results_approved) {
+    return { text: 'View Results', link: `/dashboard/leaderboard/${event.id}` };
+  }
+  return { text: 'Result Soon', link: null };
 }
 
 export function BannerCarousel() {
@@ -44,20 +83,33 @@ export function BannerCarousel() {
         .select('*, test_events(*, event_prizes(*))')
         .eq('is_active', true)
         .order('priority', { ascending: false })
-        .limit(4);
-      return data || [];
+        .limit(3);
+      return (data || []) as unknown as BannerRow[];
     },
     enabled: !!profile,
     refetchInterval: 60000,
     refetchOnWindowFocus: true,
   });
 
-  // Auto-slide every 5 seconds
+  // Auto-slide every 3 seconds
   useEffect(() => {
     if (!banners?.length || banners.length <= 1) return;
-    const id = setInterval(() => setCurrent(c => (c + 1) % banners.length), 5000);
+    const id = setInterval(() => setCurrent(c => (c + 1) % banners.length), 3000);
     return () => clearInterval(id);
   }, [banners?.length]);
+
+  // Swipe support
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => setTouchStart(e.touches[0].clientX);
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStart === null || !banners?.length) return;
+    const diff = touchStart - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) setCurrent(c => (c + 1) % banners.length);
+      else setCurrent(c => (c - 1 + banners.length) % banners.length);
+    }
+    setTouchStart(null);
+  };
 
   if (!banners?.length) return null;
 
@@ -65,75 +117,96 @@ export function BannerCarousel() {
   const next = () => setCurrent(c => (c + 1) % banners.length);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl">
+    <div
+      className="relative overflow-hidden rounded-2xl shadow-lg"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       <AnimatePresence mode="wait">
-        {banners.map((banner: any, i: number) => {
+        {banners.map((banner, i) => {
           if (i !== current) return null;
-          const event = banner.test_events;
-          const prize = event?.event_prizes?.[0];
-          const status = event ? getEventStatus(event.start_date, event.end_date) : null;
+          const theme = TEMPLATE_THEMES[banner.template] || TEMPLATE_THEMES.test_announcement;
+          const Icon = theme.icon;
+          const cta = getEventCTA(banner);
+          const bg = banner.background_color || theme.bg;
 
           return (
             <motion.div
               key={banner.id}
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ duration: 0.3 }}
-              className="relative min-h-[180px] sm:min-h-[200px] rounded-2xl overflow-hidden"
-              style={{
-                background: banner.image_url
-                  ? `linear-gradient(135deg, rgba(99,102,241,0.9), rgba(168,85,247,0.85)), url(${banner.image_url}) center/cover`
-                  : 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent-gradient)))',
-              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="relative w-full h-[200px] sm:h-[220px] md:h-[240px]"
+              style={{ background: bg }}
             >
-              <div className="relative z-10 p-5 sm:p-7 flex flex-col justify-between h-full min-h-[180px]">
-                <div>
-                  <h3 className="text-lg sm:text-xl font-display font-bold text-white mb-1">{banner.title}</h3>
-                  {banner.description && <p className="text-white/80 text-sm mb-2">{banner.description}</p>}
-                  <div className="flex flex-wrap gap-2 items-center">
-                    {event && (
-                      <>
-                        <span className="text-xs bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-white">
-                          {event.is_universal ? 'All Classes' : `Class ${event.target_class}`}
-                        </span>
-                        <span className="text-xs bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-white">
-                          {new Date(event.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                        </span>
-                      </>
-                    )}
-                    {prize?.first_prize && (
-                      <span className="text-xs bg-yellow-400/30 backdrop-blur-sm rounded-full px-3 py-1 text-white flex items-center gap-1">
-                        <Trophy className="w-3 h-3" />🥇 {prize.first_prize}
-                      </span>
-                    )}
-                  </div>
+              {/* Subtle pattern overlay */}
+              <div
+                className="absolute inset-0 opacity-[0.08]"
+                style={{
+                  backgroundImage:
+                    'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+                  backgroundSize: '24px 24px',
+                }}
+              />
+
+              {/* Image right side (if provided) */}
+              {banner.image_url && (
+                <div className="absolute right-0 top-0 bottom-0 w-1/2 hidden sm:block">
+                  <img
+                    src={banner.image_url}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover object-center"
+                    style={{
+                      maskImage: 'linear-gradient(to left, black 40%, transparent 100%)',
+                      WebkitMaskImage: 'linear-gradient(to left, black 40%, transparent 100%)',
+                    }}
+                  />
                 </div>
-                <div className="mt-4 flex items-center gap-3">
-                  {status === 'upcoming' && (
-                    <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
-                      <Clock className="w-4 h-4 text-white" />
-                      <Countdown target={event.start_date} />
-                    </div>
-                  )}
-                  {status === 'active' && event?.test_id && (
-                    <Link to={`/dashboard/tests/${event.test_id}`}>
-                      <Button size="sm" className="bg-white text-primary hover:bg-white/90 font-bold shadow-lg">
-                        Attempt Now <ArrowRight className="w-4 h-4 ml-1" />
+              )}
+
+              {/* Content */}
+              <div className="relative z-10 h-full flex flex-col justify-center px-5 sm:px-8 md:px-10 max-w-full sm:max-w-[60%]">
+                {/* Badge */}
+                <div className="inline-flex items-center gap-1.5 self-start bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 mb-2 sm:mb-3">
+                  <Icon className="w-3.5 h-3.5" style={{ color: theme.accent }} />
+                  <span className="text-[11px] sm:text-xs font-semibold text-white uppercase tracking-wider">
+                    {banner.template.replace(/_/g, ' ')}
+                  </span>
+                </div>
+
+                {/* Headline */}
+                <h2 className="text-white font-display font-bold text-xl sm:text-2xl md:text-3xl leading-tight mb-1 sm:mb-2 line-clamp-2">
+                  {banner.title}
+                </h2>
+
+                {/* Subtitle */}
+                {(banner.subtitle || banner.description) && (
+                  <p className="text-white/85 text-sm sm:text-base font-medium mb-3 sm:mb-4 line-clamp-2">
+                    {banner.subtitle || banner.description}
+                  </p>
+                )}
+
+                {/* CTA */}
+                {cta && (
+                  cta.link ? (
+                    <Link to={cta.link} className="self-start">
+                      <Button
+                        size="sm"
+                        className="bg-white text-slate-900 hover:bg-white/90 font-bold rounded-full px-5 h-9 sm:h-10 shadow-md"
+                      >
+                        {cta.text}
+                        <ArrowRight className="w-4 h-4 ml-1" />
                       </Button>
                     </Link>
-                  )}
-                  {status === 'ended' && event?.results_approved && (
-                    <Link to={`/dashboard/leaderboard/${event.id}`}>
-                      <Button size="sm" variant="secondary" className="font-bold">
-                        <Trophy className="w-4 h-4 mr-1" />View Results
-                      </Button>
-                    </Link>
-                  )}
-                  {status === 'ended' && !event?.results_approved && (
-                    <span className="text-sm text-white/70 bg-white/10 rounded-xl px-4 py-2">Results Coming Soon</span>
-                  )}
-                </div>
+                  ) : (
+                    <span className="self-start inline-flex items-center bg-white/15 backdrop-blur-sm text-white font-semibold rounded-full px-4 h-9 sm:h-10 text-sm">
+                      {cta.text}
+                    </span>
+                  )
+                )}
               </div>
             </motion.div>
           );
@@ -142,15 +215,33 @@ export function BannerCarousel() {
 
       {banners.length > 1 && (
         <>
-          <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/30 text-white flex items-center justify-center backdrop-blur-sm">
+          {/* Arrows — desktop only for cleaner mobile */}
+          <button
+            onClick={prev}
+            aria-label="Previous banner"
+            className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/30 hover:bg-black/50 text-white items-center justify-center backdrop-blur-sm transition-colors"
+          >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <button onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/30 text-white flex items-center justify-center backdrop-blur-sm">
+          <button
+            onClick={next}
+            aria-label="Next banner"
+            className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/30 hover:bg-black/50 text-white items-center justify-center backdrop-blur-sm transition-colors"
+          >
             <ChevronRight className="w-5 h-5" />
           </button>
+
+          {/* Dots */}
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
-            {banners.map((_: any, i: number) => (
-              <button key={i} onClick={() => setCurrent(i)} className={`w-2 h-2 rounded-full transition-all ${i === current ? 'bg-white w-5' : 'bg-white/50'}`} />
+            {banners.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrent(i)}
+                aria-label={`Go to banner ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === current ? 'bg-white w-6' : 'bg-white/50 w-1.5'
+                }`}
+              />
             ))}
           </div>
         </>
