@@ -6,6 +6,7 @@ import swaritImage from '@/assets/swarit-roy.jpg';
 import { SmallPWAButton } from '@/components/pwa/SmallPWAButton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileAppLanding from '@/pages/MobileAppLanding';
+import ChallengeBanner from '@/components/ChallengeBanner';
 
 const fadeInUp = {
   initial: {
@@ -77,6 +78,7 @@ export default function LandingPage() {
   }
 
   return <div className="overflow-hidden">
+      <ChallengeBanner />
       {/* Hero Section */}
       <section className="relative min-h-[90vh] flex items-center hero-gradient overflow-hidden">
         {/* Animated Background Elements */}
