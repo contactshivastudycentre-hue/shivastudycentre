@@ -83,9 +83,13 @@ export function SundaySpecialCard() {
   const end = new Date(event.end_date);
   const now = new Date();
 
+  // Defensive: if dates are inverted/equal, the event window is invalid - still show as upcoming until start
+  const validWindow = end.getTime() > start.getTime();
+
   let phase: 'upcoming' | 'live' | 'ended' = 'upcoming';
-  if (now >= start && now <= end) phase = 'live';
-  else if (now > end) phase = 'ended';
+  if (validWindow && now >= start && now <= end) phase = 'live';
+  else if (validWindow && now > end) phase = 'ended';
+  else if (!validWindow && now >= start) phase = 'ended';
 
   const countdown = phase === 'upcoming' ? getCountdown(start) : phase === 'live' ? getCountdown(end) : null;
 
