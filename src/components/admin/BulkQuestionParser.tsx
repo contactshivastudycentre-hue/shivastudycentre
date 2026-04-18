@@ -84,6 +84,48 @@ export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQ
   const [step, setStep] = useState<'paste' | 'preview'>('paste');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [pasteTab, setPasteTab] = useState<'ai' | 'paste'>('ai');
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiCount, setAiCount] = useState('10');
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const generateWithAI = async () => {
+    const topic = aiTopic.trim();
+    if (topic.length < 3) {
+      toast({ title: 'Topic too short', description: 'Enter at least a few words describing the topic.', variant: 'destructive' });
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-mcq-questions', {
+        body: { topic, count: parseInt(aiCount, 10) || 10 },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const aiQuestions = ((data as any)?.questions || []) as Array<{ question_text: string; options: string[]; correct_option_index: number }>;
+      if (!aiQuestions.length) {
+        toast({ title: 'No questions generated', description: 'Try a more specific topic.', variant: 'destructive' });
+        return;
+      }
+      const mapped: ParsedQuestion[] = aiQuestions.map((q, idx) => ({
+        id: `ai-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
+        question_text: q.question_text,
+        question_type: 'mcq_single',
+        options: q.options.slice(0, 4),
+        correct_answers: [q.correct_option_index],
+        marks: 1,
+      }));
+      setParsedQuestions(mapped);
+      setStep('preview');
+      setExpandedCards(new Set(mapped.map(m => m.id)));
+      toast({ title: 'Questions generated!', description: `Got ${mapped.length} MCQs. Review before adding.` });
+    } catch (err: any) {
+      toast({ title: 'AI generation failed', description: err?.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
 
   const parseQuestions = () => {
     if (!rawText.trim()) {
