@@ -42,20 +42,22 @@ export function HighlightedTestBanner() {
   const { data: test } = useQuery({
     queryKey: ['highlight-test', profile?.class],
     queryFn: async () => {
-      const { data } = await supabase
+      let q = supabase
         .from('tests')
         .select('id, title, description, class, subject, duration_minutes, start_time, end_time, banner_image, test_type')
         .eq('is_published', true)
-        .eq('test_type', 'sunday_special' as any)
+        .in('test_type', ['sunday_special', 'weekly', 'surprise_quiz'] as any)
         .order('start_time', { ascending: true })
-        .limit(5);
+        .limit(10);
+      if (profile?.class) q = q.eq('class', profile.class);
+      const { data } = await q;
       const list = (data || []) as unknown as HighlightTest[];
       // Pick the next live or upcoming test that hasn't ended
       const active = list.find(t => !t.end_time || new Date(t.end_time) > new Date());
       return active || null;
     },
     enabled: !!profile,
-    refetchInterval: 60000,
+    refetchInterval: 30000,
   });
 
   if (!test) return null;
