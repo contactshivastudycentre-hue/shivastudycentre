@@ -486,9 +486,55 @@ export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQ
 
         {step === 'paste' ? (
           <div className="flex-1 space-y-4 overflow-y-auto">
-            <div className="bg-accent/50 rounded-lg p-4 text-sm">
-              <p className="font-medium text-foreground mb-2">Supported formats:</p>
-              <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-background p-3 rounded border overflow-x-auto">
+            <Tabs value={pasteTab} onValueChange={(v) => setPasteTab(v as 'ai' | 'paste')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="ai">
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  AI Generate
+                </TabsTrigger>
+                <TabsTrigger value="paste">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Paste
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="ai" className="space-y-4 pt-4">
+                <div className="bg-accent/50 rounded-lg p-4 text-sm">
+                  <p className="font-medium text-foreground mb-1">✨ AI-powered generation</p>
+                  <p className="text-xs text-muted-foreground">
+                    Paste a topic, chapter, or syllabus snippet and let AI generate exam-ready MCQs in seconds.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Topic / Chapter / Syllabus</Label>
+                  <Textarea
+                    placeholder="e.g. Class 10 Science — Chapter 6: Life Processes (Photosynthesis, Respiration, Transportation)"
+                    value={aiTopic}
+                    onChange={(e) => setAiTopic(e.target.value)}
+                    className="min-h-[140px] text-sm"
+                    disabled={aiLoading}
+                  />
+                </div>
+
+                <div className="space-y-2 max-w-[200px]">
+                  <Label>Number of questions</Label>
+                  <Select value={aiCount} onValueChange={setAiCount} disabled={aiLoading}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 questions</SelectItem>
+                      <SelectItem value="10">10 questions</SelectItem>
+                      <SelectItem value="15">15 questions</SelectItem>
+                      <SelectItem value="20">20 questions</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="paste" className="space-y-4 pt-4">
+                <div className="bg-accent/50 rounded-lg p-4 text-sm">
+                  <p className="font-medium text-foreground mb-2">Supported formats:</p>
+                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-background p-3 rounded border overflow-x-auto">
 {`Q1. What is the capital of France?
 A. London
 B. Paris
@@ -503,18 +549,20 @@ Q3. Is the Earth round?
 A. True
 B. False
 Answer: A`}
-              </pre>
-            </div>
+                  </pre>
+                </div>
 
-            <div className="space-y-2">
-              <Label>Paste Your Questions</Label>
-              <Textarea
-                placeholder="Paste questions here..."
-                value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
-                className="min-h-[250px] font-mono text-sm"
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label>Paste Your Questions</Label>
+                  <Textarea
+                    placeholder="Paste questions here..."
+                    value={rawText}
+                    onChange={(e) => setRawText(e.target.value)}
+                    className="min-h-[250px] font-mono text-sm"
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto space-y-3 pr-2">
