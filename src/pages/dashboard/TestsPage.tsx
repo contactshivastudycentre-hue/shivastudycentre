@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ClipboardList, Clock, ArrowRight, CheckCircle, Eye, Lock } from 'lucide-react';
+import { ClipboardList, Clock, ArrowRight, CheckCircle, Eye, Lock, Calendar, Radio } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { CardSkeletonGrid } from '@/components/skeletons/CardSkeleton';
 
@@ -13,6 +13,34 @@ interface Test {
   duration_minutes: number;
   subject: string;
   class: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  banner_image?: string | null;
+}
+
+type TestPhase = 'upcoming' | 'live' | 'closed' | 'always';
+
+function getPhase(t: Test, now: Date): TestPhase {
+  if (!t.start_time || !t.end_time) return 'always';
+  const s = new Date(t.start_time);
+  const e = new Date(t.end_time);
+  if (now < s) return 'upcoming';
+  if (now > e) return 'closed';
+  return 'live';
+}
+
+function formatCountdown(target: Date, now: Date): string {
+  const ms = target.getTime() - now.getTime();
+  if (ms <= 0) return '0s';
+  const totalSec = Math.floor(ms / 1000);
+  const d = Math.floor(totalSec / 86400);
+  const h = Math.floor((totalSec % 86400) / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
 }
 
 interface TestAttempt {
