@@ -118,6 +118,66 @@ export default function MobileAppLanding() {
         </div>
       </div>
 
+      {/* About the Platform & Creator (mobile-compact) */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.4 }}
+        className="px-6 pb-6"
+      >
+        <div className="text-center mb-4">
+          <span className="inline-block text-[11px] font-semibold text-primary tracking-wider uppercase mb-1">
+            Technology Partner
+          </span>
+          <h2 className="text-lg font-display font-bold text-foreground">
+            About the Platform & Creator
+          </h2>
+        </div>
+
+        <div className="bg-card rounded-2xl p-5 border border-border shadow-sm">
+          <div className="flex items-start gap-4 mb-4">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-muted flex-shrink-0">
+              <img
+                src={swaritImage}
+                alt="Swarit Roy - Founder, LeadPe"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="text-xs font-medium text-primary">Founder – LeadPe</span>
+              <h3 className="text-base font-display font-bold text-foreground leading-tight">
+                Swarit Roy
+              </h3>
+            </div>
+          </div>
+
+          <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+            Swarit Roy is the creator of LeadPe — a platform that helps businesses build modern
+            websites that capture real customer leads via WhatsApp, calls, and smart contact forms.
+          </p>
+
+          <div className="bg-accent/50 rounded-xl p-3 mb-4">
+            <p className="text-xs text-foreground font-medium mb-1">
+              Powered by <span className="text-[#111827]">Lead</span><span className="text-[#16A34A]">Pe</span>
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Each website is optimized for WhatsApp leads, phone calls, and smart contact forms.
+            </p>
+          </div>
+
+          <a
+            href="https://leadpe.tech"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 w-full bg-[#16A34A] text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-[#15803d] transition-colors"
+          >
+            Visit LeadPe
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
+      </motion.section>
+
       {/* Bottom Section - Login Buttons */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
