@@ -542,6 +542,7 @@ export type Database = {
           highlight_until: string | null
           id: string
           is_published: boolean
+          prize_pool: number | null
           results_published_at: string | null
           start_time: string | null
           subject: string
@@ -561,6 +562,7 @@ export type Database = {
           highlight_until?: string | null
           id?: string
           is_published?: boolean
+          prize_pool?: number | null
           results_published_at?: string | null
           start_time?: string | null
           subject: string
@@ -580,6 +582,7 @@ export type Database = {
           highlight_until?: string | null
           id?: string
           is_published?: boolean
+          prize_pool?: number | null
           results_published_at?: string | null
           start_time?: string | null
           subject?: string
