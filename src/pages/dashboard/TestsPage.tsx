@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ClipboardList, Clock, ArrowRight, CheckCircle, Eye, Lock, Calendar, Radio } from 'lucide-react';
+import { ClipboardList, Clock, ArrowRight, CheckCircle, Eye, Lock, Calendar, Radio, Trophy } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { CardSkeletonGrid } from '@/components/skeletons/CardSkeleton';
 
@@ -16,6 +16,7 @@ interface Test {
   start_time?: string | null;
   end_time?: string | null;
   banner_image?: string | null;
+  prize_pool?: number | null;
 }
 
 type TestPhase = 'upcoming' | 'live' | 'closed' | 'always';
@@ -173,6 +174,9 @@ export default function TestsPage() {
                     {test.description && <p className="text-sm text-muted-foreground mb-3">{test.description}</p>}
                     <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                       <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{test.duration_minutes} minutes</span>
+                      {test.prize_pool ? (
+                        <span className="flex items-center gap-1 font-semibold text-amber-600"><Trophy className="w-4 h-4" />Prize Pool: ₹{test.prize_pool}</span>
+                      ) : null}
                       {test.start_time && phase !== 'always' && (
                         <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{new Date(test.start_time).toLocaleString()}</span>
                       )}

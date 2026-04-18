@@ -82,6 +82,7 @@ interface Test {
   end_time: string;
   banner_image: string;
   test_type: 'standard' | 'sunday_special' | 'practice' | 'weekly' | 'mock' | 'surprise_quiz';
+  prize_pool: number | null;
 }
 
 const questionTypeLabels: Record<QuestionType, string> = {
@@ -136,6 +137,7 @@ export default function TestBuilder() {
     end_time: '',
     banner_image: '',
     test_type: 'standard',
+    prize_pool: null,
   });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
@@ -216,6 +218,7 @@ export default function TestBuilder() {
       end_time: toLocal(td.end_time),
       banner_image: td.banner_image || '',
       test_type: (td.test_type as Test['test_type']) || 'standard',
+      prize_pool: td.prize_pool ?? null,
     });
 
     const { data: questionsData } = await supabase
@@ -391,6 +394,7 @@ export default function TestBuilder() {
             end_time: test.end_time ? new Date(test.end_time).toISOString() : null,
             banner_image: test.banner_image || null,
             test_type: test.test_type,
+            prize_pool: test.prize_pool ?? null,
           } as any)
           .select()
           .single();
@@ -413,6 +417,7 @@ export default function TestBuilder() {
             end_time: test.end_time ? new Date(test.end_time).toISOString() : null,
             banner_image: test.banner_image || null,
             test_type: test.test_type,
+            prize_pool: test.prize_pool ?? null,
           } as any)
           .eq('id', test.id);
 
@@ -626,6 +631,22 @@ export default function TestBuilder() {
             <div className="space-y-2">
               <Label htmlFor="duration">Duration (minutes) *</Label>
               <Input id="duration" type="number" min="5" max="180" value={test.duration_minutes} onChange={(e) => setTest({ ...test, duration_minutes: parseInt(e.target.value) || 30 })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="prize_pool">Prize Pool (₹, optional)</Label>
+              <Input
+                id="prize_pool"
+                type="number"
+                min="0"
+                step="50"
+                placeholder="e.g. 500"
+                value={test.prize_pool ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value.trim();
+                  setTest({ ...test, prize_pool: v === '' ? null : Math.max(0, parseInt(v) || 0) });
+                }}
+              />
+              <p className="text-xs text-muted-foreground">Shown on banner & test card. Leave empty for no prize.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="start_time">Start Time *</Label>
