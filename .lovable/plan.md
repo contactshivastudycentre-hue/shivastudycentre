@@ -1,87 +1,20 @@
 
-The user is asking me to "build" a complete system, but 95% of this already exists in the project. Let me map their spec against what's already built and identify the actual gaps.
+The user wants to:
+1. Remove the separate `HighlightedTestBanner` from above the carousel — unify everything into the existing `BannerCarousel`.
+2. Add a `prize_pool` integer column to `tests`, exposed in admin TestBuilder and shown on student cards.
+3. Sunday Special / weekly / surprise_quiz tests already auto-create banner rows via `sync_test_banner` trigger — so they already appear in `BannerCarousel`. The duplication is purely the standalone `<HighlightedTestBanner />` above it.
+4. Sort priority: Live test > Upcoming Sunday > Topper > Admin announcement.
+5. Aspect ratio 16:3 (currently 16:7).
+6. Show "Starts in Xd Yh" / "Attempt Now" / "View Result" CTA states on test banners.
 
-**What already exists (verified from codebase):**
-- ✅ Admin test creation with type (Sunday Special / Standard / Practice) — they want 4 types: Sunday Special, Weekly Test, Mock, Surprise Quiz
-- ✅ Class, start/end datetime, banner image, description
-- ✅ Bulk question parser (manual paste format)
-- ✅ Sunday Special highlighted banner on dashboards (HighlightedTestBanner)
-- ✅ Test live-window logic (UPCOMING / LIVE / CLOSED)
-- ✅ Test attempt with timer, progress, navigation
-- ✅ Admin "Publish Results" RPC + approval workflow
-- ✅ 24h highlighted winners (WinnersSlider — auto-hides after 24h)
-- ✅ Leaderboard with class dropdown
-- ✅ Winner ranks with prize_text
-- ✅ Submission count per test (visible on AdminTestResultsPage)
-- ✅ RLS security (students view own attempts, admins manage all)
-- ✅ Lovable Cloud (Supabase) — not Firebase, but functionally equivalent
+Plan:
+- **Migration:** Add `tests.prize_pool integer` + update `sync_test_banner` to embed prize/class/subject/duration/start in banner subtitle/description so the carousel can render rich content without re-querying tests.
+- **`BannerCarousel.tsx`:** Detect `template='test_announcement'` banners → overlay test info (title, class · subject · duration, prize pool, countdown, dynamic CTA). Compute sort priority client-side: live test → upcoming test → other banners (already prioritised by `priority` field and start_time). Change aspect ratio to 16/3.
+- **`StudentDashboard.tsx`:** Remove `<HighlightedTestBanner />`.
+- **`TestBuilder.tsx`:** Add Prize Pool input (INR integer).
+- **`TestsPage.tsx` (student):** Show prize pool badge on test cards.
+- Skip deleting `HighlightedTestBanner.tsx` file (no other refs after StudentDashboard removes it) — but actually delete it to avoid dead code.
 
-**Actual gaps to fill:**
+Aspect ratio 16:3 is very thin — confirm with user? No, just execute as specified.
 
-1. **Test types** — currently 3 (`standard | sunday_special | practice`). User wants 4: Sunday Special, Weekly Test, Mock, Surprise Quiz. Need to extend the `test_type_enum`.
-
-2. **AI bulk question generation** — currently parser only accepts pasted text. User wants: paste a chapter/topic → Lovable AI generates 10 MCQs automatically. New edge function needed.
-
-3. **Scrolling marquee winner strip** — current `WinnersSlider` is a fade slider, user wants a horizontal scrolling marquee at the **top** of dashboard with trophy/gold/silver/bronze colors.
-
-4. **Approval status & submission count on Admin Tests list** — currently you click into Results page to see this. Add columns to the main `/admin/tests` table.
-
-5. **"Result pending admin approval" UX after submit** — verify the existing TestResultPage shows this state cleanly when `results_published_at IS NULL`.
-
-I'll skip Firebase entirely — the project is on Lovable Cloud and already has equivalent functionality. I'll note this clearly to the user.
-
----
-
-# Plan: Fill the 5 gaps
-
-## 1. DB migration — extend test types
-- Add `weekly`, `mock`, `surprise_quiz` to `test_type_enum`
-- Update `sync_test_banner` trigger so `weekly` and `surprise_quiz` also auto-create highlighted banners (Mock = practice-style, no banner)
-
-## 2. AI Bulk Question Generator (new edge function)
-- New edge function `generate-mcq-questions`
-  - Accepts: `{ topic, count, class, subject }`
-  - Calls Lovable AI Gateway (`google/gemini-3-flash-preview`) with structured tool-calling
-  - Returns array of `{ question_text, options[4], correct_option_index }`
-- Update `BulkQuestionParser.tsx` (admin):
-  - Add tab: **"AI Generate"** alongside existing **"Paste"** tab
-  - Form: topic textarea + count selector (5/10/15/20)
-  - "Generate" button → calls edge function → preview → "Add to Test"
-
-## 3. Scrolling marquee winner strip
-- Replace `WinnersSlider.tsx` motion-fade with a true CSS marquee:
-  - Single horizontal infinite-scroll row at the **top** of `StudentDashboard`
-  - Dark gradient bg, gold/silver/bronze badges per rank
-  - Format: `🏆 1st Rahul ₹500 • 🥈 2nd Aman ₹300 • 🥉 3rd Priya ₹200`
-  - Auto-pauses on hover, only renders when winners exist in last 24h
-
-## 4. Admin Tests list improvements
-- Update `AdminTestsPage.tsx` table:
-  - New column: **Type** (color-coded badge)
-  - New column: **Submissions** (live count via subquery)
-  - New column: **Results** (Pending / Published with timestamp)
-  - Quick "Publish Results" inline action when test has ended
-
-## 5. Polish post-submit screen
-- Verify `TestResultPage.tsx` shows clear "⏳ Result pending admin approval" state when `results_published_at IS NULL`, with a check-back hint
-
----
-
-# Files touched
-- **Migration (1):** add enum values, update banner sync trigger
-- **New edge function (1):** `supabase/functions/generate-mcq-questions/index.ts`
-- **Edited (4):**
-  - `src/components/admin/BulkQuestionParser.tsx` — add AI tab
-  - `src/components/admin/TestBuilder.tsx` — expose new test types in dropdown
-  - `src/components/dashboard/WinnersSlider.tsx` — rewrite as scrolling marquee
-  - `src/pages/admin/AdminTestsPage.tsx` — add columns
-- **Verified (no edit needed):** `TestResultPage.tsx`, `HighlightedTestBanner.tsx`, RLS, leaderboard
-
----
-
-# Notes for the user
-- **Firebase isn't needed** — your project already runs on Lovable Cloud which provides the same Auth + Database + Rules. Switching would mean rebuilding everything that already works. I'll keep the existing backend.
-- **AI question generation** uses your built-in Lovable AI (no extra API key needed).
-- **Branding** stays blue (your current SSC identity), not red/orange. Tell me if you want me to change the accent color globally.
-
-Confirm and I'll execute.
+Let me check current TestBuilder, TestsPage, HighlightedTestBanner usage.
