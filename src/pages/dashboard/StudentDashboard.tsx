@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { BannerCarousel } from '@/components/dashboard/BannerCarousel';
-import { HighlightedTestBanner } from '@/components/dashboard/HighlightedTestBanner';
 import { TrendingContent } from '@/components/dashboard/TrendingContent';
 import { WinnersSlider } from '@/components/dashboard/WinnersSlider';
 import { ResumeLearning } from '@/components/dashboard/ResumeLearning';
@@ -82,10 +81,8 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      {/* Sunday Special highlight (realtime, only renders when a Sunday Special test exists) */}
-      <HighlightedTestBanner />
-
-      {/* Hero Banner */}
+      {/* Unified hero banner slider — includes admin banners, topper banners,
+          and live/upcoming test banners (Sunday Special, Weekly, Surprise Quiz) */}
       <motion.div {...fadeInUp}>
         <BannerCarousel />
       </motion.div>
