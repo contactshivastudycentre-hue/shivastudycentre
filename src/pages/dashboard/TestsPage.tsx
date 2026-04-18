@@ -56,11 +56,18 @@ export default function TestsPage() {
   const [tests, setTests] = useState<Test[]>([]);
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [now, setNow] = useState(new Date());
   const { user } = useAuth();
 
   useEffect(() => {
     fetchTests();
     fetchAttempts();
+  }, []);
+
+  // Tick every second to keep countdowns live
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
   }, []);
 
   const fetchTests = async () => {
@@ -71,7 +78,7 @@ export default function TestsPage() {
       .order('created_at', { ascending: false });
 
     if (data) {
-      setTests(data);
+      setTests(data as Test[]);
     }
     setIsLoading(false);
   };
