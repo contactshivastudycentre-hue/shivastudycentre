@@ -61,10 +61,15 @@ export default function AdminEventsPage() {
     },
   });
 
+  // Events can only REFERENCE published tests — they cannot create tests or questions.
   const { data: tests } = useQuery({
-    queryKey: ['admin-tests-list'],
+    queryKey: ['admin-tests-list-published'],
     queryFn: async () => {
-      const { data } = await supabase.from('tests').select('id, title, class, subject').order('title');
+      const { data } = await supabase
+        .from('tests')
+        .select('id, title, class, subject, is_published')
+        .eq('is_published', true)
+        .order('title');
       return data || [];
     },
   });
@@ -214,14 +219,20 @@ export default function AdminEventsPage() {
                 <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} />
               </div>
               <div>
-                <Label>Link Test</Label>
+                <Label>Linked Test</Label>
                 <Select value={form.test_id} onValueChange={v => setForm(p => ({ ...p, test_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select test" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select a published test to promote" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NONE}>None (no test linked)</SelectItem>
-                    {tests?.map(t => <SelectItem key={t.id} value={t.id}>{t.title} ({t.class} - {t.subject})</SelectItem>)}
+                    <SelectItem value={NONE}>None (promotion-only event)</SelectItem>
+                    {tests?.map(t => <SelectItem key={t.id} value={t.id}>{t.title} · Class {t.class} · {t.subject}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Only <strong>published</strong> tests appear here. Events promote existing tests — they don't create new ones.{' '}
+                  {(!tests || tests.length === 0) && (
+                    <a href="/admin/tests" className="text-primary underline">Create &amp; publish a test first →</a>
+                  )}
+                </p>
               </div>
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
