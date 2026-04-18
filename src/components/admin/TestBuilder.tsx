@@ -81,7 +81,7 @@ interface Test {
   start_time: string;
   end_time: string;
   banner_image: string;
-  test_type: 'standard' | 'sunday_special' | 'practice';
+  test_type: 'standard' | 'sunday_special' | 'practice' | 'weekly' | 'mock' | 'surprise_quiz';
 }
 
 const questionTypeLabels: Record<QuestionType, string> = {
@@ -611,13 +611,16 @@ export default function TestBuilder() {
               <Select value={test.test_type} onValueChange={(v) => setTest({ ...test, test_type: v as Test['test_type'] })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="sunday_special">🔥 Sunday Special</SelectItem>
+                  <SelectItem value="weekly">📅 Weekly Test</SelectItem>
+                  <SelectItem value="surprise_quiz">⚡ Surprise Quiz</SelectItem>
+                  <SelectItem value="mock">📝 Mock Test</SelectItem>
                   <SelectItem value="standard">Standard Test</SelectItem>
-                  <SelectItem value="sunday_special">🔥 Sunday Special Test</SelectItem>
                   <SelectItem value="practice">Practice Test</SelectItem>
                 </SelectContent>
               </Select>
-              {test.test_type === 'sunday_special' && (
-                <p className="text-xs text-amber-600">Highlighted on student dashboards. Banner image required.</p>
+              {['sunday_special', 'weekly', 'surprise_quiz'].includes(test.test_type) && (
+                <p className="text-xs text-amber-600">Highlighted on student dashboards when a banner image is added.</p>
               )}
             </div>
             <div className="space-y-2">
