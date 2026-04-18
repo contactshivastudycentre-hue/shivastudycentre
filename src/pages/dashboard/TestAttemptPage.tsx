@@ -91,10 +91,18 @@ export default function TestAttemptPage() {
   // Simplified submit states
   const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'slow' | 'offline' | 'failed' | 'success'>('idle');
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
-  
+
+  // Per-answer save status + network tracking
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [wasResumed, setWasResumed] = useState(false);
+
   // Refs to prevent double submission
   const submitLockRef = useRef(false);
   const submitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSyncRef = useRef(false);
+  const savedFlashRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Calculate MCQ score
   const calculateScore = useCallback(() => {
