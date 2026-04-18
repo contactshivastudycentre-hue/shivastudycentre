@@ -1,79 +1,87 @@
 
+The user is asking me to "build" a complete system, but 95% of this already exists in the project. Let me map their spec against what's already built and identify the actual gaps.
 
-## Root causes found
+**What already exists (verified from codebase):**
+- ✅ Admin test creation with type (Sunday Special / Standard / Practice) — they want 4 types: Sunday Special, Weekly Test, Mock, Surprise Quiz
+- ✅ Class, start/end datetime, banner image, description
+- ✅ Bulk question parser (manual paste format)
+- ✅ Sunday Special highlighted banner on dashboards (HighlightedTestBanner)
+- ✅ Test live-window logic (UPCOMING / LIVE / CLOSED)
+- ✅ Test attempt with timer, progress, navigation
+- ✅ Admin "Publish Results" RPC + approval workflow
+- ✅ 24h highlighted winners (WinnersSlider — auto-hides after 24h)
+- ✅ Leaderboard with class dropdown
+- ✅ Winner ranks with prize_text
+- ✅ Submission count per test (visible on AdminTestResultsPage)
+- ✅ RLS security (students view own attempts, admins manage all)
+- ✅ Lovable Cloud (Supabase) — not Firebase, but functionally equivalent
 
-1. **Mobile admin can't reach Events / Banners / Leaderboard**
-   AdminLayout's mobile bottom nav only has Home, Students, Tests, Content, Results — there's literally no entry point on mobile. That's why "no sunday test and banner uploading from admin" works on desktop but not phone.
+**Actual gaps to fill:**
 
-2. **Banner dialog crashes silently** (`AdminBannersPage.tsx`)
-   - `<SelectItem value="">None</SelectItem>` — Radix Select throws because empty-string values are forbidden. Dialog breaks on open.
-   - On submit, `event_id: ''` and `target_class: ''` are passed as empty strings to UUID/text columns → Postgres rejects ("invalid input syntax for uuid"). Same in AdminEventsPage when "All Classes" is on but `target_class` was previously set.
+1. **Test types** — currently 3 (`standard | sunday_special | practice`). User wants 4: Sunday Special, Weekly Test, Mock, Surprise Quiz. Need to extend the `test_type_enum`.
 
-3. **Admins can only paste an image URL** — no actual upload widget for banner / event banner images. Should upload to Supabase Storage.
+2. **AI bulk question generation** — currently parser only accepts pasted text. User wants: paste a chapter/topic → Lovable AI generates 10 MCQs automatically. New edge function needed.
 
-4. **Banner not showing on student dashboard**
-   - Carousel query `.eq('is_active', true)` works, but if banner has `event_id = null` the `test_events(*, event_prizes(*))` join still returns the row — that part is fine.
-   - Real reason nothing appears: no banner ever got created (because of #2).
+3. **Scrolling marquee winner strip** — current `WinnersSlider` is a fade slider, user wants a horizontal scrolling marquee at the **top** of dashboard with trophy/gold/silver/bronze colors.
 
-5. **PDF upload fails on mobile** (`FileUploader.tsx`)
-   - `visibilitychange` only restores UI when `status === 'idle'`. On Android Chrome the input `onChange` fires AFTER visibility flips back, so the ref is set but state may have been reset by a parent re-render (the surrounding Dialog in AdminNotesPage uses controlled state that closes when focus is lost on some browsers). The form is also wrapped in a `<form>` whose submit can be triggered by the upload button.
-   - Need: keep the file in BOTH ref + state, lift the dialog out of any auto-closing parent, and ensure the button is `type="button"`.
+4. **Approval status & submission count on Admin Tests list** — currently you click into Results page to see this. Add columns to the main `/admin/tests` table.
 
-6. **PDF viewer not visible cleanly on mobile**
-   - Uses `paddingTop: env(safe-area-inset-top)` on the fixed container which adds whitespace above the dark canvas area. The header sits below the safe area but the dashboard mobile header (`z-40`) is below `z-[9999]` so that's fine. The actual issue is the back arrow can be small / hard to tap and the PDF area background bleeds into the safe area making header look detached.
+5. **"Result pending admin approval" UX after submit** — verify the existing TestResultPage shows this state cleanly when `results_published_at IS NULL`.
 
-7. **Landing page admin button** — user wants to reduce friction so students don't accidentally tap "Admin Login". Solution: move Admin Login to a small subtle link in the landing footer area instead of a big primary button on both desktop and mobile landing.
-
----
-
-## Fix plan
-
-### A. AdminLayout mobile nav — add access to new pages
-Replace the static 5 buttons with a "More" sheet that exposes: Events, Banners, Leaderboard, Notes, Videos, Password Resets. Keep Home, Students, Tests, Results as direct buttons; "More" replaces the Content sheet.
-
-### B. AdminBannersPage — fix dialog + add image upload
-- Replace `<SelectItem value="">None</SelectItem>` with `<SelectItem value="__none__">None</SelectItem>` and convert to `null` on submit.
-- Sanitize payload: convert empty strings to `null` for `event_id`, `target_class`, `image_url`.
-- Add a proper image uploader (reuse `FileUploader` but with `accept="image/*"` and a new `images` storage bucket OR reuse `notes` bucket under `banners/` prefix). Upload returns a public URL → stored as `image_url`.
-
-### C. AdminEventsPage — same fixes
-- Sanitize empty strings to null for `test_id`, `target_class`.
-- Add image upload widget for `banner_image`.
-
-### D. New storage bucket for banner images
-Create public `banner-images` bucket via migration with admin-only insert/update/delete RLS. Make `FileUploader` accept arbitrary `accept` and validate accordingly (currently hardcoded to PDF).
-
-### E. FileUploader — mobile upload bug
-- Mirror the file into React state `selectedFile` (not just ref) so unmount/remount restores correctly.
-- Add `key` based on bucket so the component doesn't lose state between dialogs.
-- Wrap upload action so it cannot trigger a form submit (`type="button"` is already there — also stop propagation on input change).
-- Make AdminNotesPage's note dialog NOT close on outside click during upload (`onPointerDownOutside` preventDefault when uploading).
-
-### F. PDFViewer — cleaner mobile header
-- Move `paddingTop: env(safe-area-inset-top)` from outer container to the header `<div>` only, and give header a solid `bg-card` so the safe-area zone is filled.
-- Increase Back button hit area to `h-11 px-3` and bump font size.
-- Confirmed `z-[9999]` is above mobile header (`z-40`) and bottom nav.
-
-### G. Landing page — soften Admin Login
-- On `MobileAppLanding`: replace the full-width "Admin Login" button with a small text link at the bottom: "Admin? Sign in here" (smaller font, muted color).
-- On desktop `LandingPage` hero: keep Student Login as the only large CTA; move Admin Login to a small ghost link beside "Learn more about us".
-
-### H. BannerCarousel safety
-- Add a console-visible empty state hint for admins so they know none are active (already returns null — keep, but ensure query refetches every minute via `refetchInterval`).
+I'll skip Firebase entirely — the project is on Lovable Cloud and already has equivalent functionality. I'll note this clearly to the user.
 
 ---
 
-## Files to change
-- `src/components/layout/AdminLayout.tsx` — add "More" sheet with Events/Banners/Leaderboard/Notes/Videos/Resets
-- `src/pages/admin/AdminBannersPage.tsx` — fix Select bug, sanitize payload, add image upload
-- `src/pages/admin/AdminEventsPage.tsx` — sanitize payload, add banner image upload
-- `src/components/admin/FileUploader.tsx` — mobile robustness + accept arbitrary mime
-- `src/pages/admin/AdminNotesPage.tsx` — prevent dialog close during upload
-- `src/components/PDFViewer.tsx` — header safe-area + bigger back button
-- `src/pages/MobileAppLanding.tsx` — admin link instead of button
-- `src/pages/LandingPage.tsx` — admin link instead of button
-- `src/components/dashboard/BannerCarousel.tsx` — refetchInterval
-- New migration — `banner-images` public bucket + admin RLS
+# Plan: Fill the 5 gaps
 
-After approval, implementing all of the above in one pass.
+## 1. DB migration — extend test types
+- Add `weekly`, `mock`, `surprise_quiz` to `test_type_enum`
+- Update `sync_test_banner` trigger so `weekly` and `surprise_quiz` also auto-create highlighted banners (Mock = practice-style, no banner)
 
+## 2. AI Bulk Question Generator (new edge function)
+- New edge function `generate-mcq-questions`
+  - Accepts: `{ topic, count, class, subject }`
+  - Calls Lovable AI Gateway (`google/gemini-3-flash-preview`) with structured tool-calling
+  - Returns array of `{ question_text, options[4], correct_option_index }`
+- Update `BulkQuestionParser.tsx` (admin):
+  - Add tab: **"AI Generate"** alongside existing **"Paste"** tab
+  - Form: topic textarea + count selector (5/10/15/20)
+  - "Generate" button → calls edge function → preview → "Add to Test"
+
+## 3. Scrolling marquee winner strip
+- Replace `WinnersSlider.tsx` motion-fade with a true CSS marquee:
+  - Single horizontal infinite-scroll row at the **top** of `StudentDashboard`
+  - Dark gradient bg, gold/silver/bronze badges per rank
+  - Format: `🏆 1st Rahul ₹500 • 🥈 2nd Aman ₹300 • 🥉 3rd Priya ₹200`
+  - Auto-pauses on hover, only renders when winners exist in last 24h
+
+## 4. Admin Tests list improvements
+- Update `AdminTestsPage.tsx` table:
+  - New column: **Type** (color-coded badge)
+  - New column: **Submissions** (live count via subquery)
+  - New column: **Results** (Pending / Published with timestamp)
+  - Quick "Publish Results" inline action when test has ended
+
+## 5. Polish post-submit screen
+- Verify `TestResultPage.tsx` shows clear "⏳ Result pending admin approval" state when `results_published_at IS NULL`, with a check-back hint
+
+---
+
+# Files touched
+- **Migration (1):** add enum values, update banner sync trigger
+- **New edge function (1):** `supabase/functions/generate-mcq-questions/index.ts`
+- **Edited (4):**
+  - `src/components/admin/BulkQuestionParser.tsx` — add AI tab
+  - `src/components/admin/TestBuilder.tsx` — expose new test types in dropdown
+  - `src/components/dashboard/WinnersSlider.tsx` — rewrite as scrolling marquee
+  - `src/pages/admin/AdminTestsPage.tsx` — add columns
+- **Verified (no edit needed):** `TestResultPage.tsx`, `HighlightedTestBanner.tsx`, RLS, leaderboard
+
+---
+
+# Notes for the user
+- **Firebase isn't needed** — your project already runs on Lovable Cloud which provides the same Auth + Database + Rules. Switching would mean rebuilding everything that already works. I'll keep the existing backend.
+- **AI question generation** uses your built-in Lovable AI (no extra API key needed).
+- **Branding** stays blue (your current SSC identity), not red/orange. Tell me if you want me to change the accent color globally.
+
+Confirm and I'll execute.
