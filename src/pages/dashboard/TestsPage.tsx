@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ClipboardList, Clock, ArrowRight, CheckCircle, Eye } from 'lucide-react';
+import { ClipboardList, Clock, ArrowRight, CheckCircle, Eye, Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { CardSkeletonGrid } from '@/components/skeletons/CardSkeleton';
 
@@ -64,6 +64,9 @@ export default function TestsPage() {
   const getAttempt = (testId: string) => {
     return attempts.find((a) => a.test_id === testId);
   };
+
+  // Active (unsubmitted) attempt for ANY test — used for hard session lock UI
+  const activeAttempt = attempts.find((a) => !a.submitted_at);
 
   if (isLoading) {
     return (
@@ -136,6 +139,11 @@ export default function TestsPage() {
                           View Result
                         </Button>
                       </Link>
+                    ) : activeAttempt && activeAttempt.test_id !== test.id ? (
+                      <Button variant="outline" disabled className="gap-2 opacity-60">
+                        <Lock className="w-4 h-4" />
+                        Locked
+                      </Button>
                     ) : (
                       <Link to={`/dashboard/tests/${test.id}`}>
                         <Button>
