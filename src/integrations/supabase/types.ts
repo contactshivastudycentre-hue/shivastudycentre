@@ -22,7 +22,6 @@ export type Database = {
           cta_text: string | null
           description: string | null
           end_date: string | null
-          event_id: string | null
           id: string
           image_url: string | null
           is_active: boolean
@@ -42,7 +41,6 @@ export type Database = {
           cta_text?: string | null
           description?: string | null
           end_date?: string | null
-          event_id?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -62,7 +60,6 @@ export type Database = {
           cta_text?: string | null
           description?: string | null
           end_date?: string | null
-          event_id?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -75,15 +72,7 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "banners_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "test_events"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       challenge_shares: {
         Row: {
@@ -165,47 +154,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      event_prizes: {
-        Row: {
-          created_at: string
-          event_id: string
-          extra_reward: string | null
-          first_prize: string | null
-          id: string
-          second_prize: string | null
-          third_prize: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          event_id: string
-          extra_reward?: string | null
-          first_prize?: string | null
-          id?: string
-          second_prize?: string | null
-          third_prize?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          event_id?: string
-          extra_reward?: string | null
-          first_prize?: string | null
-          id?: string
-          second_prize?: string | null
-          third_prize?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_prizes_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: true
-            referencedRelation: "test_events"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       last_activity: {
         Row: {
@@ -532,58 +480,49 @@ export type Database = {
           },
         ]
       }
-      test_events: {
+      test_winners: {
         Row: {
-          banner_image: string | null
+          auto_calculated: boolean
           created_at: string
-          description: string | null
-          end_date: string
-          event_name: string
-          event_type: string
+          full_name: string | null
           id: string
-          is_universal: boolean
-          results_approved: boolean
-          start_date: string
-          status: string
-          target_class: string | null
-          test_id: string | null
+          prize_text: string | null
+          rank: number
+          score: number | null
+          test_id: string
+          time_seconds: number | null
           updated_at: string
+          user_id: string
         }
         Insert: {
-          banner_image?: string | null
+          auto_calculated?: boolean
           created_at?: string
-          description?: string | null
-          end_date: string
-          event_name: string
-          event_type?: string
+          full_name?: string | null
           id?: string
-          is_universal?: boolean
-          results_approved?: boolean
-          start_date: string
-          status?: string
-          target_class?: string | null
-          test_id?: string | null
+          prize_text?: string | null
+          rank: number
+          score?: number | null
+          test_id: string
+          time_seconds?: number | null
           updated_at?: string
+          user_id: string
         }
         Update: {
-          banner_image?: string | null
+          auto_calculated?: boolean
           created_at?: string
-          description?: string | null
-          end_date?: string
-          event_name?: string
-          event_type?: string
+          full_name?: string | null
           id?: string
-          is_universal?: boolean
-          results_approved?: boolean
-          start_date?: string
-          status?: string
-          target_class?: string | null
-          test_id?: string | null
+          prize_text?: string | null
+          rank?: number
+          score?: number | null
+          test_id?: string
+          time_seconds?: number | null
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "test_events_test_id_fkey"
+            foreignKeyName: "test_winners_test_id_fkey"
             columns: ["test_id"]
             isOneToOne: false
             referencedRelation: "tests"
@@ -600,10 +539,13 @@ export type Database = {
           description: string | null
           duration_minutes: number
           end_time: string | null
+          highlight_until: string | null
           id: string
           is_published: boolean
+          results_published_at: string | null
           start_time: string | null
           subject: string
+          test_type: Database["public"]["Enums"]["test_type_enum"]
           title: string
           total_marks: number | null
           updated_at: string
@@ -616,10 +558,13 @@ export type Database = {
           description?: string | null
           duration_minutes?: number
           end_time?: string | null
+          highlight_until?: string | null
           id?: string
           is_published?: boolean
+          results_published_at?: string | null
           start_time?: string | null
           subject: string
+          test_type?: Database["public"]["Enums"]["test_type_enum"]
           title: string
           total_marks?: number | null
           updated_at?: string
@@ -632,10 +577,13 @@ export type Database = {
           description?: string | null
           duration_minutes?: number
           end_time?: string | null
+          highlight_until?: string | null
           id?: string
           is_published?: boolean
+          results_published_at?: string | null
           start_time?: string | null
           subject?: string
+          test_type?: Database["public"]["Enums"]["test_type_enum"]
           title?: string
           total_marks?: number | null
           updated_at?: string
@@ -787,8 +735,27 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: string
       }
-      get_event_leaderboard: {
-        Args: { p_event_id: string }
+      get_recent_winners: {
+        Args: { p_days?: number }
+        Returns: {
+          full_name: string
+          prize_text: string
+          rank: number
+          results_published_at: string
+          score: number
+          test_class: string
+          test_id: string
+          test_title: string
+          test_type: string
+          user_id: string
+        }[]
+      }
+      get_student_status: {
+        Args: { check_user_id?: string }
+        Returns: Database["public"]["Enums"]["student_status"]
+      }
+      get_test_leaderboard: {
+        Args: { p_test_id: string }
         Returns: {
           full_name: string
           rank: number
@@ -796,10 +763,6 @@ export type Database = {
           time_seconds: number
           user_id: string
         }[]
-      }
-      get_student_status: {
-        Args: { check_user_id?: string }
-        Returns: Database["public"]["Enums"]["student_status"]
       }
       get_video_like_count: { Args: { video_uuid: string }; Returns: number }
       is_admin: { Args: { check_user_id?: string }; Returns: boolean }
@@ -834,6 +797,7 @@ export type Database = {
         }
         Returns: number
       }
+      publish_test_results: { Args: { p_test_id: string }; Returns: Json }
       set_student_verified: {
         Args: { is_verified: boolean; target_user_id: string }
         Returns: boolean
@@ -853,10 +817,6 @@ export type Database = {
         }
         Returns: Json
       }
-      toggle_event_results_published: {
-        Args: { event_id: string; publish: boolean }
-        Returns: boolean
-      }
       track_activity: {
         Args: {
           p_content_id: string
@@ -865,6 +825,11 @@ export type Database = {
           p_title?: string
         }
         Returns: undefined
+      }
+      unpublish_test_results: { Args: { p_test_id: string }; Returns: boolean }
+      update_winner_prize: {
+        Args: { p_prize_text: string; p_winner_id: string }
+        Returns: boolean
       }
       user_has_liked_video: {
         Args: { check_user_id?: string; video_uuid: string }
@@ -880,6 +845,7 @@ export type Database = {
         | "short_answer"
         | "long_answer"
       student_status: "pending" | "approved" | "inactive"
+      test_type_enum: "standard" | "sunday_special" | "practice"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1016,6 +982,7 @@ export const Constants = {
         "long_answer",
       ],
       student_status: ["pending", "approved", "inactive"],
+      test_type_enum: ["standard", "sunday_special", "practice"],
     },
   },
 } as const

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
-import { Users, FileText, Play, ClipboardList, LogOut, Home, KeyRound, BarChart3, CalendarDays, Image as ImageIcon, Trophy, MoreHorizontal } from 'lucide-react';
+import { Users, FileText, Play, ClipboardList, LogOut, Home, KeyRound, BarChart3, Image as ImageIcon, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { Logo, LogoIcon } from '@/components/Logo';
@@ -13,18 +13,14 @@ const sidebarItems = [
   { name: 'Students', path: '/admin/students', icon: Users },
   { name: 'Tests', path: '/admin/tests', icon: ClipboardList },
   { name: 'Results', path: '/admin/results', icon: BarChart3 },
-  { name: 'Events', path: '/admin/events', icon: CalendarDays },
   { name: 'Banners', path: '/admin/banners', icon: ImageIcon },
-  { name: 'Leaderboard', path: '/admin/leaderboard', icon: Trophy },
   { name: 'Notes', path: '/admin/notes', icon: FileText },
   { name: 'Videos', path: '/admin/videos', icon: Play },
   { name: 'Password Resets', path: '/admin/password-resets', icon: KeyRound },
 ];
 
 const moreItems = [
-  { name: 'Events', path: '/admin/events', icon: CalendarDays, description: 'Sunday tests & specials' },
   { name: 'Banners', path: '/admin/banners', icon: ImageIcon, description: 'Dashboard announcements' },
-  { name: 'Leaderboard', path: '/admin/leaderboard', icon: Trophy, description: 'Approve results & rankings' },
   { name: 'Notes', path: '/admin/notes', icon: FileText, description: 'Study materials' },
   { name: 'Videos', path: '/admin/videos', icon: Play, description: 'Video lectures' },
   { name: 'Password Resets', path: '/admin/password-resets', icon: KeyRound, description: 'Reset student passwords' },

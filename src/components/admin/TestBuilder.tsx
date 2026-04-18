@@ -78,9 +78,10 @@ interface Test {
   duration_minutes: number;
   is_published: boolean;
   total_marks: number;
-  start_time: string;   // ISO string or '' (datetime-local format when in form)
+  start_time: string;
   end_time: string;
-  banner_image: string; // URL or ''
+  banner_image: string;
+  test_type: 'standard' | 'sunday_special' | 'practice';
 }
 
 const questionTypeLabels: Record<QuestionType, string> = {
@@ -134,6 +135,7 @@ export default function TestBuilder() {
     start_time: '',
     end_time: '',
     banner_image: '',
+    test_type: 'standard',
   });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
@@ -213,6 +215,7 @@ export default function TestBuilder() {
       start_time: toLocal(td.start_time),
       end_time: toLocal(td.end_time),
       banner_image: td.banner_image || '',
+      test_type: (td.test_type as Test['test_type']) || 'standard',
     });
 
     const { data: questionsData } = await supabase
@@ -387,6 +390,7 @@ export default function TestBuilder() {
             start_time: test.start_time ? new Date(test.start_time).toISOString() : null,
             end_time: test.end_time ? new Date(test.end_time).toISOString() : null,
             banner_image: test.banner_image || null,
+            test_type: test.test_type,
           } as any)
           .select()
           .single();
@@ -408,6 +412,7 @@ export default function TestBuilder() {
             start_time: test.start_time ? new Date(test.start_time).toISOString() : null,
             end_time: test.end_time ? new Date(test.end_time).toISOString() : null,
             banner_image: test.banner_image || null,
+            test_type: test.test_type,
           } as any)
           .eq('id', test.id);
 
@@ -600,6 +605,20 @@ export default function TestBuilder() {
             <div className="space-y-2">
               <Label>Subject *</Label>
               <SubjectSelect value={test.subject} onChange={(value) => setTest({ ...test, subject: value })} disabled={!isNew && test.is_published} />
+            </div>
+            <div className="space-y-2">
+              <Label>Test Type *</Label>
+              <Select value={test.test_type} onValueChange={(v) => setTest({ ...test, test_type: v as Test['test_type'] })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard Test</SelectItem>
+                  <SelectItem value="sunday_special">🔥 Sunday Special Test</SelectItem>
+                  <SelectItem value="practice">Practice Test</SelectItem>
+                </SelectContent>
+              </Select>
+              {test.test_type === 'sunday_special' && (
+                <p className="text-xs text-amber-600">Highlighted on student dashboards. Banner image required.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="duration">Duration (minutes) *</Label>

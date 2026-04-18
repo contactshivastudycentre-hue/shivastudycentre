@@ -1,223 +1,212 @@
-import { useParams, Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Crown, Medal, Award, Trophy, EyeOff, Eye, Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Trophy, Crown, Medal, Award, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
-import ChallengeFriendButton from '@/components/ChallengeFriendButton';
-import { toast } from '@/hooks/use-toast';
+
+const CLASSES = ['4', '5', '6', '7', '8', '9', '10', '11', '12'];
+const TYPE_LABELS: Record<string, string> = {
+  all: 'All Tests',
+  sunday_special: 'Sunday Special',
+  standard: 'Standard',
+  practice: 'Practice',
+};
+
+interface PublishedTest {
+  id: string;
+  title: string;
+  class: string;
+  subject: string;
+  test_type: string;
+  results_published_at: string;
+}
+
+interface LbRow {
+  rank: number;
+  user_id: string;
+  full_name: string;
+  score: number;
+  time_seconds: number;
+}
 
 export default function LeaderboardPage() {
-  const { eventId } = useParams();
-  const { user, isAdmin } = useAuth();
-  const qc = useQueryClient();
+  const { user, profile } = useAuth();
+  const [classFilter, setClassFilter] = useState<string>(profile?.class || 'all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [selectedTest, setSelectedTest] = useState<string>('');
 
-  const { data: event } = useQuery({
-    queryKey: ['event-detail', eventId],
+  // Pull all tests with published results that this student can see (RLS handles class scope)
+  const { data: tests } = useQuery({
+    queryKey: ['published-result-tests'],
     queryFn: async () => {
-      const { data } = await supabase.from('test_events').select('*').eq('id', eventId!).single() as any;
-      if (data) {
-        const { data: prizes } = await supabase.from('event_prizes').select('*').eq('event_id', data.id);
-        data.event_prizes = prizes || [];
-      }
-      return data;
+      const { data } = await supabase
+        .from('tests')
+        .select('id, title, class, subject, test_type, results_published_at')
+        .not('results_published_at', 'is', null)
+        .order('results_published_at', { ascending: false });
+      return ((data as any) || []) as PublishedTest[];
     },
-    enabled: !!eventId,
   });
 
-  const { data: leaderboard, isLoading } = useQuery({
-    queryKey: ['student-leaderboard', eventId],
+  const filteredTests = useMemo(() => {
+    let list = tests || [];
+    if (classFilter !== 'all') list = list.filter(t => t.class === classFilter);
+    if (typeFilter !== 'all') list = list.filter(t => t.test_type === typeFilter);
+    return list;
+  }, [tests, classFilter, typeFilter]);
+
+  useEffect(() => {
+    if (filteredTests.length && !filteredTests.find(t => t.id === selectedTest)) {
+      setSelectedTest(filteredTests[0].id);
+    }
+  }, [filteredTests, selectedTest]);
+
+  const { data: lb } = useQuery({
+    queryKey: ['student-test-leaderboard', selectedTest],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_event_leaderboard' as any, { p_event_id: eventId });
-      if (error) {
-        console.error('[Leaderboard] RPC error:', error);
-        return [];
-      }
-      return ((data as any[]) || []).map((row) => ({
-        rank: Number(row.rank),
-        user_id: row.user_id,
-        name: row.full_name,
-        score: row.score ?? 0,
-        time: row.time_seconds ?? 0,
-        isMe: row.user_id === user?.id,
+      const { data } = await supabase.rpc('get_test_leaderboard' as any, { p_test_id: selectedTest });
+      return ((data as any) || []).map((r: any) => ({
+        rank: Number(r.rank),
+        user_id: r.user_id,
+        full_name: r.full_name,
+        score: r.score ?? 0,
+        time_seconds: r.time_seconds ?? 0,
+        isMe: r.user_id === user?.id,
       }));
     },
-    enabled: !!eventId && (!!event?.results_approved || isAdmin),
+    enabled: !!selectedTest,
   });
 
-  const togglePublish = useMutation({
-    mutationFn: async (publish: boolean) => {
-      const { error } = await supabase.rpc('toggle_event_results_published' as any, {
-        event_id: eventId,
-        publish,
-      });
-      if (error) throw error;
-      return publish;
-    },
-    onSuccess: (publish) => {
-      qc.invalidateQueries({ queryKey: ['event-detail', eventId] });
-      qc.invalidateQueries({ queryKey: ['student-leaderboard', eventId] });
-      qc.invalidateQueries({ queryKey: ['admin-events'] });
-      toast({
-        title: publish ? 'Results published 🎉' : 'Results unpublished',
-        description: publish
-          ? 'Students can now see the leaderboard.'
-          : 'Leaderboard is hidden. You can publish again anytime.',
-      });
-    },
-    onError: (e: any) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
-  });
-
-  const prize = event?.event_prizes?.[0];
+  const activeTest = filteredTests.find(t => t.id === selectedTest);
   const fmt = (s: number) => `${Math.floor(s / 60)}m ${s % 60}s`;
 
-  const RankDisplay = ({ rank }: { rank: number }) => {
-    if (rank === 1) return <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 flex items-center justify-center shadow-lg"><Crown className="w-5 h-5 text-white" /></div>;
-    if (rank === 2) return <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center shadow-lg"><Medal className="w-5 h-5 text-white" /></div>;
-    if (rank === 3) return <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-300 to-amber-500 flex items-center justify-center shadow-lg"><Award className="w-5 h-5 text-white" /></div>;
-    return <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"><span className="font-bold text-muted-foreground">#{rank}</span></div>;
-  };
-
-  if (!event?.results_approved && !isAdmin) {
-    return (
-      <div className="space-y-4">
-        <Link to="/dashboard"><Button variant="ghost"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button></Link>
-        <Card><CardContent className="py-16 text-center text-muted-foreground">Results not yet published.</CardContent></Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button></Link>
-        {isAdmin && event && (
-          event.results_approved ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-2 text-amber-600 border-amber-300 hover:bg-amber-50"
-              onClick={() => {
-                if (confirm('Unpublish results? Students will no longer see this leaderboard until you publish again.')) {
-                  togglePublish.mutate(false);
-                }
-              }}
-              disabled={togglePublish.isPending}
-            >
-              {togglePublish.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <EyeOff className="w-4 h-4" />}
-              Unpublish Results
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              className="gap-2 bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => togglePublish.mutate(true)}
-              disabled={togglePublish.isPending}
-            >
-              {togglePublish.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-              Publish Results
-            </Button>
-          )
-        )}
+    <div className="space-y-6 animate-fade-in pb-12 max-w-3xl mx-auto">
+      <div>
+        <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
+          <Trophy className="w-6 h-6 text-amber-500" /> Leaderboard
+        </h1>
+        <p className="text-muted-foreground text-sm">Browse rankings from any class and test type</p>
       </div>
 
-      {isAdmin && !event?.results_approved && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <strong>Admin preview:</strong> Results are currently <span className="font-semibold">unpublished</span>. Students cannot see this leaderboard.
-        </div>
-      )}
+      {/* Filters */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <Select value={classFilter} onValueChange={setClassFilter}>
+          <SelectTrigger><SelectValue placeholder="Class" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Classes</SelectItem>
+            {CLASSES.map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
+          <SelectContent>
+            {Object.entries(TYPE_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={selectedTest} onValueChange={setSelectedTest}>
+          <SelectTrigger className="col-span-2 sm:col-span-1"><SelectValue placeholder="Pick a test" /></SelectTrigger>
+          <SelectContent>
+            {filteredTests.length === 0 && <div className="p-2 text-xs text-muted-foreground">No published results</div>}
+            {filteredTests.map(t => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.test_type === 'sunday_special' ? '🔥 ' : ''}{t.title} • C{t.class}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      {/* Event Header */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl hero-gradient p-6 text-white">
-        <div className="flex items-center gap-2 mb-2">
-          <Trophy className="w-6 h-6 text-yellow-300" />
-          <h1 className="text-xl font-display font-bold">{event?.event_name}</h1>
-        </div>
-        {prize && (
-          <div className="flex flex-wrap gap-3 mt-3">
-            {prize.first_prize && <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-sm">🥇 {prize.first_prize}</span>}
-            {prize.second_prize && <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-sm">🥈 {prize.second_prize}</span>}
-            {prize.third_prize && <span className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-sm">🥉 {prize.third_prize}</span>}
-          </div>
-        )}
-      </motion.div>
-
-      {/* Top 3 Podium */}
-      {leaderboard && leaderboard.length >= 3 && (
-        <div className="grid grid-cols-3 gap-2">
-          {[1, 0, 2].map(idx => {
-            const e = leaderboard[idx];
-            if (!e) return null;
-            const colors = ['border-yellow-400 bg-yellow-50', 'border-gray-300 bg-gray-50', 'border-orange-400 bg-orange-50'];
-            const heights = ['pt-4', 'pt-8', 'pt-10'];
-            const emojis = ['🥇', '🥈', '🥉'];
-            return (
-              <motion.div
-                key={e.rank}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: idx * 0.1 }}
-                className={`flex flex-col items-center ${heights[idx]}`}
-              >
-                <span className="text-2xl">{emojis[idx]}</span>
-                <p className={`font-display font-bold text-sm text-center mt-1 ${e.isMe ? 'text-primary' : 'text-foreground'}`}>{e.name}</p>
-                <p className="text-lg font-bold text-primary">{e.score}</p>
-                <p className="text-xs text-muted-foreground">{fmt(e.time)}</p>
-                <div className={`w-full h-16 sm:h-20 rounded-t-xl mt-2 border-2 ${colors[idx]} flex items-center justify-center`}>
-                  <span className="font-display font-bold text-lg text-foreground">#{e.rank}</span>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Full Rankings */}
-      <Card>
-        <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Trophy className="w-5 h-5" />Full Rankings</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <p className="p-6 text-center text-muted-foreground">Loading...</p>
-          ) : !leaderboard?.length ? (
-            <p className="p-6 text-center text-muted-foreground">No results yet</p>
-          ) : (
-            <div className="divide-y">
-              {leaderboard.map(entry => (
-                <motion.div
-                  key={entry.rank}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className={`flex items-center gap-3 p-3 ${entry.isMe ? 'bg-primary/5 border-l-4 border-l-primary' : ''}`}
-                >
-                  <RankDisplay rank={entry.rank} />
-                  <div className="flex-1 min-w-0">
-                    <p className={`font-medium truncate ${entry.isMe ? 'text-primary font-bold' : 'text-foreground'}`}>
-                      {entry.name} {entry.isMe && '(You)'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{fmt(entry.time)}</p>
-                  </div>
-                  <span className="font-display font-bold text-lg text-primary">{entry.score}</span>
-                </motion.div>
-              ))}
+      {!selectedTest ? (
+        <Card><CardContent className="py-12 text-center text-muted-foreground">Select a test to view rankings</CardContent></Card>
+      ) : (
+        <>
+          {/* Test header */}
+          {activeTest && (
+            <div className={`rounded-2xl p-5 text-white ${
+              activeTest.test_type === 'sunday_special'
+                ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500'
+                : 'bg-gradient-to-r from-indigo-600 to-purple-600'
+            }`}>
+              <div className="flex items-center gap-2 mb-1 text-[11px] font-bold uppercase tracking-widest">
+                {activeTest.test_type === 'sunday_special' && <Sparkles className="w-3 h-3" />}
+                {TYPE_LABELS[activeTest.test_type] || activeTest.test_type} • Class {activeTest.class}
+              </div>
+              <h2 className="font-display text-xl font-bold">{activeTest.title}</h2>
+              <p className="text-sm opacity-90">{activeTest.subject}</p>
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      {/* Challenge a Friend (if current user is on the board) */}
-      {leaderboard?.some(e => e.isMe) && (() => {
-        const me = leaderboard.find(e => e.isMe)!;
-        return (
-          <ChallengeFriendButton
-            testId={event?.test_id || undefined}
-            score={me.score}
-            testTitle={event?.event_name}
-            rank={me.rank}
-          />
-        );
-      })()}
+          {/* Top 3 podium */}
+          {lb && lb.length >= 3 && (
+            <div className="grid grid-cols-3 gap-2">
+              {[1, 0, 2].map(idx => {
+                const e = lb[idx];
+                if (!e) return null;
+                const colors = ['border-yellow-400 bg-yellow-50', 'border-gray-300 bg-gray-50', 'border-orange-400 bg-orange-50'];
+                const heights = ['pt-4', 'pt-8', 'pt-10'];
+                const emojis = ['🥇', '🥈', '🥉'];
+                return (
+                  <motion.div
+                    key={e.rank}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: idx * 0.1 }}
+                    className={`flex flex-col items-center ${heights[idx]}`}
+                  >
+                    <span className="text-2xl">{emojis[idx]}</span>
+                    <p className={`font-display font-bold text-sm text-center mt-1 ${e.isMe ? 'text-primary' : 'text-foreground'}`}>{e.full_name}</p>
+                    <p className="text-lg font-bold text-primary">{e.score}</p>
+                    <p className="text-xs text-muted-foreground">{fmt(e.time_seconds)}</p>
+                    <div className={`w-full h-16 sm:h-20 rounded-t-xl mt-2 border-2 ${colors[idx]} flex items-center justify-center`}>
+                      <span className="font-display font-bold text-lg text-foreground">#{e.rank}</span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Full rankings */}
+          <Card>
+            <CardHeader><CardTitle className="text-lg">Full Rankings</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              {!lb?.length ? (
+                <p className="p-6 text-center text-muted-foreground">No rankings yet</p>
+              ) : (
+                <div className="divide-y">
+                  {lb.map((entry: any) => (
+                    <motion.div
+                      key={entry.user_id + entry.rank}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className={`flex items-center gap-3 p-3 ${entry.isMe ? 'bg-primary/5 border-l-4 border-l-primary' : ''}`}
+                    >
+                      <div className="w-10 flex-shrink-0">
+                        {entry.rank === 1 ? <Crown className="w-6 h-6 text-yellow-500" />
+                          : entry.rank === 2 ? <Medal className="w-6 h-6 text-gray-400" />
+                          : entry.rank === 3 ? <Award className="w-6 h-6 text-amber-600" />
+                          : <span className="text-sm font-bold text-muted-foreground">#{entry.rank}</span>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-medium truncate ${entry.isMe ? 'text-primary font-bold' : 'text-foreground'}`}>
+                          {entry.full_name} {entry.isMe && '(You)'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{fmt(entry.time_seconds)}</p>
+                      </div>
+                      <Badge variant="outline" className="font-bold">{entry.score}</Badge>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

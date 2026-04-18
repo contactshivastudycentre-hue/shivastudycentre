@@ -316,14 +316,13 @@ export default function TestAttemptPage() {
       setTest(testData);
       setTimeLeft(testData.duration_minutes * 60);
 
-      // Detect if this test is linked to a Sunday Special event
-      const { data: eventData } = await supabase
-        .from('test_events')
-        .select('event_type')
-        .eq('test_id', testId)
-        .eq('event_type', 'sunday_special')
+      // Detect if this test is a Sunday Special (test_type field on tests)
+      const { data: typeData } = await supabase
+        .from('tests')
+        .select('test_type')
+        .eq('id', testId)
         .maybeSingle();
-      if (eventData?.event_type === 'sunday_special') {
+      if ((typeData as any)?.test_type === 'sunday_special') {
         setIsSundaySpecial(true);
       }
 
