@@ -148,35 +148,40 @@ export default function TestsPage() {
           {tests.map((test) => {
             const attempt = getAttempt(test.id);
             const isCompleted = attempt?.submitted_at;
+            const phase = getPhase(test, now);
+            const phaseBadge = phase === 'upcoming'
+              ? <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700 inline-flex items-center gap-1"><Calendar className="w-3 h-3" />UPCOMING · {test.start_time && formatCountdown(new Date(test.start_time), now)}</span>
+              : phase === 'live'
+              ? <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-700 inline-flex items-center gap-1 animate-pulse"><Radio className="w-3 h-3" />LIVE · ends in {test.end_time && formatCountdown(new Date(test.end_time), now)}</span>
+              : phase === 'closed'
+              ? <span className="text-xs font-bold px-2 py-1 rounded-full bg-gray-200 text-gray-600">TEST CLOSED</span>
+              : null;
 
             return (
               <div key={test.id} className="dashboard-card">
+                {test.banner_image && (
+                  <img src={test.banner_image} alt="" className="w-full h-32 object-cover rounded-xl mb-3" loading="lazy" />
+                )}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-accent text-accent-foreground">
-                        {test.subject}
-                      </span>
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
-                        {test.class}
-                      </span>
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-accent text-accent-foreground">{test.subject}</span>
+                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-secondary text-secondary-foreground">Class {test.class}</span>
+                      {phaseBadge}
                     </div>
                     <h3 className="text-lg font-semibold text-foreground mb-1">{test.title}</h3>
-                    {test.description && (
-                      <p className="text-sm text-muted-foreground mb-3">{test.description}</p>
-                    )}
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {test.duration_minutes} minutes
-                      </span>
+                    {test.description && <p className="text-sm text-muted-foreground mb-3">{test.description}</p>}
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                      <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{test.duration_minutes} minutes</span>
+                      {test.start_time && phase !== 'always' && (
+                        <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{new Date(test.start_time).toLocaleString()}</span>
+                      )}
                       {isCompleted && (
                         <span className="flex items-center gap-1 text-success">
                           <CheckCircle className="w-4 h-4" />
-                          {attempt?.evaluation_status === 'pending' 
+                          {attempt?.evaluation_status === 'pending'
                             ? `MCQ: ${attempt.mcq_score || 0} marks (Review pending)`
-                            : `Score: ${attempt?.score || 0}%`
-                          }
+                            : `Score: ${attempt?.score || 0}%`}
                         </span>
                       )}
                     </div>
@@ -184,22 +189,17 @@ export default function TestsPage() {
                   <div>
                     {isCompleted ? (
                       <Link to={`/dashboard/results/${attempt?.id}`}>
-                        <Button variant="outline" className="gap-2">
-                          <Eye className="w-4 h-4" />
-                          View Result
-                        </Button>
+                        <Button variant="outline" className="gap-2"><Eye className="w-4 h-4" />View Result</Button>
                       </Link>
+                    ) : phase === 'upcoming' ? (
+                      <Button variant="outline" disabled className="gap-2 opacity-60"><Calendar className="w-4 h-4" />Upcoming</Button>
+                    ) : phase === 'closed' ? (
+                      <Button variant="outline" disabled className="gap-2 opacity-60"><Lock className="w-4 h-4" />Closed</Button>
                     ) : activeAttempt && activeAttempt.test_id !== test.id ? (
-                      <Button variant="outline" disabled className="gap-2 opacity-60">
-                        <Lock className="w-4 h-4" />
-                        Locked
-                      </Button>
+                      <Button variant="outline" disabled className="gap-2 opacity-60"><Lock className="w-4 h-4" />Locked</Button>
                     ) : (
                       <Link to={`/dashboard/tests/${test.id}`}>
-                        <Button>
-                          {attempt ? 'Continue' : 'Start Test'}
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
+                        <Button>{attempt ? 'Continue' : 'Start Test'}<ArrowRight className="w-4 h-4 ml-2" /></Button>
                       </Link>
                     )}
                   </div>
