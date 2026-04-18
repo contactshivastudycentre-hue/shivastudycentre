@@ -105,6 +105,7 @@ const App = () => (
               <Route path="videos" element={<AdminVideosPage />} />
               <Route path="password-resets" element={<AdminPasswordResetPage />} />
               <Route path="banners" element={<AdminBannersPage />} />
+              <Route path="leaderboard" element={<LeaderboardPage />} />
             </Route>
 
             {/* 404 */}
