@@ -1183,7 +1183,7 @@ export default function TestAttemptPage() {
       )}
 
       {/* Question Navigator */}
-      {showNavigator && (
+      {showNavigator && !isSundaySpecial && (
         <div className="mt-4 p-4 bg-card rounded-xl border">
           <div className="flex flex-wrap gap-2">
             {shuffledQuestions.map((q, index) => {
