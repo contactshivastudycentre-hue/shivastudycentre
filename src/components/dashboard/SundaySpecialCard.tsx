@@ -155,14 +155,19 @@ export function SundaySpecialCard() {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
+          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
             <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-500 to-orange-500 text-white">
               Sunday Special
             </span>
+            {phase === 'upcoming' && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary text-primary-foreground">
+                📡 Upcoming Broadcast
+              </span>
+            )}
             {phase === 'live' && (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
-                LIVE
+                LIVE NOW
               </span>
             )}
           </div>
