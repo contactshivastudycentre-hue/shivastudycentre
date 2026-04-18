@@ -733,11 +733,18 @@ Answer: A`}
         <DialogFooter className="gap-2 pt-4 border-t">
           {step === 'paste' ? (
             <>
-              <Button variant="outline" onClick={handleClose}>Cancel</Button>
-              <Button onClick={parseQuestions}>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Parse Questions
-              </Button>
+              <Button variant="outline" onClick={handleClose} disabled={aiLoading}>Cancel</Button>
+              {pasteTab === 'ai' ? (
+                <Button onClick={generateWithAI} disabled={aiLoading || !aiTopic.trim()}>
+                  {aiLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+                  {aiLoading ? 'Generating…' : 'Generate Questions'}
+                </Button>
+              ) : (
+                <Button onClick={parseQuestions}>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Parse Questions
+                </Button>
+              )}
             </>
           ) : (
             <>
