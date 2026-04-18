@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send, Shield, Loader2, AlertTriangle, WifiOff, RefreshCw, Eye } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send, Shield, Loader2, AlertTriangle, WifiOff, RefreshCw, Eye, Wifi, Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAntiCheat } from '@/hooks/useAntiCheat';
