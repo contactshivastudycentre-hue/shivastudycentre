@@ -199,6 +199,8 @@ export default function TestBuilder() {
       return;
     }
 
+    const td: any = testData;
+    const toLocal = (iso?: string | null) => (iso ? iso.slice(0, 16) : '');
     setTest({
       id: testData.id,
       title: testData.title,
@@ -208,6 +210,9 @@ export default function TestBuilder() {
       duration_minutes: testData.duration_minutes,
       is_published: testData.is_published,
       total_marks: testData.total_marks || 0,
+      start_time: toLocal(td.start_time),
+      end_time: toLocal(td.end_time),
+      banner_image: td.banner_image || '',
     });
 
     const { data: questionsData } = await supabase
