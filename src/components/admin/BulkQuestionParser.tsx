@@ -465,6 +465,10 @@ export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQ
     setStep('paste');
     setExpandedCards(new Set());
     setEditingId(null);
+    setAiTopic('');
+    setAiCount('10');
+    setAiLoading(false);
+    setPasteTab('ai');
     onOpenChange(false);
   };
 
