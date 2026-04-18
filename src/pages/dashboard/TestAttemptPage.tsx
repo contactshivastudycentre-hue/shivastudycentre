@@ -616,26 +616,100 @@ export default function TestAttemptPage() {
     localStorage.setItem(LOCAL_STORAGE_KEY + testId, JSON.stringify(saveData));
   }, [answers, attemptId, isCompleted, testId]);
 
-  // Periodic save to database (every 15 seconds)
+  // Instant (debounced) per-answer save to database — non-blocking
+  // Triggers shortly after the student selects/types. Shows "Saving..." -> "Saved ✓".
+  useEffect(() => {
+    if (!attemptId || isCompleted) return;
+    if (Object.keys(answers).length === 0) return;
+
+    // Mark dirty immediately
+    setSaveStatus('saving');
+
+    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+    saveDebounceRef.current = setTimeout(async () => {
+      if (!navigator.onLine) {
+        // Defer until reconnect
+        pendingSyncRef.current = true;
+        setSaveStatus('error');
+        return;
+      }
+      try {
+        const { error } = await supabase
+          .from('test_attempts')
+          .update({ answers: JSON.parse(JSON.stringify(answers)) })
+          .eq('id', attemptId);
+        if (error) throw error;
+        pendingSyncRef.current = false;
+        setSaveStatus('saved');
+        // Briefly flash "Saved ✓" then fade to idle
+        if (savedFlashRef.current) clearTimeout(savedFlashRef.current);
+        savedFlashRef.current = setTimeout(() => setSaveStatus('idle'), 1500);
+      } catch (e) {
+        console.error('Instant save failed:', e);
+        pendingSyncRef.current = true;
+        setSaveStatus('error');
+      }
+    }, 600);
+
+    return () => {
+      if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+    };
+  }, [answers, attemptId, isCompleted]);
+
+  // Periodic safety-net save to database (every 15 seconds)
   useEffect(() => {
     if (!attemptId || isCompleted) return;
 
     const saveTimer = setInterval(async () => {
       if (!navigator.onLine) return; // Skip if offline
-      
       try {
         await supabase
           .from('test_attempts')
           .update({ answers: JSON.parse(JSON.stringify(answers)) })
           .eq('id', attemptId);
+        pendingSyncRef.current = false;
       } catch (e) {
-        // Silent fail for auto-save
         console.error('Auto-save failed:', e);
       }
     }, 15000);
 
     return () => clearInterval(saveTimer);
   }, [answers, attemptId, isCompleted]);
+
+  // Online/offline tracking + flush pending answers on reconnect
+  useEffect(() => {
+    const handleOnline = async () => {
+      setIsOnline(true);
+      if (pendingSyncRef.current && attemptId && !isCompleted) {
+        setSaveStatus('saving');
+        try {
+          await supabase
+            .from('test_attempts')
+            .update({ answers: JSON.parse(JSON.stringify(answers)) })
+            .eq('id', attemptId);
+          pendingSyncRef.current = false;
+          setSaveStatus('saved');
+          if (savedFlashRef.current) clearTimeout(savedFlashRef.current);
+          savedFlashRef.current = setTimeout(() => setSaveStatus('idle'), 1500);
+          toast({
+            title: 'Back online',
+            description: 'Your answers have been synced.',
+          });
+        } catch (e) {
+          console.error('Reconnect sync failed:', e);
+          setSaveStatus('error');
+        }
+      }
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [answers, attemptId, isCompleted, toast]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
