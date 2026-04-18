@@ -61,10 +61,15 @@ export default function AdminEventsPage() {
     },
   });
 
+  // Events can only REFERENCE published tests — they cannot create tests or questions.
   const { data: tests } = useQuery({
-    queryKey: ['admin-tests-list'],
+    queryKey: ['admin-tests-list-published'],
     queryFn: async () => {
-      const { data } = await supabase.from('tests').select('id, title, class, subject').order('title');
+      const { data } = await supabase
+        .from('tests')
+        .select('id, title, class, subject, is_published')
+        .eq('is_published', true)
+        .order('title');
       return data || [];
     },
   });
