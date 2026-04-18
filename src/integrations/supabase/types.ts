@@ -390,6 +390,45 @@ export type Database = {
         }
         Relationships: []
       }
+      question_progress: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          current_question_index: number
+          id: string
+          is_completed: boolean
+          per_question_seconds: number
+          question_started_at: string
+          test_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          current_question_index?: number
+          id?: string
+          is_completed?: boolean
+          per_question_seconds?: number
+          question_started_at?: string
+          test_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          current_question_index?: number
+          id?: string
+          is_completed?: boolean
+          per_question_seconds?: number
+          question_started_at?: string
+          test_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       questions: {
         Row: {
           correct_answers: Json | null
@@ -445,6 +484,7 @@ export type Database = {
           manual_score: number | null
           mcq_score: number | null
           score: number | null
+          sequence_locked: boolean
           started_at: string
           submitted_at: string | null
           test_id: string
@@ -460,6 +500,7 @@ export type Database = {
           manual_score?: number | null
           mcq_score?: number | null
           score?: number | null
+          sequence_locked?: boolean
           started_at?: string
           submitted_at?: string | null
           test_id: string
@@ -475,6 +516,7 @@ export type Database = {
           manual_score?: number | null
           mcq_score?: number | null
           score?: number | null
+          sequence_locked?: boolean
           started_at?: string
           submitted_at?: string | null
           test_id?: string
@@ -726,6 +768,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      advance_sunday_question: {
+        Args: { p_attempt_id: string; p_next_index: number }
+        Returns: Json
+      }
       can_access_content: { Args: { check_user_id?: string }; Returns: boolean }
       delete_student: { Args: { student_user_id: string }; Returns: boolean }
       get_email_by_user_id: {
@@ -782,6 +828,10 @@ export type Database = {
       set_student_verified: {
         Args: { is_verified: boolean; target_user_id: string }
         Returns: boolean
+      }
+      start_sunday_question: {
+        Args: { p_attempt_id: string; p_question_index: number }
+        Returns: Json
       }
       submit_test_attempt: {
         Args: {

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { BannerCarousel } from '@/components/dashboard/BannerCarousel';
+import { SundaySpecialCard } from '@/components/dashboard/SundaySpecialCard';
 import { TrendingContent } from '@/components/dashboard/TrendingContent';
 import { EventLeaderboards } from '@/components/dashboard/EventLeaderboards';
 import { ResumeLearning } from '@/components/dashboard/ResumeLearning';
@@ -80,6 +81,9 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
+      {/* Sunday Special highlight (realtime, only renders when an event exists) */}
+      <SundaySpecialCard />
+
       {/* Hero Banner */}
       <motion.div {...fadeInUp}>
         <BannerCarousel />

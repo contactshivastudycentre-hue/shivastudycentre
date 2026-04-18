@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { Link } from 'react-router-dom';
@@ -8,12 +8,15 @@ type BannerRow = {
   id: string;
   image_url: string | null;
   cta_link: string | null;
+  template?: string | null;
   start_date?: string | null;
   end_date?: string | null;
+  priority?: number | null;
 };
 
 export function BannerCarousel() {
   const { profile } = useAuth();
+  const qc = useQueryClient();
   const [current, setCurrent] = useState(0);
 
   const { data: banners } = useQuery({
@@ -22,7 +25,7 @@ export function BannerCarousel() {
       const nowIso = new Date().toISOString();
       const { data } = await supabase
         .from('banners')
-        .select('id, image_url, cta_link, start_date, end_date')
+        .select('id, image_url, cta_link, template, start_date, end_date, priority')
         .eq('is_active', true)
         .or(`start_date.is.null,start_date.lte.${nowIso}`)
         .or(`end_date.is.null,end_date.gte.${nowIso}`)
@@ -34,6 +37,21 @@ export function BannerCarousel() {
     refetchInterval: 60000,
     refetchOnWindowFocus: true,
   });
+
+  // Realtime: refresh banners as soon as admin creates/updates one
+  useEffect(() => {
+    const channel = supabase
+      .channel('banners-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'banners' },
+        () => qc.invalidateQueries({ queryKey: ['student-banners'] }),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qc]);
 
   // Auto-slide every 5 seconds
   useEffect(() => {
@@ -63,6 +81,7 @@ export function BannerCarousel() {
   if (!banners?.length) return null;
 
   const banner = banners[current];
+  const isSunday = banner.template === 'sunday_special';
 
   const ImageEl = (
     <img
@@ -87,6 +106,13 @@ export function BannerCarousel() {
         </Link>
       ) : (
         ImageEl
+      )}
+
+      {/* Sunday Special label badge */}
+      {isSunday && (
+        <div className="absolute top-2 left-2 z-10 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md">
+          🏆 Special Sunday Test – SSC
+        </div>
       )}
 
       {banners.length > 1 && (

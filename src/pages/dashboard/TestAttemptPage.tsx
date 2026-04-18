@@ -77,6 +77,11 @@ export default function TestAttemptPage() {
   const [violationCount, setViolationCount] = useState(0);
   const [hasDescriptiveQuestions, setHasDescriptiveQuestions] = useState(false);
 
+  // Sunday Special locked-sequence state
+  const [isSundaySpecial, setIsSundaySpecial] = useState(false);
+  const [questionTimeLeft, setQuestionTimeLeft] = useState(60);
+  const [slideDirection, setSlideDirection] = useState<'in' | 'out'>('in');
+
   // Per-student question shuffle (deterministic — same student sees same order
   // on refresh, different students see different orders). Seed = attemptId.
   const shuffledQuestions = attemptId
@@ -303,6 +308,17 @@ export default function TestAttemptPage() {
       setTest(testData);
       setTimeLeft(testData.duration_minutes * 60);
 
+      // Detect if this test is linked to a Sunday Special event
+      const { data: eventData } = await supabase
+        .from('test_events')
+        .select('event_type')
+        .eq('test_id', testId)
+        .eq('event_type', 'sunday_special')
+        .maybeSingle();
+      if (eventData?.event_type === 'sunday_special') {
+        setIsSundaySpecial(true);
+      }
+
       // Track resume-learning activity (fire and forget)
       supabase.rpc('track_activity', {
         p_content_type: 'test',
@@ -465,8 +481,97 @@ export default function TestAttemptPage() {
     }
   };
 
-  // Timer
+  // Locked-sequence auto-advance for Sunday Special tests
+  // Saves current answer, advances to next question, resets backend timer
+  const handleSundayAutoAdvance = useCallback(async () => {
+    if (!attemptId || !isSundaySpecial) return;
+    const isLast = currentIndex >= shuffledQuestions.length - 1;
+
+    // Persist current answer to DB (best-effort)
+    try {
+      await supabase
+        .from('test_attempts')
+        .update({ answers: JSON.parse(JSON.stringify(answers)) })
+        .eq('id', attemptId);
+    } catch (e) {
+      console.error('Sunday autosave failed:', e);
+    }
+
+    if (isLast) {
+      // Last question — submit
+      submitTest(true);
+      return;
+    }
+
+    // Slide-out animation, then advance
+    setSlideDirection('out');
+    setTimeout(async () => {
+      const nextIndex = currentIndex + 1;
+      try {
+        await supabase.rpc('advance_sunday_question', {
+          p_attempt_id: attemptId,
+          p_next_index: nextIndex,
+        });
+      } catch (e) {
+        console.error('advance_sunday_question failed:', e);
+      }
+      setCurrentIndex(nextIndex);
+      setQuestionTimeLeft(60);
+      setSlideDirection('in');
+    }, 200);
+  }, [attemptId, isSundaySpecial, currentIndex, shuffledQuestions.length, answers, submitTest]);
+
+  // Sync per-question timer with backend (anti-cheat: refresh restores remaining time)
   useEffect(() => {
+    if (!isSundaySpecial || !attemptId || isCompleted) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.rpc('start_sunday_question', {
+          p_attempt_id: attemptId,
+          p_question_index: currentIndex,
+        });
+        if (cancelled) return;
+        const result = data as { remaining_seconds?: number; forced_question_index?: number };
+        if (typeof result?.forced_question_index === 'number' && result.forced_question_index !== currentIndex) {
+          // Backend forces them back to the question they're supposed to be on
+          setCurrentIndex(result.forced_question_index);
+          setQuestionTimeLeft(result.remaining_seconds ?? 60);
+          return;
+        }
+        setQuestionTimeLeft(Math.max(0, result?.remaining_seconds ?? 60));
+      } catch (e) {
+        console.error('start_sunday_question failed:', e);
+        setQuestionTimeLeft(60);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSundaySpecial, attemptId, currentIndex, isCompleted]);
+
+  // Per-question countdown for Sunday Special
+  useEffect(() => {
+    if (!isSundaySpecial || !attemptId || isCompleted) return;
+    if (questionTimeLeft <= 0) {
+      handleSundayAutoAdvance();
+      return;
+    }
+    const id = setInterval(() => {
+      setQuestionTimeLeft((prev) => {
+        if (prev <= 1) {
+          handleSundayAutoAdvance();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isSundaySpecial, attemptId, isCompleted, questionTimeLeft, handleSundayAutoAdvance]);
+
+  // Overall test timer (skipped for Sunday Special — that uses per-question timer)
+  useEffect(() => {
+    if (isSundaySpecial) return;
     if (!attemptId || isCompleted || timeLeft <= 0) return;
 
     const timer = setInterval(() => {
@@ -481,7 +586,7 @@ export default function TestAttemptPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [attemptId, isCompleted, timeLeft, submitTest]);
+  }, [attemptId, isCompleted, timeLeft, submitTest, isSundaySpecial]);
 
   // Auto-save to local storage (every answer change)
   useEffect(() => {
@@ -822,19 +927,43 @@ export default function TestAttemptPage() {
             </div>
           )}
           
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-full font-mono font-semibold ${
-            timeLeft < 60 ? 'bg-destructive/10 text-destructive animate-pulse' : 
-            timeLeft < 300 ? 'bg-warning/10 text-warning' : 
-            'bg-accent text-accent-foreground'
-          }`}>
-            <Clock className="w-4 h-4" />
-            {formatTime(timeLeft)}
-          </div>
+          {isSundaySpecial ? (
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full font-mono font-bold text-base ${
+              questionTimeLeft <= 10
+                ? 'bg-destructive/10 text-destructive animate-pulse'
+                : questionTimeLeft <= 20
+                ? 'bg-warning/10 text-warning'
+                : 'bg-primary/10 text-primary'
+            }`}>
+              <Clock className="w-4 h-4" />
+              {questionTimeLeft.toString().padStart(2, '0')}s
+            </div>
+          ) : (
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full font-mono font-semibold ${
+              timeLeft < 60 ? 'bg-destructive/10 text-destructive animate-pulse' :
+              timeLeft < 300 ? 'bg-warning/10 text-warning' :
+              'bg-accent text-accent-foreground'
+            }`}>
+              <Clock className="w-4 h-4" />
+              {formatTime(timeLeft)}
+            </div>
+          )}
         </div>
-        
+
+        {isSundaySpecial && (
+          <div className="mt-1 flex items-center gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+              🏆 Sunday Special
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              Locked sequence — no going back
+            </span>
+          </div>
+        )}
+
         {/* Progress bar */}
         <div className="mt-2 h-1 bg-secondary rounded-full overflow-hidden">
-          <div 
+          <div
             className="h-full bg-primary transition-all duration-300"
             style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
           />
@@ -842,27 +971,48 @@ export default function TestAttemptPage() {
       </div>
 
       {/* Question Card */}
-      <div className="dashboard-card mb-4">
+      <div
+        key={isSundaySpecial ? `q-${currentIndex}` : 'standard'}
+        className={`dashboard-card mb-4 ${
+          isSundaySpecial
+            ? slideDirection === 'in'
+              ? 'animate-[slideInRight_0.3s_ease-out]'
+              : 'opacity-0 -translate-x-8 transition-all duration-200'
+            : ''
+        }`}
+        style={{
+          // Inline keyframes for slide-in (slide-left = next question slides in from right)
+          ...(isSundaySpecial ? {} : {}),
+        }}
+      >
+        <style>{`
+          @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+        `}</style>
         <div className="flex items-center justify-between mb-4">
           <span className="text-xs font-medium px-2 py-1 rounded-full bg-accent text-accent-foreground">
             {currentQuestion?.marks} mark{currentQuestion?.marks !== 1 ? 's' : ''}
           </span>
-          <Button
-            variant={isMarked ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => {
-              const newMarked = new Set(markedForReview);
-              if (isMarked) {
-                newMarked.delete(currentQuestion.id);
-              } else {
-                newMarked.add(currentQuestion.id);
-              }
-              setMarkedForReview(newMarked);
-            }}
-          >
-            <Flag className={`w-4 h-4 mr-1 ${isMarked ? 'fill-current' : ''}`} />
-            {isMarked ? 'Marked' : 'Mark for Review'}
-          </Button>
+          {!isSundaySpecial && (
+            <Button
+              variant={isMarked ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => {
+                const newMarked = new Set(markedForReview);
+                if (isMarked) {
+                  newMarked.delete(currentQuestion.id);
+                } else {
+                  newMarked.add(currentQuestion.id);
+                }
+                setMarkedForReview(newMarked);
+              }}
+            >
+              <Flag className={`w-4 h-4 mr-1 ${isMarked ? 'fill-current' : ''}`} />
+              {isMarked ? 'Marked' : 'Mark for Review'}
+            </Button>
+          )}
         </div>
         
         <p className="text-lg font-medium text-foreground mb-6 leading-relaxed">
@@ -947,59 +1097,93 @@ export default function TestAttemptPage() {
       </div>
 
       {/* Navigation Buttons */}
-      <div className="flex items-center justify-between gap-3">
-        <Button
-          variant="outline"
-          onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-          disabled={currentIndex === 0}
-          className="flex-1 sm:flex-none"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Previous
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowNavigator(!showNavigator)}
-          className="hidden sm:flex"
-        >
-          {getAnsweredCount()}/{questions.length} answered
-        </Button>
-
-        {currentIndex === questions.length - 1 ? (
-          <Button 
-            onClick={() => setShowSubmitDialog(true)} 
-            disabled={submitState !== 'idle'}
-            className="flex-1 sm:flex-none"
-          >
-            <Send className="w-4 h-4 mr-2" />
-            Submit Test
-          </Button>
-        ) : (
+      {isSundaySpecial ? (
+        <div className="flex items-center justify-between gap-3">
           <Button
-            onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
+            variant="outline"
+            disabled
+            className="flex-1 sm:flex-none opacity-50"
+            title="Locked sequence — Sunday Special tests cannot go back"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Locked
+          </Button>
+          {currentIndex === shuffledQuestions.length - 1 ? (
+            <Button
+              onClick={() => handleSundayAutoAdvance()}
+              disabled={submitState !== 'idle'}
+              className="flex-1 sm:flex-none"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Submit Final Answer
+            </Button>
+          ) : (
+            <Button
+              onClick={() => handleSundayAutoAdvance()}
+              className="flex-1 sm:flex-none"
+            >
+              Next Question
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+            disabled={currentIndex === 0}
             className="flex-1 sm:flex-none"
           >
-            Next
-            <ArrowRight className="w-4 h-4 ml-2" />
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Previous
           </Button>
-        )}
-      </div>
 
-      {/* Question Navigator Toggle for Mobile */}
-      <div className="mt-4 sm:hidden">
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => setShowNavigator(!showNavigator)}
-        >
-          Question Navigator ({getAnsweredCount()}/{questions.length} answered)
-        </Button>
-      </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowNavigator(!showNavigator)}
+            className="hidden sm:flex"
+          >
+            {getAnsweredCount()}/{questions.length} answered
+          </Button>
+
+          {currentIndex === questions.length - 1 ? (
+            <Button
+              onClick={() => setShowSubmitDialog(true)}
+              disabled={submitState !== 'idle'}
+              className="flex-1 sm:flex-none"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Submit Test
+            </Button>
+          ) : (
+            <Button
+              onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
+              className="flex-1 sm:flex-none"
+            >
+              Next
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Question Navigator Toggle for Mobile (hidden in Sunday Special) */}
+      {!isSundaySpecial && (
+        <div className="mt-4 sm:hidden">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => setShowNavigator(!showNavigator)}
+          >
+            Question Navigator ({getAnsweredCount()}/{questions.length} answered)
+          </Button>
+        </div>
+      )}
 
       {/* Question Navigator */}
-      {showNavigator && (
+      {showNavigator && !isSundaySpecial && (
         <div className="mt-4 p-4 bg-card rounded-xl border">
           <div className="flex flex-wrap gap-2">
             {shuffledQuestions.map((q, index) => {
