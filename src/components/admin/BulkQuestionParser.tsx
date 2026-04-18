@@ -18,19 +18,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { 
-  FileText, 
-  Sparkles, 
-  CheckCircle, 
-  Trash2, 
-  Edit2, 
+import {
+  FileText,
+  Sparkles,
+  CheckCircle,
+  Trash2,
+  Edit2,
   AlertCircle,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Wand2,
+  Loader2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 type QuestionType = 'mcq_single' | 'mcq_multiple' | 'true_false' | 'short_answer' | 'long_answer';
 
@@ -80,6 +84,48 @@ export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQ
   const [step, setStep] = useState<'paste' | 'preview'>('paste');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [pasteTab, setPasteTab] = useState<'ai' | 'paste'>('ai');
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiCount, setAiCount] = useState('10');
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const generateWithAI = async () => {
+    const topic = aiTopic.trim();
+    if (topic.length < 3) {
+      toast({ title: 'Topic too short', description: 'Enter at least a few words describing the topic.', variant: 'destructive' });
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-mcq-questions', {
+        body: { topic, count: parseInt(aiCount, 10) || 10 },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const aiQuestions = ((data as any)?.questions || []) as Array<{ question_text: string; options: string[]; correct_option_index: number }>;
+      if (!aiQuestions.length) {
+        toast({ title: 'No questions generated', description: 'Try a more specific topic.', variant: 'destructive' });
+        return;
+      }
+      const mapped: ParsedQuestion[] = aiQuestions.map((q, idx) => ({
+        id: `ai-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
+        question_text: q.question_text,
+        question_type: 'mcq_single',
+        options: q.options.slice(0, 4),
+        correct_answers: [q.correct_option_index],
+        marks: 1,
+      }));
+      setParsedQuestions(mapped);
+      setStep('preview');
+      setExpandedCards(new Set(mapped.map(m => m.id)));
+      toast({ title: 'Questions generated!', description: `Got ${mapped.length} MCQs. Review before adding.` });
+    } catch (err: any) {
+      toast({ title: 'AI generation failed', description: err?.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
 
   const parseQuestions = () => {
     if (!rawText.trim()) {
@@ -419,6 +465,10 @@ export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQ
     setStep('paste');
     setExpandedCards(new Set());
     setEditingId(null);
+    setAiTopic('');
+    setAiCount('10');
+    setAiLoading(false);
+    setPasteTab('ai');
     onOpenChange(false);
   };
 
@@ -440,9 +490,55 @@ export function BulkQuestionParser({ open, onOpenChange, onQuestionsAdd }: BulkQ
 
         {step === 'paste' ? (
           <div className="flex-1 space-y-4 overflow-y-auto">
-            <div className="bg-accent/50 rounded-lg p-4 text-sm">
-              <p className="font-medium text-foreground mb-2">Supported formats:</p>
-              <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-background p-3 rounded border overflow-x-auto">
+            <Tabs value={pasteTab} onValueChange={(v) => setPasteTab(v as 'ai' | 'paste')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="ai">
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  AI Generate
+                </TabsTrigger>
+                <TabsTrigger value="paste">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Paste
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="ai" className="space-y-4 pt-4">
+                <div className="bg-accent/50 rounded-lg p-4 text-sm">
+                  <p className="font-medium text-foreground mb-1">✨ AI-powered generation</p>
+                  <p className="text-xs text-muted-foreground">
+                    Paste a topic, chapter, or syllabus snippet and let AI generate exam-ready MCQs in seconds.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Topic / Chapter / Syllabus</Label>
+                  <Textarea
+                    placeholder="e.g. Class 10 Science — Chapter 6: Life Processes (Photosynthesis, Respiration, Transportation)"
+                    value={aiTopic}
+                    onChange={(e) => setAiTopic(e.target.value)}
+                    className="min-h-[140px] text-sm"
+                    disabled={aiLoading}
+                  />
+                </div>
+
+                <div className="space-y-2 max-w-[200px]">
+                  <Label>Number of questions</Label>
+                  <Select value={aiCount} onValueChange={setAiCount} disabled={aiLoading}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 questions</SelectItem>
+                      <SelectItem value="10">10 questions</SelectItem>
+                      <SelectItem value="15">15 questions</SelectItem>
+                      <SelectItem value="20">20 questions</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="paste" className="space-y-4 pt-4">
+                <div className="bg-accent/50 rounded-lg p-4 text-sm">
+                  <p className="font-medium text-foreground mb-2">Supported formats:</p>
+                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-background p-3 rounded border overflow-x-auto">
 {`Q1. What is the capital of France?
 A. London
 B. Paris
@@ -457,18 +553,20 @@ Q3. Is the Earth round?
 A. True
 B. False
 Answer: A`}
-              </pre>
-            </div>
+                  </pre>
+                </div>
 
-            <div className="space-y-2">
-              <Label>Paste Your Questions</Label>
-              <Textarea
-                placeholder="Paste questions here..."
-                value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
-                className="min-h-[250px] font-mono text-sm"
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label>Paste Your Questions</Label>
+                  <Textarea
+                    placeholder="Paste questions here..."
+                    value={rawText}
+                    onChange={(e) => setRawText(e.target.value)}
+                    className="min-h-[250px] font-mono text-sm"
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto space-y-3 pr-2">
@@ -639,11 +737,18 @@ Answer: A`}
         <DialogFooter className="gap-2 pt-4 border-t">
           {step === 'paste' ? (
             <>
-              <Button variant="outline" onClick={handleClose}>Cancel</Button>
-              <Button onClick={parseQuestions}>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Parse Questions
-              </Button>
+              <Button variant="outline" onClick={handleClose} disabled={aiLoading}>Cancel</Button>
+              {pasteTab === 'ai' ? (
+                <Button onClick={generateWithAI} disabled={aiLoading || !aiTopic.trim()}>
+                  {aiLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+                  {aiLoading ? 'Generating…' : 'Generate Questions'}
+                </Button>
+              ) : (
+                <Button onClick={parseQuestions}>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Parse Questions
+                </Button>
+              )}
             </>
           ) : (
             <>

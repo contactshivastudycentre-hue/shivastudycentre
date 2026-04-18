@@ -845,7 +845,13 @@ export type Database = {
         | "short_answer"
         | "long_answer"
       student_status: "pending" | "approved" | "inactive"
-      test_type_enum: "standard" | "sunday_special" | "practice"
+      test_type_enum:
+        | "standard"
+        | "sunday_special"
+        | "practice"
+        | "weekly"
+        | "mock"
+        | "surprise_quiz"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -982,7 +988,14 @@ export const Constants = {
         "long_answer",
       ],
       student_status: ["pending", "approved", "inactive"],
-      test_type_enum: ["standard", "sunday_special", "practice"],
+      test_type_enum: [
+        "standard",
+        "sunday_special",
+        "practice",
+        "weekly",
+        "mock",
+        "surprise_quiz",
+      ],
     },
   },
 } as const
