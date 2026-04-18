@@ -71,6 +71,22 @@ export default function AdminEventsPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (f: typeof form & { id?: string }) => {
+      // Validate dates
+      if (!f.start_date || !f.end_date) {
+        throw new Error('Start and end date are required');
+      }
+      const sd = new Date(f.start_date);
+      const ed = new Date(f.end_date);
+      if (isNaN(sd.getTime()) || isNaN(ed.getTime())) {
+        throw new Error('Invalid date format');
+      }
+      if (ed.getTime() <= sd.getTime()) {
+        throw new Error('End date must be after start date (give the test a real time window).');
+      }
+      // Sunday Special: require at least 5 minutes window so students can join
+      if (f.event_type === 'sunday_special' && ed.getTime() - sd.getTime() < 5 * 60_000) {
+        throw new Error('Sunday Special must run for at least 5 minutes.');
+      }
       const eventData = {
         event_name: f.event_name.trim(),
         description: f.description?.trim() || null,
