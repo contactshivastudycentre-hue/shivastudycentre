@@ -4,9 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { BannerCarousel } from '@/components/dashboard/BannerCarousel';
-import { SundaySpecialCard } from '@/components/dashboard/SundaySpecialCard';
+import { HighlightedTestBanner } from '@/components/dashboard/HighlightedTestBanner';
 import { TrendingContent } from '@/components/dashboard/TrendingContent';
-import { EventLeaderboards } from '@/components/dashboard/EventLeaderboards';
+import { WinnersSlider } from '@/components/dashboard/WinnersSlider';
 import { ResumeLearning } from '@/components/dashboard/ResumeLearning';
 import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { LeadPeAd } from '@/components/LeadPeAd';
@@ -81,8 +81,8 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      {/* Sunday Special highlight (realtime, only renders when an event exists) */}
-      <SundaySpecialCard />
+      {/* Sunday Special highlight (realtime, only renders when a Sunday Special test exists) */}
+      <HighlightedTestBanner />
 
       {/* Hero Banner */}
       <motion.div {...fadeInUp}>
@@ -127,9 +127,9 @@ export default function StudentDashboard() {
         </div>
       </motion.div>
 
-      {/* Event Leaderboards (only shows when admin approves results) */}
+      {/* Recent Winners slider (cross-class, last 7 days) */}
       <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.18 }}>
-        <EventLeaderboards />
+        <WinnersSlider />
       </motion.div>
 
       {/* Trending Content */}

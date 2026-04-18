@@ -46,9 +46,8 @@ import AdminNotesPage from "@/pages/admin/AdminNotesPage";
 import AdminVideosPage from "@/pages/admin/AdminVideosPage";
 import AdminPasswordResetPage from "@/pages/admin/AdminPasswordResetPage";
 import AdminResultsPage from "@/pages/admin/AdminResultsPage";
-import AdminEventsPage from "@/pages/admin/AdminEventsPage";
+import AdminTestResultsPage from "@/pages/admin/AdminTestResultsPage";
 import AdminBannersPage from "@/pages/admin/AdminBannersPage";
-import AdminLeaderboardPage from "@/pages/admin/AdminLeaderboardPage";
 import LeaderboardPage from "@/pages/dashboard/LeaderboardPage";
 
 const queryClient = new QueryClient();
@@ -90,7 +89,7 @@ const App = () => (
               <Route path="videos" element={<VideosPage />} />
               <Route path="videos/:videoId" element={<VideoWatchPage />} />
               <Route path="profile" element={<ProfilePage />} />
-              <Route path="leaderboard/:eventId" element={<LeaderboardPage />} />
+              <Route path="leaderboard" element={<LeaderboardPage />} />
             </Route>
 
             {/* Admin Dashboard */}
@@ -100,13 +99,12 @@ const App = () => (
               <Route path="tests" element={<AdminTestsPage />} />
               <Route path="tests/:testId/questions" element={<AdminQuestionsPage />} />
               <Route path="tests/:testId/builder" element={<TestBuilder />} />
+              <Route path="tests/:testId/results" element={<AdminTestResultsPage />} />
               <Route path="results" element={<AdminResultsPage />} />
               <Route path="notes" element={<AdminNotesPage />} />
               <Route path="videos" element={<AdminVideosPage />} />
               <Route path="password-resets" element={<AdminPasswordResetPage />} />
-              <Route path="events" element={<AdminEventsPage />} />
               <Route path="banners" element={<AdminBannersPage />} />
-              <Route path="leaderboard" element={<AdminLeaderboardPage />} />
             </Route>
 
             {/* 404 */}
