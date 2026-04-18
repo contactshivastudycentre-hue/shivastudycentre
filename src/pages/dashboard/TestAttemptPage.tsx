@@ -481,8 +481,97 @@ export default function TestAttemptPage() {
     }
   };
 
-  // Timer
+  // Locked-sequence auto-advance for Sunday Special tests
+  // Saves current answer, advances to next question, resets backend timer
+  const handleSundayAutoAdvance = useCallback(async () => {
+    if (!attemptId || !isSundaySpecial) return;
+    const isLast = currentIndex >= shuffledQuestions.length - 1;
+
+    // Persist current answer to DB (best-effort)
+    try {
+      await supabase
+        .from('test_attempts')
+        .update({ answers: JSON.parse(JSON.stringify(answers)) })
+        .eq('id', attemptId);
+    } catch (e) {
+      console.error('Sunday autosave failed:', e);
+    }
+
+    if (isLast) {
+      // Last question — submit
+      submitTest(true);
+      return;
+    }
+
+    // Slide-out animation, then advance
+    setSlideDirection('out');
+    setTimeout(async () => {
+      const nextIndex = currentIndex + 1;
+      try {
+        await supabase.rpc('advance_sunday_question', {
+          p_attempt_id: attemptId,
+          p_next_index: nextIndex,
+        });
+      } catch (e) {
+        console.error('advance_sunday_question failed:', e);
+      }
+      setCurrentIndex(nextIndex);
+      setQuestionTimeLeft(60);
+      setSlideDirection('in');
+    }, 200);
+  }, [attemptId, isSundaySpecial, currentIndex, shuffledQuestions.length, answers, submitTest]);
+
+  // Sync per-question timer with backend (anti-cheat: refresh restores remaining time)
   useEffect(() => {
+    if (!isSundaySpecial || !attemptId || isCompleted) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.rpc('start_sunday_question', {
+          p_attempt_id: attemptId,
+          p_question_index: currentIndex,
+        });
+        if (cancelled) return;
+        const result = data as { remaining_seconds?: number; forced_question_index?: number };
+        if (typeof result?.forced_question_index === 'number' && result.forced_question_index !== currentIndex) {
+          // Backend forces them back to the question they're supposed to be on
+          setCurrentIndex(result.forced_question_index);
+          setQuestionTimeLeft(result.remaining_seconds ?? 60);
+          return;
+        }
+        setQuestionTimeLeft(Math.max(0, result?.remaining_seconds ?? 60));
+      } catch (e) {
+        console.error('start_sunday_question failed:', e);
+        setQuestionTimeLeft(60);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSundaySpecial, attemptId, currentIndex, isCompleted]);
+
+  // Per-question countdown for Sunday Special
+  useEffect(() => {
+    if (!isSundaySpecial || !attemptId || isCompleted) return;
+    if (questionTimeLeft <= 0) {
+      handleSundayAutoAdvance();
+      return;
+    }
+    const id = setInterval(() => {
+      setQuestionTimeLeft((prev) => {
+        if (prev <= 1) {
+          handleSundayAutoAdvance();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isSundaySpecial, attemptId, isCompleted, questionTimeLeft, handleSundayAutoAdvance]);
+
+  // Overall test timer (skipped for Sunday Special — that uses per-question timer)
+  useEffect(() => {
+    if (isSundaySpecial) return;
     if (!attemptId || isCompleted || timeLeft <= 0) return;
 
     const timer = setInterval(() => {
@@ -497,7 +586,7 @@ export default function TestAttemptPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [attemptId, isCompleted, timeLeft, submitTest]);
+  }, [attemptId, isCompleted, timeLeft, submitTest, isSundaySpecial]);
 
   // Auto-save to local storage (every answer change)
   useEffect(() => {
