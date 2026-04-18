@@ -383,7 +383,8 @@ export default function TestAttemptPage() {
           });
         } else {
           setAttemptId(existingAttempt.id);
-          
+          setWasResumed(true);
+
           // Try to restore from local storage first (more recent)
           const localData = localStorage.getItem(LOCAL_STORAGE_KEY + testId);
           if (localData) {
