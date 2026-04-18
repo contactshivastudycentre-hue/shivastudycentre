@@ -42,7 +42,8 @@ export function WinnersSlider() {
     return age < 24 * 60 * 60 * 1000;
   });
 
-  const slides = highlighted.length ? highlighted : (winners || []);
+  // Strict: only show winners published within last 24h, then auto-disappear
+  const slides = highlighted;
 
   useEffect(() => {
     if (slides.length <= 1) return;
