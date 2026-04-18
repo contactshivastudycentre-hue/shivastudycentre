@@ -87,6 +87,21 @@ export default function TestsPage() {
         <p className="text-muted-foreground">Attempt MCQ tests and track your progress</p>
       </div>
 
+      {activeAttempt && (
+        <div className="dashboard-card border-l-4 border-l-warning bg-warning/5 flex items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <Lock className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-foreground text-sm">A test is in progress</p>
+              <p className="text-xs text-muted-foreground">Finish or submit it before starting another test.</p>
+            </div>
+          </div>
+          <Link to={`/dashboard/tests/${activeAttempt.test_id}`}>
+            <Button size="sm">Resume</Button>
+          </Link>
+        </div>
+      )}
+
 {tests.length === 0 ? (
         <div className="dashboard-card text-center py-12">
           <ClipboardList className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
