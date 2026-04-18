@@ -71,6 +71,22 @@ export default function AdminEventsPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (f: typeof form & { id?: string }) => {
+      // Validate dates
+      if (!f.start_date || !f.end_date) {
+        throw new Error('Start and end date are required');
+      }
+      const sd = new Date(f.start_date);
+      const ed = new Date(f.end_date);
+      if (isNaN(sd.getTime()) || isNaN(ed.getTime())) {
+        throw new Error('Invalid date format');
+      }
+      if (ed.getTime() <= sd.getTime()) {
+        throw new Error('End date must be after start date (give the test a real time window).');
+      }
+      // Sunday Special: require at least 5 minutes window so students can join
+      if (f.event_type === 'sunday_special' && ed.getTime() - sd.getTime() < 5 * 60_000) {
+        throw new Error('Sunday Special must run for at least 5 minutes.');
+      }
       const eventData = {
         event_name: f.event_name.trim(),
         description: f.description?.trim() || null,
@@ -276,6 +292,12 @@ export default function AdminEventsPage() {
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           {ev.event_type === 'sunday_special' && (
                             <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-sm">🏆 Sunday Special</span>
+                          )}
+                          {ev.event_type === 'sunday_special' && (getEventStatus(ev.start_date, ev.end_date) === 'upcoming' || getEventStatus(ev.start_date, ev.end_date) === 'active') && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r from-rose-500 via-red-500 to-orange-500 text-white shadow-md animate-pulse">
+                              <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                              {getEventStatus(ev.start_date, ev.end_date) === 'active' ? 'Broadcasting Live' : 'Scheduled Broadcast'}
+                            </span>
                           )}
                           <h3 className="font-display font-bold text-foreground truncate">{ev.event_name}</h3>
                           <StatusBadge start={ev.start_date} end={ev.end_date} />

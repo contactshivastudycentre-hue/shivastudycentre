@@ -83,9 +83,13 @@ export function SundaySpecialCard() {
   const end = new Date(event.end_date);
   const now = new Date();
 
+  // Defensive: if dates are inverted/equal, the event window is invalid - still show as upcoming until start
+  const validWindow = end.getTime() > start.getTime();
+
   let phase: 'upcoming' | 'live' | 'ended' = 'upcoming';
-  if (now >= start && now <= end) phase = 'live';
-  else if (now > end) phase = 'ended';
+  if (validWindow && now >= start && now <= end) phase = 'live';
+  else if (validWindow && now > end) phase = 'ended';
+  else if (!validWindow && now >= start) phase = 'ended';
 
   const countdown = phase === 'upcoming' ? getCountdown(start) : phase === 'live' ? getCountdown(end) : null;
 
@@ -151,14 +155,19 @@ export function SundaySpecialCard() {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
+          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
             <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-500 to-orange-500 text-white">
               Sunday Special
             </span>
+            {phase === 'upcoming' && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary text-primary-foreground">
+                📡 Upcoming Broadcast
+              </span>
+            )}
             {phase === 'live' && (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
-                LIVE
+                LIVE NOW
               </span>
             )}
           </div>
