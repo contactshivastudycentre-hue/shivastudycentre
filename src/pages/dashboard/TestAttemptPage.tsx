@@ -77,6 +77,11 @@ export default function TestAttemptPage() {
   const [violationCount, setViolationCount] = useState(0);
   const [hasDescriptiveQuestions, setHasDescriptiveQuestions] = useState(false);
 
+  // Sunday Special locked-sequence state
+  const [isSundaySpecial, setIsSundaySpecial] = useState(false);
+  const [questionTimeLeft, setQuestionTimeLeft] = useState(60);
+  const [slideDirection, setSlideDirection] = useState<'in' | 'out'>('in');
+
   // Per-student question shuffle (deterministic — same student sees same order
   // on refresh, different students see different orders). Seed = attemptId.
   const shuffledQuestions = attemptId
