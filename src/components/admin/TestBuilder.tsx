@@ -316,6 +316,18 @@ export default function TestBuilder() {
       return;
     }
 
+    // Schedule validation (required when publishing)
+    if (publish) {
+      if (!test.start_time || !test.end_time) {
+        toast({ title: 'Schedule required', description: 'Set both start and end time before publishing.', variant: 'destructive' });
+        return;
+      }
+      if (new Date(test.end_time) <= new Date(test.start_time)) {
+        toast({ title: 'Invalid schedule', description: 'End time must be after start time.', variant: 'destructive' });
+        return;
+      }
+    }
+
     // Validate all questions
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
@@ -372,7 +384,10 @@ export default function TestBuilder() {
             duration_minutes: test.duration_minutes,
             is_published: publish,
             created_by: user?.id,
-          })
+            start_time: test.start_time ? new Date(test.start_time).toISOString() : null,
+            end_time: test.end_time ? new Date(test.end_time).toISOString() : null,
+            banner_image: test.banner_image || null,
+          } as any)
           .select()
           .single();
 
@@ -390,7 +405,10 @@ export default function TestBuilder() {
             class: test.class,
             duration_minutes: test.duration_minutes,
             is_published: publish,
-          })
+            start_time: test.start_time ? new Date(test.start_time).toISOString() : null,
+            end_time: test.end_time ? new Date(test.end_time).toISOString() : null,
+            banner_image: test.banner_image || null,
+          } as any)
           .eq('id', test.id);
 
         if (testError) throw testError;
