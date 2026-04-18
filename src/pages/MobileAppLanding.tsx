@@ -118,13 +118,37 @@ export default function MobileAppLanding() {
         </div>
       </div>
 
+      {/* Bottom Section - Login Buttons */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="px-6 pt-2 space-y-3"
+      >
+        <Link to="/student-login" className="block">
+          <Button className="w-full h-14 text-base rounded-xl bg-primary hover:bg-primary/90">
+            <UserCircle className="w-5 h-5 mr-2" />
+            Student Login
+          </Button>
+        </Link>
+        <div className="flex justify-center pt-1">
+          <SmallPWAButton variant="landing" />
+        </div>
+        <div className="text-center pt-2">
+          <Link to="/admin-login" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <Shield className="w-3 h-3" />
+            Admin? Sign in here
+          </Link>
+        </div>
+      </motion.div>
+
       {/* About the Platform & Creator (mobile-compact) */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.4 }}
-        className="px-6 pb-6"
+        className="px-6 pt-6 pb-8"
       >
         <div className="text-center mb-4">
           <span className="inline-block text-[11px] font-semibold text-primary tracking-wider uppercase mb-1">
@@ -177,30 +201,6 @@ export default function MobileAppLanding() {
           </a>
         </div>
       </motion.section>
-
-      {/* Bottom Section - Login Buttons */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="px-6 pb-8 space-y-3"
-      >
-        <Link to="/student-login" className="block">
-          <Button className="w-full h-14 text-base rounded-xl bg-primary hover:bg-primary/90">
-            <UserCircle className="w-5 h-5 mr-2" />
-            Student Login
-          </Button>
-        </Link>
-        <div className="flex justify-center pt-1">
-          <SmallPWAButton variant="landing" />
-        </div>
-        <div className="text-center pt-2">
-          <Link to="/admin-login" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-            <Shield className="w-3 h-3" />
-            Admin? Sign in here
-          </Link>
-        </div>
-      </motion.div>
     </div>
   );
 }
