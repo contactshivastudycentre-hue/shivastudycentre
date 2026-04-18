@@ -308,6 +308,17 @@ export default function TestAttemptPage() {
       setTest(testData);
       setTimeLeft(testData.duration_minutes * 60);
 
+      // Detect if this test is linked to a Sunday Special event
+      const { data: eventData } = await supabase
+        .from('test_events')
+        .select('event_type')
+        .eq('test_id', testId)
+        .eq('event_type', 'sunday_special')
+        .maybeSingle();
+      if (eventData?.event_type === 'sunday_special') {
+        setIsSundaySpecial(true);
+      }
+
       // Track resume-learning activity (fire and forget)
       supabase.rpc('track_activity', {
         p_content_type: 'test',
