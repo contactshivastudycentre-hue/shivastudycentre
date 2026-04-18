@@ -428,15 +428,21 @@ export default function TestAttemptPage() {
     if (!user || !testId) return;
 
     try {
-      // First check if an attempt already exists
-      const { data: existingAttempt } = await supabase
-        .from('test_attempts')
-        .select('id, submitted_at')
-        .eq('test_id', testId)
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Hard DB-enforced session lock + atomic create-or-resume
+      const { data, error } = await supabase.rpc('start_test_attempt_locked', {
+        p_test_id: testId,
+      });
 
-      if (existingAttempt?.submitted_at) {
+      if (error) throw error;
+      const result = data as {
+        status: string;
+        attempt_id?: string;
+        code?: string;
+        blocking_test_title?: string;
+        blocking_test_id?: string;
+      };
+
+      if (result?.status === 'already_submitted') {
         toast({
           title: 'Test Already Submitted',
           description: 'You have already completed this test.',
@@ -446,39 +452,41 @@ export default function TestAttemptPage() {
         return;
       }
 
-      if (existingAttempt) {
-        setAttemptId(existingAttempt.id);
+      if (result?.status === 'locked') {
+        toast({
+          title: 'Another Test In Progress',
+          description: `Please finish "${result.blocking_test_title}" before starting a new test.`,
+          variant: 'destructive',
+        });
+        navigate(`/dashboard/tests/${result.blocking_test_id}`);
+        return;
+      }
+
+      if (result?.status === 'resumed' && result.attempt_id) {
+        setAttemptId(result.attempt_id);
+        setWasResumed(true);
         toast({
           title: 'Test Resumed',
-          description: 'Continuing your previous attempt.',
+          description: 'Welcome back! Your previous answers are restored.',
         });
         return;
       }
 
-      const { data, error } = await supabase
-        .from('test_attempts')
-        .insert([{
-          user_id: user.id,
-          test_id: testId,
-          answers: {},
-        }])
-        .select()
-        .single();
-
-      if (data) {
-        setAttemptId(data.id);
+      if (result?.status === 'started' && result.attempt_id) {
+        setAttemptId(result.attempt_id);
         toast({
           title: 'Test Started',
           description: 'Good luck! Your timer has started.',
         });
-      } else if (error) {
-        toast({
-          title: 'Unable to start test',
-          description: 'You may have already attempted this test.',
-          variant: 'destructive',
-        });
-        navigate('/dashboard/tests');
+        return;
       }
+
+      // Fallback error
+      toast({
+        title: 'Unable to start test',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
     } catch (error) {
       console.error('Error starting attempt:', error);
       toast({
