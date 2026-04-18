@@ -293,6 +293,12 @@ export default function AdminEventsPage() {
                           {ev.event_type === 'sunday_special' && (
                             <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-sm">🏆 Sunday Special</span>
                           )}
+                          {ev.event_type === 'sunday_special' && (getEventStatus(ev.start_date, ev.end_date) === 'upcoming' || getEventStatus(ev.start_date, ev.end_date) === 'active') && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r from-rose-500 via-red-500 to-orange-500 text-white shadow-md animate-pulse">
+                              <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                              {getEventStatus(ev.start_date, ev.end_date) === 'active' ? 'Broadcasting Live' : 'Scheduled Broadcast'}
+                            </span>
+                          )}
                           <h3 className="font-display font-bold text-foreground truncate">{ev.event_name}</h3>
                           <StatusBadge start={ev.start_date} end={ev.end_date} />
                           {ev.results_approved && <Badge variant="secondary" className="bg-green-100 text-green-700">Results Published</Badge>}
