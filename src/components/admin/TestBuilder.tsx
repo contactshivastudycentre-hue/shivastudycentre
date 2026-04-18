@@ -53,8 +53,10 @@ import { useAuth } from '@/lib/auth';
 import { ClassSelect } from '@/components/ClassSelect';
 import { SubjectSelect } from '@/components/SubjectSelect';
 import { BulkQuestionParser } from '@/components/admin/BulkQuestionParser';
+import { FileUploader } from '@/components/admin/FileUploader';
 
 type QuestionType = 'mcq_single' | 'mcq_multiple' | 'true_false' | 'short_answer' | 'long_answer';
+type WizardStep = 1 | 2 | 3 | 4;
 
 interface Question {
   id: string;
@@ -76,6 +78,9 @@ interface Test {
   duration_minutes: number;
   is_published: boolean;
   total_marks: number;
+  start_time: string;   // ISO string or '' (datetime-local format when in form)
+  end_time: string;
+  banner_image: string; // URL or ''
 }
 
 const questionTypeLabels: Record<QuestionType, string> = {
@@ -126,6 +131,9 @@ export default function TestBuilder() {
     duration_minutes: 30,
     is_published: false,
     total_marks: 0,
+    start_time: '',
+    end_time: '',
+    banner_image: '',
   });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
@@ -135,6 +143,7 @@ export default function TestBuilder() {
   const [showPreview, setShowPreview] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [showBulkParser, setShowBulkParser] = useState(false);
+  const [step, setStep] = useState<WizardStep>(1);
 
   const handleBulkQuestionsAdd = (parsedQuestions: Question[]) => {
     const questionsWithIds = parsedQuestions.map((q, i) => ({
