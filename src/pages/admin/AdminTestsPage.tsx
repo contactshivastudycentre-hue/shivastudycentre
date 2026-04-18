@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ClipboardList, Plus, MoreVertical, Edit, Trash2, Clock, List, Loader2, Rocket } from 'lucide-react';
+import { ClipboardList, Plus, MoreVertical, Edit, Trash2, Clock, List, Loader2, Rocket, Trophy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -170,6 +170,12 @@ export default function AdminTestsPage() {
                             <Link to={`/admin/tests/${test.id}/questions`}>
                               <List className="w-4 h-4 mr-2" />
                               Quick Edit Questions
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to={`/admin/tests/${test.id}/results`}>
+                              <Trophy className="w-4 h-4 mr-2" />
+                              Results & Winners
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => togglePublish(test)}>
