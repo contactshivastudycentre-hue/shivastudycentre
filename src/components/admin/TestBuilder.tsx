@@ -53,8 +53,10 @@ import { useAuth } from '@/lib/auth';
 import { ClassSelect } from '@/components/ClassSelect';
 import { SubjectSelect } from '@/components/SubjectSelect';
 import { BulkQuestionParser } from '@/components/admin/BulkQuestionParser';
+import { FileUploader } from '@/components/admin/FileUploader';
 
 type QuestionType = 'mcq_single' | 'mcq_multiple' | 'true_false' | 'short_answer' | 'long_answer';
+type WizardStep = 1 | 2 | 3 | 4;
 
 interface Question {
   id: string;
@@ -76,6 +78,9 @@ interface Test {
   duration_minutes: number;
   is_published: boolean;
   total_marks: number;
+  start_time: string;   // ISO string or '' (datetime-local format when in form)
+  end_time: string;
+  banner_image: string; // URL or ''
 }
 
 const questionTypeLabels: Record<QuestionType, string> = {
@@ -126,6 +131,9 @@ export default function TestBuilder() {
     duration_minutes: 30,
     is_published: false,
     total_marks: 0,
+    start_time: '',
+    end_time: '',
+    banner_image: '',
   });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
@@ -135,6 +143,7 @@ export default function TestBuilder() {
   const [showPreview, setShowPreview] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [showBulkParser, setShowBulkParser] = useState(false);
+  const [step, setStep] = useState<WizardStep>(1);
 
   const handleBulkQuestionsAdd = (parsedQuestions: Question[]) => {
     const questionsWithIds = parsedQuestions.map((q, i) => ({
@@ -190,6 +199,8 @@ export default function TestBuilder() {
       return;
     }
 
+    const td: any = testData;
+    const toLocal = (iso?: string | null) => (iso ? iso.slice(0, 16) : '');
     setTest({
       id: testData.id,
       title: testData.title,
@@ -199,6 +210,9 @@ export default function TestBuilder() {
       duration_minutes: testData.duration_minutes,
       is_published: testData.is_published,
       total_marks: testData.total_marks || 0,
+      start_time: toLocal(td.start_time),
+      end_time: toLocal(td.end_time),
+      banner_image: td.banner_image || '',
     });
 
     const { data: questionsData } = await supabase
@@ -302,6 +316,18 @@ export default function TestBuilder() {
       return;
     }
 
+    // Schedule validation (required when publishing)
+    if (publish) {
+      if (!test.start_time || !test.end_time) {
+        toast({ title: 'Schedule required', description: 'Set both start and end time before publishing.', variant: 'destructive' });
+        return;
+      }
+      if (new Date(test.end_time) <= new Date(test.start_time)) {
+        toast({ title: 'Invalid schedule', description: 'End time must be after start time.', variant: 'destructive' });
+        return;
+      }
+    }
+
     // Validate all questions
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
@@ -358,7 +384,10 @@ export default function TestBuilder() {
             duration_minutes: test.duration_minutes,
             is_published: publish,
             created_by: user?.id,
-          })
+            start_time: test.start_time ? new Date(test.start_time).toISOString() : null,
+            end_time: test.end_time ? new Date(test.end_time).toISOString() : null,
+            banner_image: test.banner_image || null,
+          } as any)
           .select()
           .single();
 
@@ -376,7 +405,10 @@ export default function TestBuilder() {
             class: test.class,
             duration_minutes: test.duration_minutes,
             is_published: publish,
-          })
+            start_time: test.start_time ? new Date(test.start_time).toISOString() : null,
+            end_time: test.end_time ? new Date(test.end_time).toISOString() : null,
+            banner_image: test.banner_image || null,
+          } as any)
           .eq('id', test.id);
 
         if (testError) throw testError;
@@ -481,6 +513,50 @@ export default function TestBuilder() {
 
   const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
 
+  // Step gating
+  const step1Complete = !!(test.title && test.subject && test.class && test.duration_minutes);
+  const step2Complete = step1Complete && questions.length > 0;
+  const scheduleValid = !!(test.start_time && test.end_time && new Date(test.end_time) > new Date(test.start_time));
+
+  const goToStep = async (target: WizardStep) => {
+    // Auto-save draft when moving past step 1 for the first time
+    if (target > 1 && step === 1 && step1Complete && (isNew || !test.id)) {
+      await saveTest(false);
+    }
+    setStep(target);
+  };
+
+  const StepHeader = (
+    <div className="flex items-center gap-2 overflow-x-auto pb-2">
+      {([1, 2, 3, 4] as WizardStep[]).map((n) => {
+        const labels: Record<WizardStep, string> = { 1: 'Test Info', 2: 'Add Questions', 3: 'Review', 4: 'Publish' };
+        const reachable = n === 1
+          || (n === 2 && step1Complete)
+          || (n === 3 && step2Complete)
+          || (n === 4 && step2Complete);
+        const active = step === n;
+        return (
+          <button
+            key={n}
+            type="button"
+            onClick={() => reachable && goToStep(n)}
+            disabled={!reachable}
+            className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+              active ? 'bg-primary text-primary-foreground shadow-sm'
+              : reachable ? 'bg-muted text-foreground hover:bg-muted/80'
+              : 'bg-muted/40 text-muted-foreground cursor-not-allowed'
+            }`}
+          >
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+              active ? 'bg-primary-foreground/20' : 'bg-background/60'
+            }`}>{n}</span>
+            {labels[n]}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="space-y-6 animate-fade-in pb-24">
       {/* Header */}
@@ -495,139 +571,189 @@ export default function TestBuilder() {
             {isNew ? 'Create New Test' : 'Edit Test'}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {questions.length} question{questions.length !== 1 ? 's' : ''} • {totalMarks} marks
+            Step {step} of 4 • {questions.length} question{questions.length !== 1 ? 's' : ''} • {totalMarks} marks
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={() => setShowPreview(true)} disabled={questions.length === 0}>
-            <Eye className="w-4 h-4 mr-2" />
-            Preview
-          </Button>
-          <Button variant="outline" onClick={() => saveTest(false)} disabled={isSaving}>
+          <Button variant="outline" onClick={() => saveTest(false)} disabled={isSaving || !step1Complete}>
             {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             Save Draft
           </Button>
-          <Button onClick={handlePublish} disabled={isSaving}>
-            <Rocket className="w-4 h-4 mr-2" />
-            Publish
-          </Button>
         </div>
       </div>
 
-      {/* Test Details */}
-      <div className="dashboard-card">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Test Details</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="title">Test Name *</Label>
-            <Input
-              id="title"
-              value={test.title}
-              onChange={(e) => setTest({ ...test, title: e.target.value })}
-              placeholder="e.g., Chapter 1 - Motion and Force"
-              className="text-lg"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Class *</Label>
-            <ClassSelect
-              value={test.class}
-              onChange={(value) => setTest({ ...test, class: value })}
-              disabled={!isNew && test.is_published}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Subject *</Label>
-            <SubjectSelect
-              value={test.subject}
-              onChange={(value) => setTest({ ...test, subject: value })}
-              disabled={!isNew && test.is_published}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="duration">Time Limit (minutes)</Label>
-            <Input
-              id="duration"
-              type="number"
-              min="5"
-              max="180"
-              value={test.duration_minutes}
-              onChange={(e) => setTest({ ...test, duration_minutes: parseInt(e.target.value) || 30 })}
-            />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="description">Instructions (optional)</Label>
-            <Textarea
-              id="description"
-              value={test.description || ''}
-              onChange={(e) => setTest({ ...test, description: e.target.value })}
-              placeholder="Enter any special instructions for students..."
-              rows={3}
-            />
-          </div>
-        </div>
-      </div>
+      {StepHeader}
 
-      {/* Questions Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <h2 className="text-lg font-semibold text-foreground">Questions</h2>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowBulkParser(true)} 
-              disabled={!canAddQuestions}
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Bulk Add
-            </Button>
-            <Button onClick={() => addQuestion()} disabled={!canAddQuestions}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Question
+      {/* Step 1: Test Info */}
+      {step === 1 && (
+        <div className="dashboard-card">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Test Information</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="title">Test Name *</Label>
+              <Input id="title" value={test.title} onChange={(e) => setTest({ ...test, title: e.target.value })} placeholder="e.g., Chapter 1 - Motion and Force" className="text-lg" />
+            </div>
+            <div className="space-y-2">
+              <Label>Class *</Label>
+              <ClassSelect value={test.class} onChange={(value) => setTest({ ...test, class: value })} disabled={!isNew && test.is_published} />
+            </div>
+            <div className="space-y-2">
+              <Label>Subject *</Label>
+              <SubjectSelect value={test.subject} onChange={(value) => setTest({ ...test, subject: value })} disabled={!isNew && test.is_published} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="duration">Duration (minutes) *</Label>
+              <Input id="duration" type="number" min="5" max="180" value={test.duration_minutes} onChange={(e) => setTest({ ...test, duration_minutes: parseInt(e.target.value) || 30 })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="start_time">Start Time *</Label>
+              <Input id="start_time" type="datetime-local" value={test.start_time} onChange={(e) => setTest({ ...test, start_time: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="end_time">End Time *</Label>
+              <Input id="end_time" type="datetime-local" value={test.end_time} onChange={(e) => setTest({ ...test, end_time: e.target.value })} />
+              {test.start_time && test.end_time && new Date(test.end_time) <= new Date(test.start_time) && (
+                <p className="text-xs text-destructive">End time must be after start time.</p>
+              )}
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="description">Instructions (optional)</Label>
+              <Textarea id="description" value={test.description || ''} onChange={(e) => setTest({ ...test, description: e.target.value })} placeholder="Special instructions for students..." rows={3} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Banner Image (optional, shows on student dashboard)</Label>
+              <FileUploader
+                bucket="banner-images"
+                accept="image/*"
+                maxSizeMB={5}
+                isImage
+                existingUrl={test.banner_image}
+                onUploadComplete={(url) => setTest({ ...test, banner_image: url })}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end mt-6">
+            <Button onClick={() => goToStep(2)} disabled={!step1Complete || isSaving}>
+              Next: Add Questions
             </Button>
           </div>
         </div>
+      )}
 
-        {!canAddQuestions && (
-          <div className="bg-warning/10 rounded-xl p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-muted-foreground">
-              Fill in the test name, class, and subject to start adding questions.
-            </p>
-          </div>
-        )}
-
-        {questions.length === 0 && canAddQuestions && (
-          <div className="dashboard-card text-center py-12">
-            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">No Questions Yet</h3>
-            <p className="text-muted-foreground mb-4">Start building your test by adding questions.</p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button variant="outline" onClick={() => setShowBulkParser(true)}>
+      {/* Step 2: Questions */}
+      {step === 2 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h2 className="text-lg font-semibold text-foreground">Questions ({questions.length})</h2>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowBulkParser(true)} disabled={!canAddQuestions}>
                 <Sparkles className="w-4 h-4 mr-2" />
-                Paste from ChatGPT / Word
+                Bulk Add
               </Button>
-              <Button onClick={() => addQuestion()}>
+              <Button onClick={() => addQuestion()} disabled={!canAddQuestions}>
                 <Plus className="w-4 h-4 mr-2" />
-                Add Question Manually
+                Add Question
               </Button>
             </div>
           </div>
-        )}
 
-        {questions.map((question, index) => (
-          <QuestionCard
-            key={question.id}
-            question={question}
-            index={index}
-            isExpanded={expandedCards.has(question.id)}
-            onToggle={() => toggleExpand(question.id)}
-            onUpdate={(updates) => updateQuestion(question.id, updates)}
-            onDelete={() => removeQuestion(question.id)}
-            onTypeChange={(type) => handleQuestionTypeChange(question.id, type)}
-          />
-        ))}
-      </div>
+          {questions.length === 0 && (
+            <div className="dashboard-card text-center py-12">
+              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">No Questions Yet</h3>
+              <p className="text-muted-foreground mb-4">Start building your test by adding questions.</p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button variant="outline" onClick={() => setShowBulkParser(true)}>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Paste from ChatGPT / Word
+                </Button>
+                <Button onClick={() => addQuestion()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Question Manually
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {questions.map((question, index) => (
+            <QuestionCard
+              key={question.id}
+              question={question}
+              index={index}
+              isExpanded={expandedCards.has(question.id)}
+              onToggle={() => toggleExpand(question.id)}
+              onUpdate={(updates) => updateQuestion(question.id, updates)}
+              onDelete={() => removeQuestion(question.id)}
+              onTypeChange={(type) => handleQuestionTypeChange(question.id, type)}
+            />
+          ))}
+
+          <div className="flex justify-between mt-6">
+            <Button variant="outline" onClick={() => goToStep(1)}>Back</Button>
+            <Button onClick={() => goToStep(3)} disabled={!step2Complete}>Next: Review</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Review */}
+      {step === 3 && (
+        <div className="space-y-4">
+          <div className="dashboard-card">
+            <h2 className="text-lg font-semibold text-foreground mb-3">Review Your Test</h2>
+            {test.banner_image && (
+              <img src={test.banner_image} alt="" className="w-full rounded-xl mb-4 max-h-48 object-cover" />
+            )}
+            <dl className="grid grid-cols-2 gap-3 text-sm">
+              <dt className="text-muted-foreground">Title</dt><dd className="font-medium">{test.title}</dd>
+              <dt className="text-muted-foreground">Class / Subject</dt><dd className="font-medium">Class {test.class} • {test.subject}</dd>
+              <dt className="text-muted-foreground">Duration</dt><dd className="font-medium">{test.duration_minutes} min</dd>
+              <dt className="text-muted-foreground">Questions</dt><dd className="font-medium">{questions.length} • {totalMarks} marks</dd>
+              <dt className="text-muted-foreground">Start</dt><dd className="font-medium">{test.start_time ? new Date(test.start_time).toLocaleString() : '—'}</dd>
+              <dt className="text-muted-foreground">End</dt><dd className="font-medium">{test.end_time ? new Date(test.end_time).toLocaleString() : '—'}</dd>
+            </dl>
+          </div>
+          <div className="dashboard-card">
+            <h3 className="font-semibold mb-3">Question summary</h3>
+            <ul className="space-y-2 text-sm">
+              {questions.map((q, i) => (
+                <li key={q.id} className="flex items-start gap-2">
+                  <span className="text-muted-foreground w-6">{i + 1}.</span>
+                  <span className="flex-1">{q.question_text || <em className="text-muted-foreground">Untitled</em>}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">{q.marks}m</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => goToStep(2)}>Back</Button>
+            <Button variant="outline" onClick={() => setShowPreview(true)}>
+              <Eye className="w-4 h-4 mr-2" />Preview as student
+            </Button>
+            <Button onClick={() => goToStep(4)}>Next: Publish</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 4: Publish */}
+      {step === 4 && (
+        <div className="dashboard-card text-center py-10">
+          <Rocket className="w-12 h-12 text-primary mx-auto mb-3" />
+          <h2 className="text-xl font-display font-bold mb-2">Ready to publish?</h2>
+          <p className="text-muted-foreground mb-2">
+            {questions.length} questions • {totalMarks} marks • Class {test.class}
+          </p>
+          {!scheduleValid && (
+            <p className="text-sm text-destructive mb-4">Schedule is invalid. Go back to Step 1 and set a valid start/end time.</p>
+          )}
+          <div className="flex justify-center gap-3 mt-4">
+            <Button variant="outline" onClick={() => goToStep(3)}>Back</Button>
+            <Button onClick={() => saveTest(true)} disabled={isSaving || !scheduleValid}>
+              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Rocket className="w-4 h-4 mr-2" />}
+              Publish Test
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Publish Confirmation Dialog */}
       <AlertDialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>

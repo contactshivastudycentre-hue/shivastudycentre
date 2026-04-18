@@ -593,39 +593,48 @@ export type Database = {
       }
       tests: {
         Row: {
+          banner_image: string | null
           class: string
           created_at: string
           created_by: string | null
           description: string | null
           duration_minutes: number
+          end_time: string | null
           id: string
           is_published: boolean
+          start_time: string | null
           subject: string
           title: string
           total_marks: number | null
           updated_at: string
         }
         Insert: {
+          banner_image?: string | null
           class: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           duration_minutes?: number
+          end_time?: string | null
           id?: string
           is_published?: boolean
+          start_time?: string | null
           subject: string
           title: string
           total_marks?: number | null
           updated_at?: string
         }
         Update: {
+          banner_image?: string | null
           class?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           duration_minutes?: number
+          end_time?: string | null
           id?: string
           is_published?: boolean
+          start_time?: string | null
           subject?: string
           title?: string
           total_marks?: number | null
