@@ -927,19 +927,43 @@ export default function TestAttemptPage() {
             </div>
           )}
           
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-full font-mono font-semibold ${
-            timeLeft < 60 ? 'bg-destructive/10 text-destructive animate-pulse' : 
-            timeLeft < 300 ? 'bg-warning/10 text-warning' : 
-            'bg-accent text-accent-foreground'
-          }`}>
-            <Clock className="w-4 h-4" />
-            {formatTime(timeLeft)}
-          </div>
+          {isSundaySpecial ? (
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full font-mono font-bold text-base ${
+              questionTimeLeft <= 10
+                ? 'bg-destructive/10 text-destructive animate-pulse'
+                : questionTimeLeft <= 20
+                ? 'bg-warning/10 text-warning'
+                : 'bg-primary/10 text-primary'
+            }`}>
+              <Clock className="w-4 h-4" />
+              {questionTimeLeft.toString().padStart(2, '0')}s
+            </div>
+          ) : (
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full font-mono font-semibold ${
+              timeLeft < 60 ? 'bg-destructive/10 text-destructive animate-pulse' :
+              timeLeft < 300 ? 'bg-warning/10 text-warning' :
+              'bg-accent text-accent-foreground'
+            }`}>
+              <Clock className="w-4 h-4" />
+              {formatTime(timeLeft)}
+            </div>
+          )}
         </div>
-        
+
+        {isSundaySpecial && (
+          <div className="mt-1 flex items-center gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+              🏆 Sunday Special
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              Locked sequence — no going back
+            </span>
+          </div>
+        )}
+
         {/* Progress bar */}
         <div className="mt-2 h-1 bg-secondary rounded-full overflow-hidden">
-          <div 
+          <div
             className="h-full bg-primary transition-all duration-300"
             style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
           />
@@ -947,7 +971,26 @@ export default function TestAttemptPage() {
       </div>
 
       {/* Question Card */}
-      <div className="dashboard-card mb-4">
+      <div
+        key={isSundaySpecial ? `q-${currentIndex}` : 'standard'}
+        className={`dashboard-card mb-4 ${
+          isSundaySpecial
+            ? slideDirection === 'in'
+              ? 'animate-[slideInRight_0.3s_ease-out]'
+              : 'opacity-0 -translate-x-8 transition-all duration-200'
+            : ''
+        }`}
+        style={{
+          // Inline keyframes for slide-in (slide-left = next question slides in from right)
+          ...(isSundaySpecial ? {} : {}),
+        }}
+      >
+        <style>{`
+          @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+        `}</style>
         <div className="flex items-center justify-between mb-4">
           <span className="text-xs font-medium px-2 py-1 rounded-full bg-accent text-accent-foreground">
             {currentQuestion?.marks} mark{currentQuestion?.marks !== 1 ? 's' : ''}
