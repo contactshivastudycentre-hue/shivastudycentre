@@ -11,7 +11,7 @@ import { ResumeLearning } from '@/components/dashboard/ResumeLearning';
 import { StatsGrid } from '@/components/dashboard/StatsGrid';
 import { LeadPeAd } from '@/components/LeadPeAd';
 import { Link } from 'react-router-dom';
-import { ClipboardList, FileText, Play, ArrowRight } from 'lucide-react';
+import { ClipboardList, FileText, Play, Trophy, ArrowRight } from 'lucide-react';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 16 },
@@ -23,6 +23,7 @@ const quickLinks = [
   { name: 'Tests', path: '/dashboard/tests', icon: ClipboardList, color: 'text-violet-600 bg-violet-100' },
   { name: 'Notes', path: '/dashboard/notes', icon: FileText, color: 'text-emerald-600 bg-emerald-100' },
   { name: 'Videos', path: '/dashboard/videos', icon: Play, color: 'text-rose-600 bg-rose-100' },
+  { name: 'Leaderboard', path: '/dashboard/leaderboard', icon: Trophy, color: 'text-amber-600 bg-amber-100' },
 ];
 
 function calcStreak(dates: string[]): number {
@@ -111,7 +112,7 @@ export default function StudentDashboard() {
         <h2 className="text-base font-display font-bold text-foreground mb-3 px-1">
           Quick Access
         </h2>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {quickLinks.map((link) => (
             <Link
               key={link.path}
