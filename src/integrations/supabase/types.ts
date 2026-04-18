@@ -833,6 +833,7 @@ export type Database = {
         Args: { p_attempt_id: string; p_question_index: number }
         Returns: Json
       }
+      start_test_attempt_locked: { Args: { p_test_id: string }; Returns: Json }
       submit_test_attempt: {
         Args: {
           p_answers: Json

@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send, Shield, Loader2, AlertTriangle, WifiOff, RefreshCw, Eye } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Flag, Send, Shield, Loader2, AlertTriangle, WifiOff, RefreshCw, Eye, Wifi, Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAntiCheat } from '@/hooks/useAntiCheat';
@@ -91,10 +91,18 @@ export default function TestAttemptPage() {
   // Simplified submit states
   const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'slow' | 'offline' | 'failed' | 'success'>('idle');
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
-  
+
+  // Per-answer save status + network tracking
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [wasResumed, setWasResumed] = useState(false);
+
   // Refs to prevent double submission
   const submitLockRef = useRef(false);
   const submitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSyncRef = useRef(false);
+  const savedFlashRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Calculate MCQ score
   const calculateScore = useCallback(() => {
@@ -375,7 +383,8 @@ export default function TestAttemptPage() {
           });
         } else {
           setAttemptId(existingAttempt.id);
-          
+          setWasResumed(true);
+
           // Try to restore from local storage first (more recent)
           const localData = localStorage.getItem(LOCAL_STORAGE_KEY + testId);
           if (localData) {
@@ -420,15 +429,21 @@ export default function TestAttemptPage() {
     if (!user || !testId) return;
 
     try {
-      // First check if an attempt already exists
-      const { data: existingAttempt } = await supabase
-        .from('test_attempts')
-        .select('id, submitted_at')
-        .eq('test_id', testId)
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Hard DB-enforced session lock + atomic create-or-resume
+      const { data, error } = await supabase.rpc('start_test_attempt_locked', {
+        p_test_id: testId,
+      });
 
-      if (existingAttempt?.submitted_at) {
+      if (error) throw error;
+      const result = data as {
+        status: string;
+        attempt_id?: string;
+        code?: string;
+        blocking_test_title?: string;
+        blocking_test_id?: string;
+      };
+
+      if (result?.status === 'already_submitted') {
         toast({
           title: 'Test Already Submitted',
           description: 'You have already completed this test.',
@@ -438,39 +453,41 @@ export default function TestAttemptPage() {
         return;
       }
 
-      if (existingAttempt) {
-        setAttemptId(existingAttempt.id);
+      if (result?.status === 'locked') {
+        toast({
+          title: 'Another Test In Progress',
+          description: `Please finish "${result.blocking_test_title}" before starting a new test.`,
+          variant: 'destructive',
+        });
+        navigate(`/dashboard/tests/${result.blocking_test_id}`);
+        return;
+      }
+
+      if (result?.status === 'resumed' && result.attempt_id) {
+        setAttemptId(result.attempt_id);
+        setWasResumed(true);
         toast({
           title: 'Test Resumed',
-          description: 'Continuing your previous attempt.',
+          description: 'Welcome back! Your previous answers are restored.',
         });
         return;
       }
 
-      const { data, error } = await supabase
-        .from('test_attempts')
-        .insert([{
-          user_id: user.id,
-          test_id: testId,
-          answers: {},
-        }])
-        .select()
-        .single();
-
-      if (data) {
-        setAttemptId(data.id);
+      if (result?.status === 'started' && result.attempt_id) {
+        setAttemptId(result.attempt_id);
         toast({
           title: 'Test Started',
           description: 'Good luck! Your timer has started.',
         });
-      } else if (error) {
-        toast({
-          title: 'Unable to start test',
-          description: 'You may have already attempted this test.',
-          variant: 'destructive',
-        });
-        navigate('/dashboard/tests');
+        return;
       }
+
+      // Fallback error
+      toast({
+        title: 'Unable to start test',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
     } catch (error) {
       console.error('Error starting attempt:', error);
       toast({
@@ -599,26 +616,100 @@ export default function TestAttemptPage() {
     localStorage.setItem(LOCAL_STORAGE_KEY + testId, JSON.stringify(saveData));
   }, [answers, attemptId, isCompleted, testId]);
 
-  // Periodic save to database (every 15 seconds)
+  // Instant (debounced) per-answer save to database — non-blocking
+  // Triggers shortly after the student selects/types. Shows "Saving..." -> "Saved ✓".
+  useEffect(() => {
+    if (!attemptId || isCompleted) return;
+    if (Object.keys(answers).length === 0) return;
+
+    // Mark dirty immediately
+    setSaveStatus('saving');
+
+    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+    saveDebounceRef.current = setTimeout(async () => {
+      if (!navigator.onLine) {
+        // Defer until reconnect
+        pendingSyncRef.current = true;
+        setSaveStatus('error');
+        return;
+      }
+      try {
+        const { error } = await supabase
+          .from('test_attempts')
+          .update({ answers: JSON.parse(JSON.stringify(answers)) })
+          .eq('id', attemptId);
+        if (error) throw error;
+        pendingSyncRef.current = false;
+        setSaveStatus('saved');
+        // Briefly flash "Saved ✓" then fade to idle
+        if (savedFlashRef.current) clearTimeout(savedFlashRef.current);
+        savedFlashRef.current = setTimeout(() => setSaveStatus('idle'), 1500);
+      } catch (e) {
+        console.error('Instant save failed:', e);
+        pendingSyncRef.current = true;
+        setSaveStatus('error');
+      }
+    }, 600);
+
+    return () => {
+      if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+    };
+  }, [answers, attemptId, isCompleted]);
+
+  // Periodic safety-net save to database (every 15 seconds)
   useEffect(() => {
     if (!attemptId || isCompleted) return;
 
     const saveTimer = setInterval(async () => {
       if (!navigator.onLine) return; // Skip if offline
-      
       try {
         await supabase
           .from('test_attempts')
           .update({ answers: JSON.parse(JSON.stringify(answers)) })
           .eq('id', attemptId);
+        pendingSyncRef.current = false;
       } catch (e) {
-        // Silent fail for auto-save
         console.error('Auto-save failed:', e);
       }
     }, 15000);
 
     return () => clearInterval(saveTimer);
   }, [answers, attemptId, isCompleted]);
+
+  // Online/offline tracking + flush pending answers on reconnect
+  useEffect(() => {
+    const handleOnline = async () => {
+      setIsOnline(true);
+      if (pendingSyncRef.current && attemptId && !isCompleted) {
+        setSaveStatus('saving');
+        try {
+          await supabase
+            .from('test_attempts')
+            .update({ answers: JSON.parse(JSON.stringify(answers)) })
+            .eq('id', attemptId);
+          pendingSyncRef.current = false;
+          setSaveStatus('saved');
+          if (savedFlashRef.current) clearTimeout(savedFlashRef.current);
+          savedFlashRef.current = setTimeout(() => setSaveStatus('idle'), 1500);
+          toast({
+            title: 'Back online',
+            description: 'Your answers have been synced.',
+          });
+        } catch (e) {
+          console.error('Reconnect sync failed:', e);
+          setSaveStatus('error');
+        }
+      }
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [answers, attemptId, isCompleted, toast]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -911,16 +1002,47 @@ export default function TestAttemptPage() {
 
   return (
     <div className="max-w-2xl mx-auto animate-fade-in pb-24 md:pb-6">
+      {/* Offline banner */}
+      {!isOnline && (
+        <div className="sticky top-0 z-30 -mx-4 px-4 py-2 bg-warning text-warning-foreground text-sm font-medium flex items-center justify-center gap-2 shadow-md">
+          <WifiOff className="w-4 h-4" />
+          Connection lost. Reconnecting… Your timer keeps running and answers are saved locally.
+        </div>
+      )}
+
+      {/* Resumed banner (one-time) */}
+      {wasResumed && isOnline && (
+        <div className="-mx-4 px-4 py-2 bg-primary/10 text-primary text-xs font-medium flex items-center justify-center gap-2 mb-2">
+          <RefreshCw className="w-3.5 h-3.5" />
+          Session restored — continue from where you left off.
+        </div>
+      )}
+
       {/* Sticky Timer Header */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm -mx-4 px-4 py-3 mb-4 border-b">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex-1 min-w-0">
             <p className="font-medium text-foreground text-sm truncate">{test?.title}</p>
-            <p className="text-xs text-muted-foreground">
-              Q {currentIndex + 1} of {questions.length}
-            </p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Q {currentIndex + 1} of {questions.length}</span>
+              {/* Save indicator */}
+              {saveStatus === 'saving' && (
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Saving…
+                </span>
+              )}
+              {saveStatus === 'saved' && (
+                <span className="flex items-center gap-1 text-success">
+                  <CheckCircle className="w-3 h-3" /> Saved
+                </span>
+              )}
+              {saveStatus === 'error' && (
+                <span className="flex items-center gap-1 text-warning">
+                  <WifiOff className="w-3 h-3" /> Will retry
+                </span>
+              )}
+            </div>
           </div>
-          
           {violationCount > 0 && (
             <div className="text-xs text-destructive bg-destructive/10 px-2 py-1 rounded-full mr-2">
               ⚠️ {3 - violationCount} warnings left

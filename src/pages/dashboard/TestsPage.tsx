@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ClipboardList, Clock, ArrowRight, CheckCircle, Eye } from 'lucide-react';
+import { ClipboardList, Clock, ArrowRight, CheckCircle, Eye, Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { CardSkeletonGrid } from '@/components/skeletons/CardSkeleton';
 
@@ -65,6 +65,9 @@ export default function TestsPage() {
     return attempts.find((a) => a.test_id === testId);
   };
 
+  // Active (unsubmitted) attempt for ANY test — used for hard session lock UI
+  const activeAttempt = attempts.find((a) => !a.submitted_at);
+
   if (isLoading) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -83,6 +86,21 @@ export default function TestsPage() {
         <h1 className="text-2xl font-display font-bold text-foreground">Tests</h1>
         <p className="text-muted-foreground">Attempt MCQ tests and track your progress</p>
       </div>
+
+      {activeAttempt && (
+        <div className="dashboard-card border-l-4 border-l-warning bg-warning/5 flex items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <Lock className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-foreground text-sm">A test is in progress</p>
+              <p className="text-xs text-muted-foreground">Finish or submit it before starting another test.</p>
+            </div>
+          </div>
+          <Link to={`/dashboard/tests/${activeAttempt.test_id}`}>
+            <Button size="sm">Resume</Button>
+          </Link>
+        </div>
+      )}
 
 {tests.length === 0 ? (
         <div className="dashboard-card text-center py-12">
@@ -136,6 +154,11 @@ export default function TestsPage() {
                           View Result
                         </Button>
                       </Link>
+                    ) : activeAttempt && activeAttempt.test_id !== test.id ? (
+                      <Button variant="outline" disabled className="gap-2 opacity-60">
+                        <Lock className="w-4 h-4" />
+                        Locked
+                      </Button>
                     ) : (
                       <Link to={`/dashboard/tests/${test.id}`}>
                         <Button>
