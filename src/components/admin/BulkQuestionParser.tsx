@@ -18,19 +18,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { 
-  FileText, 
-  Sparkles, 
-  CheckCircle, 
-  Trash2, 
-  Edit2, 
+import {
+  FileText,
+  Sparkles,
+  CheckCircle,
+  Trash2,
+  Edit2,
   AlertCircle,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Wand2,
+  Loader2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 type QuestionType = 'mcq_single' | 'mcq_multiple' | 'true_false' | 'short_answer' | 'long_answer';
 
