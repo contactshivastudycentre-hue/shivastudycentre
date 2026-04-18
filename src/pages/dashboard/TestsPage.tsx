@@ -150,11 +150,11 @@ export default function TestsPage() {
             const isCompleted = attempt?.submitted_at;
             const phase = getPhase(test, now);
             const phaseBadge = phase === 'upcoming'
-              ? <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700 inline-flex items-center gap-1"><Calendar className="w-3 h-3" />UPCOMING · {test.start_time && formatCountdown(new Date(test.start_time), now)}</span>
+              ? <span className="text-xs font-bold px-2 py-1 rounded-full bg-primary/10 text-primary inline-flex items-center gap-1"><Calendar className="w-3 h-3" />UPCOMING · {test.start_time && formatCountdown(new Date(test.start_time), now)}</span>
               : phase === 'live'
-              ? <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-700 inline-flex items-center gap-1 animate-pulse"><Radio className="w-3 h-3" />LIVE · ends in {test.end_time && formatCountdown(new Date(test.end_time), now)}</span>
+              ? <span className="text-xs font-bold px-2 py-1 rounded-full bg-success/15 text-success inline-flex items-center gap-1 animate-pulse"><Radio className="w-3 h-3" />LIVE · ends in {test.end_time && formatCountdown(new Date(test.end_time), now)}</span>
               : phase === 'closed'
-              ? <span className="text-xs font-bold px-2 py-1 rounded-full bg-gray-200 text-gray-600">TEST CLOSED</span>
+              ? <span className="text-xs font-bold px-2 py-1 rounded-full bg-muted text-muted-foreground">TEST CLOSED</span>
               : null;
 
             return (
