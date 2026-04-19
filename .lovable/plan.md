@@ -1,117 +1,55 @@
 
-Goal: stabilize the mobile WPA reload flow, remove the false “Account not found / Please register” state, ensure SSC Special Test banners always enter the unified student slider, and tighten oversized mobile UI across dashboard pages.
+Goal: Fix banner upload duplicate-key error and apply a global compact button/form system across admin pages, starting with /admin/banners.
 
 What I found
-- Auth boot is still fragile: `src/lib/auth.tsx` sets auth state quickly, but profile fetch has no error-aware recovery. If profile lookup is delayed or returns null once, `DashboardLayout` can still fall into the “Profile Not Found” branch.
-- The preview auth logs show refresh-token problems, which matches the reload/logout symptom in the WPA.
-- The unified banner exists, but it depends on auto-created `banners` rows plus class-based visibility. If `tests.class`, `banners.target_class`, and `profiles.class` are not perfectly aligned, students won’t see the banner even when the test is published.
-- The banner carousel is still visually too tall/dense for phones, and several student pages use large default card/button spacing.
-- There are also React ref warnings from `Skeleton` and `SearchInput`; these should be cleaned up during the stabilization pass.
+- `banners.title` has a UNIQUE constraint (`banners_title_key`) — blocks repeat titles like "SSC SPECIAL TEST".
+- Trigger `sync_test_banner` relies on `ON CONFLICT (title) DO UPDATE` using titles like `TEST_BANNER:<uuid>` — those are unique by design but require either a UNIQUE constraint OR rewriting the trigger.
+- `id` column already exists as PK with `gen_random_uuid()` default — no schema change needed there.
+- Admin banner page and other admin pages use default shadcn buttons that often render full-width on mobile and oversized cards.
 
-Implementation plan
+Plan
 
-1. Harden auth bootstrap for reload/PWA
-- Refactor `src/lib/auth.tsx` into a proper boot sequence:
-  - separate `authReady` / `profileReady` behavior
-  - restore session first
-  - then fetch user + profile using `user_id`
-  - only mark app ready after that flow completes
-- Make `fetchProfile` use explicit error handling (`maybeSingle`, reset stale state, retry-safe behavior).
-- Prevent stale profile flashes by clearing/loading state correctly on every auth transition.
-- Update `src/components/layout/DashboardLayout.tsx` and `src/components/layout/AdminLayout.tsx` to show a centered loading spinner/skeleton until auth + profile are resolved.
-- Remove the misleading fallback copy (“Please complete your registration”) for transient failures; only show a true missing-profile screen if the backend confirms the profile does not exist.
-- Update `src/pages/StudentAuthPage.tsx` so post-login navigation waits for resolved auth/profile state instead of using possibly stale `isAdmin/profile`.
+1. Database fix (migration)
+   - Drop the global UNIQUE on `banners.title`.
+   - Replace it with a PARTIAL UNIQUE index only for auto-managed test banners so the existing trigger keeps working:
+     `CREATE UNIQUE INDEX banners_test_sync_title_uidx ON public.banners (title) WHERE title LIKE 'TEST_BANNER:%';`
+   - Result: Admin can create unlimited banners with any title (including duplicates), while the test→banner sync still upserts cleanly.
 
-2. Stabilize mobile PWA reload behavior
-- Audit `public/sw.js` and simplify caching so reloads do not serve stale app shell/assets that can cause a blank WPA.
-- Prefer safer navigation handling for the SPA shell and avoid over-caching problematic responses.
-- Keep a lightweight loading shell visible during route/auth hydration so reload never appears blank.
+2. Admin Banners page (`src/pages/admin/AdminBannersPage.tsx`)
+   - Wrap content in a compact mobile container (`max-w-md md:max-w-3xl mx-auto px-4`).
+   - Compact upload card: stacked form, 40px inputs, preview capped at `max-h-[140px] object-cover rounded-xl`.
+   - Buttons: `Save Banner` / `Select Image` use new `btn-primary` (h-10, max-w-[200px], not full width); icon actions stay compact.
+   - Insert flow: validate image uploaded → image_url present → insert; remove any reliance on title uniqueness.
 
-3. Fix SSC Special Test banner generation and visibility
-- Verify and adjust the banner sync path so every published SSC Special test with a banner image creates/updates exactly one `test_announcement` banner row.
-- Add a migration to normalize class values across:
-  - `tests.class`
-  - `banners.target_class`
-  - student `profiles.class`
-  so RLS and unified slider visibility match reliably.
-- Re-sync existing published highlight tests so missing banner rows are rebuilt.
-- Tighten `src/components/dashboard/BannerCarousel.tsx` to:
-  - explicitly support SSC Special metadata
-  - prioritize live test > upcoming test > topper > admin
-  - show correct CTA state: Upcoming / Attempt Now / View Result
-  - gracefully ignore malformed banner metadata instead of failing the slide.
+3. Global button + form tokens (`src/index.css`)
+   - Add reusable utility classes:
+     - `.btn-primary` (h-10/42px, px-4, text-sm, font-semibold, rounded-[10px], inline-flex, max-w-[200px], whitespace-nowrap)
+     - `.btn-secondary` (h-9, px-3, text-[13px], rounded-lg, max-w-[160px])
+     - `.page-container` (max-w-[420px] md:max-w-3xl mx-auto p-4)
+     - `.banner-upload-card` (rounded-2xl bg-card p-4 shadow-sm)
+   - Inputs already 40px via shadcn — keep as is, ensure `w-full` only inside form rows.
 
-4. Validate and polish banner upload pipeline
-- Keep the existing storage-based upload flow, but standardize it end to end:
-  - confirm one canonical banner bucket is used everywhere
-  - ensure file validation is strict for images and size
-  - keep instant preview after upload
-  - surface better upload errors in admin test/banner forms
-- Review both:
-  - `src/pages/admin/AdminBannersPage.tsx`
-  - `src/components/admin/TestBuilder.tsx`
-  so uploaded images used for admin banners and SSC Special test banners behave consistently.
+4. Apply globally to admin pages
+   - Audit `AdminBannersPage`, `AdminTestsPage`, `AdminStudentsPage`, `AdminResultsPage`, `AdminDashboard`.
+   - Strip `w-full` from primary action buttons (Create / Save / Publish / Upload) unless inside a true full-width context (e.g., modal footer on mobile).
+   - Replace oversized headers/cards with `.page-container` wrapper for consistent 16px padding.
 
-5. Mobile UI sizing pass across the student WPA
-- Reduce oversized mobile density in:
-  - `src/components/dashboard/BannerCarousel.tsx`
-  - `src/pages/dashboard/StudentDashboard.tsx`
-  - `src/pages/dashboard/TestsPage.tsx`
-  - `src/pages/dashboard/NotesPage.tsx`
-  - `src/pages/dashboard/VideosPage.tsx`
-  - `src/pages/dashboard/VideoWatchPage.tsx`
-  - `src/pages/dashboard/TestResultPage.tsx`
-  - `src/pages/dashboard/ProfilePage.tsx`
-- Adjust:
-  - banner aspect ratio and inner spacing
-  - CTA/button heights and font sizes
-  - card padding on phones
-  - chip/badge density
-  - section spacing so content sits higher and fits better on 390px-wide screens
-- Keep touch targets accessible while removing the oversized look.
+5. Banner display standard (already done in `BannerCarousel`)
+   - Confirm `aspect-[2/1]`, `object-cover`, `rounded-2xl`, mobile max-height implicit via aspect ratio.
 
-6. Cleanup warnings that affect stability
-- Convert `src/components/ui/skeleton.tsx` to `forwardRef`.
-- Convert `src/components/SearchInput.tsx` to `forwardRef`-friendly behavior.
-- This removes the current console warnings and helps avoid focus/render oddities on mobile.
+6. Verification
+   - Admin: upload two banners with the same title "SSC SPECIAL TEST" → both succeed.
+   - Admin: publish a Sunday Special test → trigger still upserts `TEST_BANNER:<uuid>` row.
+   - Mobile (390px): no horizontal scroll, buttons sized ~200px max, preview compact.
 
-7. End-to-end verification after implementation
-- Test flow on mobile-sized preview and WPA-style reload:
-  1. reload while logged in
-  2. confirm spinner appears, no blank screen
-  3. confirm no false “Account not found”
-  4. create/publish SSC Special test with banner image
-  5. confirm banner appears in unified slider as Upcoming
-  6. confirm it changes to Attempt Now when live
-  7. confirm student can open test and complete attempt
-- Also verify Notes, Videos, Profile, Result, and Dashboard pages for mobile sizing consistency.
-
-Technical details
-- Likely files to change:
-  - `src/lib/auth.tsx`
-  - `src/components/layout/DashboardLayout.tsx`
-  - `src/components/layout/AdminLayout.tsx`
-  - `src/pages/StudentAuthPage.tsx`
-  - `src/components/dashboard/BannerCarousel.tsx`
-  - `src/pages/admin/AdminBannersPage.tsx`
-  - `src/components/admin/TestBuilder.tsx`
-  - `src/pages/dashboard/StudentDashboard.tsx`
-  - `src/pages/dashboard/TestsPage.tsx`
-  - `src/pages/dashboard/NotesPage.tsx`
-  - `src/pages/dashboard/VideosPage.tsx`
-  - `src/pages/dashboard/VideoWatchPage.tsx`
-  - `src/pages/dashboard/TestResultPage.tsx`
-  - `src/pages/dashboard/ProfilePage.tsx`
-  - `src/components/ui/skeleton.tsx`
-  - `src/components/SearchInput.tsx`
-  - `public/sw.js`
-- Backend work needed:
-  - one migration to normalize class values and re-sync existing test banners
-  - possible storage policy/bucket alignment if banner upload config is inconsistent
+Files to change
+- `supabase/migrations/<new>.sql` — drop unique, add partial unique index.
+- `src/index.css` — add `.btn-primary`, `.btn-secondary`, `.page-container`, `.banner-upload-card`.
+- `src/pages/admin/AdminBannersPage.tsx` — compact layout + button sizing.
+- `src/pages/admin/AdminTestsPage.tsx`, `AdminStudentsPage.tsx`, `AdminResultsPage.tsx`, `AdminDashboard.tsx` — strip full-width on primary buttons, wrap in `.page-container`.
 
 Result after fix
-- Mobile WPA reload shows a loading state instead of a blank screen.
-- Logged-in students stay signed in correctly and do not see the false registration error.
-- SSC Special tests always appear inside the one unified dashboard banner slider.
-- Banner CTA changes correctly with test time.
-- Student pages feel properly sized on phone screens instead of oversized.
+- Banner upload no longer fails on duplicate titles.
+- One global button/input system across admin pages.
+- /admin/banners feels compact and mobile-clean at 390px.
+- Test→banner auto-sync continues to work safely via partial unique index.
