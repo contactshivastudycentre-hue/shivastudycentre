@@ -107,14 +107,10 @@ export function BannerCarousel() {
         .or(`end_date.is.null,end_date.gte.${nowIso}`)
         .order('priority', { ascending: false })
         .limit(12);
-      return ((data || []) as BannerRow[]).filter((b) => {
-        if (!b.image_url) return false;
-        // For non-test banners, still respect start_date so admins can schedule
-        if (b.template !== 'test_announcement' && b.start_date && new Date(b.start_date) > new Date()) {
-          return false;
-        }
-        return true;
-      });
+      // Show every active banner with an image as long as it hasn't ended.
+      // start_date is treated as informational only — banners appear immediately
+      // once active so admins never wonder "why isn't my banner showing?".
+      return ((data || []) as BannerRow[]).filter((b) => !!b.image_url);
     },
     enabled: !!profile,
     refetchInterval: 60000,
