@@ -1,7 +1,8 @@
 import { useAuth } from '@/lib/auth';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
+import { useEffect } from 'react';
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 import { BannerCarousel } from '@/components/dashboard/BannerCarousel';
 import { TrendingContent } from '@/components/dashboard/TrendingContent';
