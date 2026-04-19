@@ -198,20 +198,20 @@ export default function TestsPage() {
                       )}
                     </div>
                   </div>
-                  <div>
+                  <div className="flex justify-end shrink-0">
                     {isCompleted ? (
                       <Link to={`/dashboard/results/${attempt?.id}`}>
-                        <Button variant="outline" className="gap-2"><Eye className="w-4 h-4" />View Result</Button>
+                        <Button size="sm" variant="outline" className="h-9 px-3 text-xs gap-1.5 w-auto"><Eye className="w-3.5 h-3.5" />View Result</Button>
                       </Link>
                     ) : phase === 'upcoming' ? (
-                      <Button variant="outline" disabled className="gap-2 opacity-60"><Calendar className="w-4 h-4" />Upcoming</Button>
+                      <Button size="sm" variant="outline" disabled className="h-9 px-3 text-xs gap-1.5 w-auto opacity-60"><Calendar className="w-3.5 h-3.5" />Upcoming</Button>
                     ) : phase === 'closed' ? (
-                      <Button variant="outline" disabled className="gap-2 opacity-60"><Lock className="w-4 h-4" />Closed</Button>
+                      <Button size="sm" variant="outline" disabled className="h-9 px-3 text-xs gap-1.5 w-auto opacity-60"><Lock className="w-3.5 h-3.5" />Closed</Button>
                     ) : activeAttempt && activeAttempt.test_id !== test.id ? (
-                      <Button variant="outline" disabled className="gap-2 opacity-60"><Lock className="w-4 h-4" />Locked</Button>
+                      <Button size="sm" variant="outline" disabled className="h-9 px-3 text-xs gap-1.5 w-auto opacity-60"><Lock className="w-3.5 h-3.5" />Locked</Button>
                     ) : (
                       <Link to={`/dashboard/tests/${test.id}`}>
-                        <Button>{attempt ? 'Continue' : 'Start Test'}<ArrowRight className="w-4 h-4 ml-2" /></Button>
+                        <Button size="sm" className="h-9 px-3 text-xs gap-1 w-auto">{attempt ? 'Continue' : 'Start Test'}<ArrowRight className="w-3.5 h-3.5" /></Button>
                       </Link>
                     )}
                   </div>
