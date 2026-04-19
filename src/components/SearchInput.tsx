@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,10 +11,13 @@ interface SearchInputProps {
   className?: string;
 }
 
-export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(function SearchInput(
-  { value, onChange, placeholder = 'Search...', debounceMs = 300, className = '' },
-  ref,
-) {
+export function SearchInput({
+  value,
+  onChange,
+  placeholder = 'Search...',
+  debounceMs = 300,
+  className = '',
+}: SearchInputProps) {
   const [localValue, setLocalValue] = useState(value);
 
   useEffect(() => {
@@ -33,7 +36,6 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(functi
     <div className={`relative ${className}`}>
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
       <Input
-        ref={ref}
         type="text"
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
@@ -56,4 +58,4 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(functi
       )}
     </div>
   );
-});
+}
