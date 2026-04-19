@@ -17,6 +17,14 @@ interface Test {
   end_time?: string | null;
   banner_image?: string | null;
   prize_pool?: number | null;
+  prize_type?: string | null;
+  prize_value?: string | null;
+}
+
+function testPrize(t: Test): string | null {
+  if (t.prize_value) return t.prize_value;
+  if (t.prize_pool) return `₹${t.prize_pool}`;
+  return null;
 }
 
 type TestPhase = 'upcoming' | 'live' | 'closed' | 'always';
