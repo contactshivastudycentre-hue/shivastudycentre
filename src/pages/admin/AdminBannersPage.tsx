@@ -136,15 +136,15 @@ export default function AdminBannersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-container space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Banners</h1>
-          <p className="text-muted-foreground">Upload banner images shown on student dashboard</p>
+          <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">Banners</h1>
+          <p className="text-sm text-muted-foreground">Upload banner images shown on student dashboard</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) resetForm(); setDialogOpen(o); }}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto"><Plus className="w-4 h-4 mr-2" />Upload Banner</Button>
+            <Button className="h-10 px-4 max-w-[200px] rounded-[10px] text-sm font-semibold self-start sm:self-auto"><Plus className="w-4 h-4 mr-1.5" />Upload Banner</Button>
           </DialogTrigger>
           <DialogContent
             className="w-[calc(100vw-2rem)] max-w-xl max-h-[90vh] overflow-y-auto"
@@ -169,7 +169,7 @@ export default function AdminBannersPage() {
 
               {form.image_url && (
                 <div className="rounded-xl overflow-hidden border border-border bg-muted">
-                  <img src={form.image_url} alt="Preview" className="w-full h-auto block" style={{ aspectRatio: '3 / 1', objectFit: 'cover' }} />
+                  <img src={form.image_url} alt="Preview" className="w-full max-h-[140px] object-cover block" />
                 </div>
               )}
 
@@ -253,9 +253,11 @@ export default function AdminBannersPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full min-h-[48px]" disabled={saveMutation.isPending || !form.image_url}>
-                {saveMutation.isPending ? 'Saving...' : editing ? 'Update Banner' : 'Save Banner'}
-              </Button>
+              <div className="flex justify-end pt-1">
+                <Button type="submit" className="h-10 px-5 max-w-[220px] rounded-[10px] text-sm font-semibold" disabled={saveMutation.isPending || !form.image_url}>
+                  {saveMutation.isPending ? 'Saving...' : editing ? 'Update Banner' : 'Save Banner'}
+                </Button>
+              </div>
             </form>
           </DialogContent>
         </Dialog>
