@@ -121,6 +121,10 @@ export default {
           "0%": { transform: "translateX(0)" },
           "100%": { transform: "translateX(-50%)" },
         },
+        "banner-shimmer": {
+          "0%": { transform: "translateX(0) skewX(12deg)" },
+          "60%, 100%": { transform: "translateX(450%) skewX(12deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -132,6 +136,7 @@ export default {
         "shimmer": "shimmer 8s ease-in-out infinite",
         "float": "float 3s ease-in-out infinite",
         "pulse-soft": "pulse-soft 2s ease-in-out infinite",
+        "banner-shimmer": "banner-shimmer 5s ease-in-out infinite",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
