@@ -20,6 +20,23 @@ type BannerRow = {
   priority?: number | null;
 };
 
+type TestBannerRow = {
+  id: string;
+  title: string;
+  class: string;
+  subject: string;
+  duration_minutes: number;
+  banner_image: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  prize_pool: number | null;
+  prize_type: string | null;
+  prize_value: string | null;
+  prize_description: string | null;
+  description: string | null;
+  test_type: string;
+};
+
 type TestMeta = {
   test_id?: string;
   test_type?: string;
@@ -98,20 +115,71 @@ export function BannerCarousel() {
     queryKey: ['student-banners', profile?.class],
     queryFn: async () => {
       const nowIso = new Date().toISOString();
-      // For test_announcement banners we want to show UPCOMING ones too,
-      // so we don't filter by start_date here. We only drop banners that have
-      // already ended (end_date < now). Active flag still required.
-      const { data } = await supabase
-        .from('banners')
-        .select('id, title, subtitle, description, image_url, cta_link, cta_text, template, start_date, end_date, priority')
-        .eq('is_active', true)
-        .or(`end_date.is.null,end_date.gte.${nowIso}`)
-        .order('priority', { ascending: false })
-        .limit(12);
-      // Show every active banner with an image as long as it hasn't ended.
-      // start_date is treated as informational only — banners appear immediately
-      // once active so admins never wonder "why isn't my banner showing?".
-      return ((data || []) as BannerRow[]).filter((b) => !!b.image_url);
+      const [bannerRes, testRes] = await Promise.all([
+        supabase
+          .from('banners')
+          .select('id, title, subtitle, description, image_url, cta_link, cta_text, template, start_date, end_date, priority')
+          .eq('is_active', true)
+          .or(`end_date.is.null,end_date.gte.${nowIso}`)
+          .order('priority', { ascending: false })
+          .limit(12),
+        supabase
+          .from('tests')
+          .select('id, title, class, subject, duration_minutes, banner_image, start_time, end_time, prize_pool, prize_type, prize_value, prize_description, description, test_type')
+          .eq('is_published', true)
+          .in('test_type', ['sunday_special', 'weekly', 'surprise_quiz'])
+          .not('banner_image', 'is', null)
+          .or(`end_time.is.null,end_time.gte.${nowIso}`)
+          .order('start_time', { ascending: true })
+          .limit(8),
+      ]);
+
+      const adminBanners = ((bannerRes.data || []) as BannerRow[]).filter((b) => !!b.image_url);
+      const testBanners = ((testRes.data || []) as TestBannerRow[]).map((test) => {
+        const meta: TestMeta = {
+          test_id: test.id,
+          test_type: test.test_type,
+          class: test.class,
+          subject: test.subject,
+          duration_minutes: test.duration_minutes,
+          prize_pool: test.prize_pool,
+          prize_type: test.prize_type,
+          prize_value: test.prize_value,
+          prize_description: test.prize_description,
+          start_time: test.start_time,
+          end_time: test.end_time,
+          description: test.description,
+        };
+
+        return {
+          id: `test-${test.id}`,
+          title: `TEST_BANNER:${test.id}`,
+          subtitle: test.title,
+          description: JSON.stringify(meta),
+          image_url: test.banner_image,
+          cta_link: `/dashboard/tests/${test.id}`,
+          cta_text: 'Attempt Test',
+          template: 'test_announcement',
+          start_date: test.start_time,
+          end_date: test.end_time,
+          priority: 1000,
+        } satisfies BannerRow;
+      });
+
+      const merged = [...adminBanners];
+      const existingTestIds = new Set(
+        adminBanners
+          .map((banner) => parseTestMeta(banner)?.test_id)
+          .filter((id): id is string => Boolean(id)),
+      );
+
+      testBanners.forEach((banner) => {
+        const testId = parseTestMeta(banner)?.test_id;
+        if (!testId || existingTestIds.has(testId)) return;
+        merged.push(banner);
+      });
+
+      return merged;
     },
     enabled: !!profile,
     refetchInterval: 60000,
