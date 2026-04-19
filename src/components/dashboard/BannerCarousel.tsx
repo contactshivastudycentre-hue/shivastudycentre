@@ -97,15 +97,24 @@ export function BannerCarousel() {
     queryKey: ['student-banners', profile?.class],
     queryFn: async () => {
       const nowIso = new Date().toISOString();
+      // For test_announcement banners we want to show UPCOMING ones too,
+      // so we don't filter by start_date here. We only drop banners that have
+      // already ended (end_date < now). Active flag still required.
       const { data } = await supabase
         .from('banners')
         .select('id, title, subtitle, description, image_url, cta_link, cta_text, template, start_date, end_date, priority')
         .eq('is_active', true)
-        .or(`start_date.is.null,start_date.lte.${nowIso}`)
         .or(`end_date.is.null,end_date.gte.${nowIso}`)
         .order('priority', { ascending: false })
-        .limit(8);
-      return ((data || []) as BannerRow[]).filter(b => !!b.image_url);
+        .limit(12);
+      return ((data || []) as BannerRow[]).filter((b) => {
+        if (!b.image_url) return false;
+        // For non-test banners, still respect start_date so admins can schedule
+        if (b.template !== 'test_announcement' && b.start_date && new Date(b.start_date) > new Date()) {
+          return false;
+        }
+        return true;
+      });
     },
     enabled: !!profile,
     refetchInterval: 60000,
@@ -183,7 +192,7 @@ export function BannerCarousel() {
       className="relative w-full overflow-hidden rounded-2xl bg-muted shadow-sm"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      style={{ aspectRatio: '16 / 7' }}
+      style={{ aspectRatio: '16 / 9' }}
     >
       {/* Background image */}
       <img
