@@ -1,77 +1,64 @@
-const CACHE_NAME = 'ssc-cache-v4';
+// Minimal SW: network-first for navigation (so PWA never serves a stale blank shell),
+// cache-first for static icons/manifest. No SPA pre-cache that could go stale.
+const CACHE_NAME = 'ssc-static-v6';
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/pwa-icon-192.svg',
-  '/pwa-icon-512.svg'
+  '/pwa-icon-512.svg',
+  '/pwa-icon-maskable.svg',
 ];
 
-// Install event - cache static assets & force activate immediately
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
+      .then(() => self.skipWaiting()),
   );
 });
 
-// Activate event - purge ALL old caches and claim clients immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      );
-    }).then(() => self.clients.claim())
-      .then(() => {
-        // Notify all clients to reload with new version
-        self.clients.matchAll({ type: 'window' }).then((clients) => {
-          clients.forEach((client) => {
-            client.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME });
-          });
-        });
-      })
+    caches.keys()
+      .then((names) => Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n))))
+      .then(() => self.clients.claim()),
   );
 });
 
-// Fetch event - network first, fallback to cache
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  const req = event.request;
+  if (req.method !== 'GET') return;
 
-  const url = new URL(event.request.url);
-  if (url.pathname.startsWith('/api') || 
-      url.hostname.includes('supabase') ||
-      url.hostname.includes('googleapis')) {
+  const url = new URL(req.url);
+
+  // Never intercept Supabase / API / cross-origin auth requests
+  if (
+    url.hostname.includes('supabase.co') ||
+    url.hostname.includes('supabase.in') ||
+    url.pathname.startsWith('/api') ||
+    url.hostname.includes('googleapis')
+  ) {
     return;
   }
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (event.request.mode === 'navigate' && response.status === 404) {
-          return caches.match('/') || response;
-        }
-        if (response.ok) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        return response;
-      })
-      .catch(() => {
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) return cachedResponse;
-          if (event.request.mode === 'navigate') return caches.match('/');
-          return new Response('Offline', { status: 503 });
-        });
-      })
-  );
+  // Navigation requests: always go to network so we never serve a stale SPA shell.
+  // Fall back to '/' from cache only if offline.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req).catch(() => caches.match('/').then((r) => r || new Response('Offline', { status: 503 }))),
+    );
+    return;
+  }
+
+  // Static assets we explicitly cached: cache-first
+  if (STATIC_ASSETS.some((p) => url.pathname === p)) {
+    event.respondWith(caches.match(req).then((r) => r || fetch(req)));
+    return;
+  }
+
+  // Everything else: network only (no aggressive caching that could cause stale builds)
+  // The browser HTTP cache + Vite hashed filenames already handle this efficiently.
 });
 
-// Listen for skip waiting message
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();

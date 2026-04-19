@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
-import { Home, FileText, Play, ClipboardList, User, LogOut, BookOpen } from 'lucide-react';
+import { Home, FileText, Play, ClipboardList, User, LogOut, BookOpen, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { BottomNav } from './BottomNav';
@@ -19,16 +19,16 @@ const sidebarItems = [
 
 export function DashboardLayout() {
   const location = useLocation();
-  const { user, profile, isLoading, profileLoaded, signOut } = useAuth();
+  const { user, profile, isLoading, profileLoaded, profileMissing, signOut } = useAuth();
 
   // Wait for BOTH session restore AND first profile fetch before rendering
   // any state-dependent UI. This prevents the "Profile Not Found" flash that
-  // appears between session-restore and the async profile query (which was
-  // also being interpreted by users as an "auto-logout" / "Account not found").
+  // appears between session-restore and the async profile query.
   if (isLoading || (user && !profileLoaded)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading your dashboard…</p>
       </div>
     );
   }
@@ -37,14 +37,27 @@ export function DashboardLayout() {
     return <Navigate to="/student-login" replace />;
   }
 
+  // Only show "missing profile" screen when backend has explicitly confirmed
+  // the row does not exist. Transient/network errors no longer trigger this.
   if (!profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Profile Not Found</h2>
-          <p className="text-muted-foreground mb-4">Please complete your registration.</p>
-          <Button onClick={signOut}>Sign Out</Button>
+    if (profileMissing) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background p-4">
+          <div className="text-center max-w-sm">
+            <h2 className="text-xl font-semibold mb-2">Complete your registration</h2>
+            <p className="text-muted-foreground mb-4">
+              We couldn't find your student profile. Please complete registration to continue.
+            </p>
+            <Button onClick={signOut}>Sign Out</Button>
+          </div>
         </div>
+      );
+    }
+    // Network glitch — keep the spinner instead of the false "not found" screen.
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading your dashboard…</p>
       </div>
     );
   }
@@ -153,8 +166,8 @@ export function DashboardLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="md:ml-64 pt-16 md:pt-0 pb-20 md:pb-0 min-h-screen">
-        <div className="p-4 md:p-8">
+      <main className="md:ml-64 pt-[60px] md:pt-0 pb-20 md:pb-0 min-h-screen">
+        <div className="p-3 md:p-8">
           <Outlet />
         </div>
       </main>

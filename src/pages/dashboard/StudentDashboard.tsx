@@ -80,9 +80,9 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="space-y-4 max-w-3xl mx-auto">
       {/* Unified hero banner slider — includes admin banners, topper banners,
-          and live/upcoming test banners (Sunday Special, Weekly, Surprise Quiz) */}
+          and live/upcoming test banners (SSC Special, Weekly, Surprise Quiz) */}
       <motion.div {...fadeInUp}>
         <BannerCarousel />
       </motion.div>
@@ -106,20 +106,20 @@ export default function StudentDashboard() {
 
       {/* Quick Access */}
       <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.15 }}>
-        <h2 className="text-base font-display font-bold text-foreground mb-3 px-1">
+        <h2 className="text-sm font-display font-bold text-foreground mb-2 px-1">
           Quick Access
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-2">
           {quickLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
-              className="bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col items-center text-center active:scale-95"
+              className="bg-card rounded-xl border border-border p-2.5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col items-center text-center active:scale-95"
             >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-2 ${link.color}`}>
-                <link.icon className="w-6 h-6" />
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-1.5 ${link.color}`}>
+                <link.icon className="w-5 h-5" />
               </div>
-              <span className="text-sm font-display font-semibold text-foreground">{link.name}</span>
+              <span className="text-[11px] font-display font-semibold text-foreground leading-tight">{link.name}</span>
             </Link>
           ))}
         </div>
