@@ -178,7 +178,7 @@ export default function TestsPage() {
                         <span className="flex items-center gap-1 font-semibold text-amber-600"><Trophy className="w-4 h-4" />Prize Pool: ₹{test.prize_pool}</span>
                       ) : null}
                       {test.start_time && phase !== 'always' && (
-                        <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{new Date(test.start_time).toLocaleString()}</span>
+                        <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{new Date(test.start_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</span>
                       )}
                       {isCompleted && (
                         <span className="flex items-center gap-1 text-success">

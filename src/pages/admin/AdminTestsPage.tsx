@@ -36,7 +36,7 @@ interface Test {
 }
 
 const TYPE_LABELS: Record<string, { label: string; className: string }> = {
-  sunday_special: { label: '🔥 Sunday', className: 'bg-amber-100 text-amber-800' },
+  sunday_special: { label: '🔥 SSC Special', className: 'bg-amber-100 text-amber-800' },
   weekly: { label: '📅 Weekly', className: 'bg-blue-100 text-blue-800' },
   surprise_quiz: { label: '⚡ Surprise', className: 'bg-purple-100 text-purple-800' },
   mock: { label: '📝 Mock', className: 'bg-slate-100 text-slate-800' },

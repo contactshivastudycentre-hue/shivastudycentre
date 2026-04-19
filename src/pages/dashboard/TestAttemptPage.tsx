@@ -1074,7 +1074,7 @@ export default function TestAttemptPage() {
         {isSundaySpecial && (
           <div className="mt-1 flex items-center gap-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-500 to-orange-500 text-white">
-              🏆 Sunday Special
+              🏆 SSC Special Test
             </span>
             <span className="text-[10px] text-muted-foreground">
               Locked sequence — no going back

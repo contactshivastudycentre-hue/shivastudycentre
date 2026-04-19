@@ -195,7 +195,7 @@ export function BannerCarousel() {
               <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-gradient-to-r from-amber-500 to-orange-500 rounded-full px-2 py-0.5 shadow">
                 <Sparkles className="w-3 h-3" />
                 {meta!.test_type === 'sunday_special'
-                  ? 'SSC Sunday Special'
+                  ? 'SSC Special Test'
                   : meta!.test_type === 'weekly'
                   ? 'Weekly Test'
                   : 'Surprise Quiz'}
@@ -221,9 +221,14 @@ export function BannerCarousel() {
                   </span>
                 ) : null}
                 {phase === 'upcoming' && start && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-white/20 backdrop-blur rounded-full px-2 py-0.5">
-                    <Calendar className="w-3 h-3" /> Starts in {fmtCountdown(start, now)}
-                  </span>
+                  <>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-white/20 backdrop-blur rounded-full px-2 py-0.5">
+                      <Calendar className="w-3 h-3" /> Starts in {fmtCountdown(start, now)}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-white/30 backdrop-blur rounded-full px-2 py-0.5 uppercase tracking-wide">
+                      ⏰ {start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                    </span>
+                  </>
                 )}
                 {phase === 'live' && end && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-white/20 backdrop-blur rounded-full px-2 py-0.5">

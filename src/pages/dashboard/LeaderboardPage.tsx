@@ -11,7 +11,7 @@ import { motion } from 'framer-motion';
 const CLASSES = ['4', '5', '6', '7', '8', '9', '10', '11', '12'];
 const TYPE_LABELS: Record<string, string> = {
   all: 'All Tests',
-  sunday_special: 'Sunday Special',
+  sunday_special: 'SSC Special Test',
   standard: 'Standard',
   practice: 'Practice',
 };
