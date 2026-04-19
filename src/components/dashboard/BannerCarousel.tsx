@@ -27,10 +27,20 @@ type TestMeta = {
   subject?: string;
   duration_minutes?: number;
   prize_pool?: number | null;
+  prize_type?: string | null;
+  prize_value?: string | null;
+  prize_description?: string | null;
   start_time?: string | null;
   end_time?: string | null;
   description?: string | null;
 };
+
+function prizeText(meta: TestMeta | null): string | null {
+  if (!meta) return null;
+  if (meta.prize_value) return meta.prize_value;
+  if (meta.prize_pool) return `₹${meta.prize_pool}`;
+  return null;
+}
 
 function fmtCountdown(target: Date, now: Date) {
   const ms = target.getTime() - now.getTime();
@@ -215,9 +225,9 @@ export function BannerCarousel() {
                 {meta!.class} • {meta!.subject} • {meta!.duration_minutes} min
               </p>
               <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                {meta!.prize_pool ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-amber-400/30 backdrop-blur rounded-full px-2 py-0.5">
-                    <Trophy className="w-3 h-3" /> ₹{meta!.prize_pool}
+                {prizeText(meta) ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 rounded-full px-2 py-0.5 shadow-sm">
+                    <Trophy className="w-3 h-3" /> Prize: {prizeText(meta)}
                   </span>
                 ) : null}
                 {phase === 'upcoming' && start && (

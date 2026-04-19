@@ -83,7 +83,12 @@ interface Test {
   banner_image: string;
   test_type: 'standard' | 'sunday_special' | 'practice' | 'weekly' | 'mock' | 'surprise_quiz';
   prize_pool: number | null;
+  prize_type: string | null;
+  prize_value: string | null;
+  prize_description: string | null;
 }
+
+const PRIZE_TYPES = ['Money', 'Gift', 'Book', 'Bag', 'Certificate', 'Other'] as const;
 
 const questionTypeLabels: Record<QuestionType, string> = {
   mcq_single: 'MCQ (Single)',
@@ -138,6 +143,9 @@ export default function TestBuilder() {
     banner_image: '',
     test_type: 'standard',
     prize_pool: null,
+    prize_type: null,
+    prize_value: null,
+    prize_description: null,
   });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
@@ -219,6 +227,9 @@ export default function TestBuilder() {
       banner_image: td.banner_image || '',
       test_type: (td.test_type as Test['test_type']) || 'standard',
       prize_pool: td.prize_pool ?? null,
+      prize_type: td.prize_type ?? null,
+      prize_value: td.prize_value ?? null,
+      prize_description: td.prize_description ?? null,
     });
 
     const { data: questionsData } = await supabase
@@ -395,6 +406,9 @@ export default function TestBuilder() {
             banner_image: test.banner_image || null,
             test_type: test.test_type,
             prize_pool: test.prize_pool ?? null,
+            prize_type: test.prize_type ?? null,
+            prize_value: test.prize_value ?? null,
+            prize_description: test.prize_description ?? null,
           } as any)
           .select()
           .single();
@@ -418,6 +432,9 @@ export default function TestBuilder() {
             banner_image: test.banner_image || null,
             test_type: test.test_type,
             prize_pool: test.prize_pool ?? null,
+            prize_type: test.prize_type ?? null,
+            prize_value: test.prize_value ?? null,
+            prize_description: test.prize_description ?? null,
           } as any)
           .eq('id', test.id);
 
@@ -633,21 +650,62 @@ export default function TestBuilder() {
               <Input id="duration" type="number" min="5" max="180" value={test.duration_minutes} onChange={(e) => setTest({ ...test, duration_minutes: parseInt(e.target.value) || 30 })} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="prize_pool">Prize Pool (₹, optional)</Label>
-              <Input
-                id="prize_pool"
-                type="number"
-                min="0"
-                step="50"
-                placeholder="e.g. 500"
-                value={test.prize_pool ?? ''}
-                onChange={(e) => {
-                  const v = e.target.value.trim();
-                  setTest({ ...test, prize_pool: v === '' ? null : Math.max(0, parseInt(v) || 0) });
-                }}
-              />
-              <p className="text-xs text-muted-foreground">Shown on banner & test card. Leave empty for no prize.</p>
+              <Label>Prize Type</Label>
+              <Select
+                value={test.prize_type ?? 'none'}
+                onValueChange={(v) =>
+                  setTest({
+                    ...test,
+                    prize_type: v === 'none' ? null : v,
+                    prize_value: v === 'none' ? null : test.prize_value,
+                    prize_pool: v === 'Money' ? test.prize_pool : null,
+                  })
+                }
+              >
+                <SelectTrigger><SelectValue placeholder="No prize" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No prize</SelectItem>
+                  {PRIZE_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t === 'Money' ? '💰 Money' : t === 'Gift' ? '🎁 Gift' : t === 'Book' ? '📚 Book' : t === 'Bag' ? '🎒 Bag' : t === 'Certificate' ? '🏅 Certificate' : '🏆 Other'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+            {test.prize_type && (
+              <div className="space-y-2">
+                <Label htmlFor="prize_value">
+                  {test.prize_type === 'Money' ? 'Prize Amount (₹) *' : `${test.prize_type} Name / Value *`}
+                </Label>
+                <Input
+                  id="prize_value"
+                  type={test.prize_type === 'Money' ? 'number' : 'text'}
+                  min={test.prize_type === 'Money' ? '0' : undefined}
+                  step={test.prize_type === 'Money' ? '50' : undefined}
+                  placeholder={test.prize_type === 'Money' ? '500' : 'e.g. School Bag, NCERT Set'}
+                  value={
+                    test.prize_type === 'Money'
+                      ? (test.prize_pool ?? '')
+                      : (test.prize_value ?? '')
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    if (test.prize_type === 'Money') {
+                      const amt = v === '' ? null : Math.max(0, parseInt(v) || 0);
+                      setTest({
+                        ...test,
+                        prize_pool: amt,
+                        prize_value: amt !== null ? `₹${amt}` : null,
+                      });
+                    } else {
+                      setTest({ ...test, prize_value: v || null, prize_pool: null });
+                    }
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">Shown on banner & test card with a 🏆 badge.</p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="start_time">Start Time *</Label>
               <Input id="start_time" type="datetime-local" value={test.start_time} onChange={(e) => setTest({ ...test, start_time: e.target.value })} />

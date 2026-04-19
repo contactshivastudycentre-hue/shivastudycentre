@@ -19,9 +19,13 @@ const sidebarItems = [
 
 export function DashboardLayout() {
   const location = useLocation();
-  const { user, profile, isLoading, signOut } = useAuth();
+  const { user, profile, isLoading, profileLoaded, signOut } = useAuth();
 
-  if (isLoading) {
+  // Wait for BOTH session restore AND first profile fetch before rendering
+  // any state-dependent UI. This prevents the "Profile Not Found" flash that
+  // appears between session-restore and the async profile query (which was
+  // also being interpreted by users as an "auto-logout" / "Account not found").
+  if (isLoading || (user && !profileLoaded)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>

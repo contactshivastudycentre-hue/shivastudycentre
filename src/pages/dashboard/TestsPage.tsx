@@ -17,6 +17,14 @@ interface Test {
   end_time?: string | null;
   banner_image?: string | null;
   prize_pool?: number | null;
+  prize_type?: string | null;
+  prize_value?: string | null;
+}
+
+function testPrize(t: Test): string | null {
+  if (t.prize_value) return t.prize_value;
+  if (t.prize_pool) return `₹${t.prize_pool}`;
+  return null;
 }
 
 type TestPhase = 'upcoming' | 'live' | 'closed' | 'always';
@@ -174,8 +182,8 @@ export default function TestsPage() {
                     {test.description && <p className="text-sm text-muted-foreground mb-3">{test.description}</p>}
                     <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                       <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{test.duration_minutes} minutes</span>
-                      {test.prize_pool ? (
-                        <span className="flex items-center gap-1 font-semibold text-amber-600"><Trophy className="w-4 h-4" />Prize Pool: ₹{test.prize_pool}</span>
+                      {testPrize(test) ? (
+                        <span className="flex items-center gap-1 font-semibold text-amber-600"><Trophy className="w-4 h-4" />Prize: {testPrize(test)}</span>
                       ) : null}
                       {test.start_time && phase !== 'always' && (
                         <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{new Date(test.start_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</span>
