@@ -45,6 +45,38 @@ function calcStreak(dates: string[]): number {
 
 export default function StudentDashboard() {
   const { user, isLoading } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Mark today as an active study day the moment the dashboard opens.
+  // This guarantees the streak ticks up daily even if the student doesn't
+  // open a specific test/note/video.
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.rpc('track_activity', {
+      p_content_type: 'dashboard',
+      p_content_id: user.id,
+      p_title: 'Daily visit',
+      p_subtitle: null,
+    }).then(({ error }) => {
+      if (!error) {
+        queryClient.invalidateQueries({ queryKey: ['student-stats', user.id] });
+      }
+    });
+  }, [user?.id, queryClient]);
+
+  // Realtime: any new activity row for this user → recompute streak instantly.
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`streak-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'last_activity', filter: `user_id=eq.${user.id}` },
+        () => queryClient.invalidateQueries({ queryKey: ['student-stats', user.id] })
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, queryClient]);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['student-stats', user?.id],
