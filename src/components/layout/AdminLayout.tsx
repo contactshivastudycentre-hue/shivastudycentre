@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
-import { Users, FileText, Play, ClipboardList, LogOut, Home, KeyRound, BarChart3, Image as ImageIcon, MoreHorizontal, Trophy } from 'lucide-react';
+import { Users, FileText, Play, ClipboardList, LogOut, Home, KeyRound, BarChart3, Image as ImageIcon, MoreHorizontal, Trophy, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { Logo, LogoIcon } from '@/components/Logo';
@@ -32,25 +32,17 @@ export function AdminLayout() {
   const location = useLocation();
   const { user, isAdmin, isLoading, profileLoaded, signOut } = useAuth();
 
-  if (isLoading) {
+  if (isLoading || (user && !profileLoaded)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </div>
     );
   }
 
   if (!user) {
     return <Navigate to="/admin-login" replace />;
-  }
-
-  // Wait for profile/role to load before deciding
-  if (!profileLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
   }
 
   if (!isAdmin) {
