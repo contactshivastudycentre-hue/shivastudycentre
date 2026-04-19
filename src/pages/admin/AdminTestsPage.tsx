@@ -48,6 +48,8 @@ export default function AdminTestsPage() {
   const [tests, setTests] = useState<Test[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [publishingResultsId, setPublishingResultsId] = useState<string | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [justPublishedId, setJustPublishedId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -96,20 +98,39 @@ export default function AdminTestsPage() {
   };
 
   const togglePublish = async (test: Test) => {
+    const nextPublished = !test.is_published;
+    // Optimistic UI — flip the row immediately
+    setTests((prev) => prev.map((t) => (t.id === test.id ? { ...t, is_published: nextPublished } : t)));
+    setPublishingId(test.id);
+
     const { error } = await supabase
       .from('tests')
-      .update({ is_published: !test.is_published })
+      .update({ is_published: nextPublished })
       .eq('id', test.id);
 
     if (error) {
+      // Roll back optimistic flip
+      setTests((prev) => prev.map((t) => (t.id === test.id ? { ...t, is_published: test.is_published } : t)));
+      setPublishingId(null);
       toast({ title: 'Error', description: 'Failed to update test.', variant: 'destructive' });
-    } else {
-      toast({
-        title: test.is_published ? 'Unpublished' : 'Published',
-        description: test.is_published ? 'Test is now a draft.' : 'Test is now live for students.',
-      });
-      fetchTests();
+      return;
     }
+
+    setPublishingId(null);
+    if (nextPublished) {
+      setJustPublishedId(test.id);
+      window.setTimeout(() => {
+        setJustPublishedId((curr) => (curr === test.id ? null : curr));
+      }, 1800);
+    }
+    toast({
+      title: nextPublished ? '🚀 Published' : 'Unpublished',
+      description: nextPublished
+        ? 'Test is now live for students.'
+        : 'Test is now a draft.',
+    });
+    // Refresh in background to pick up server-side side effects (banner sync, etc.)
+    fetchTests();
   };
 
   const publishResults = async (test: Test) => {
