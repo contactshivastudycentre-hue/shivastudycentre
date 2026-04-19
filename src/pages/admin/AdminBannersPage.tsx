@@ -267,38 +267,75 @@ export default function AdminBannersPage() {
       ) : !banners?.length ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">No banners yet. Upload one to get started.</CardContent></Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {banners.map((b: any) => (
             <Card key={b.id}>
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-24 h-16 rounded-lg flex-shrink-0 bg-muted overflow-hidden flex items-center justify-center">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="w-16 h-12 sm:w-20 sm:h-14 rounded-md flex-shrink-0 bg-muted overflow-hidden flex items-center justify-center">
                   {b.image_url ? (
                     <img src={b.image_url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                    <ImageIcon className="w-5 h-5 text-muted-foreground" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-foreground truncate">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h3 className="font-semibold text-foreground text-sm truncate">
                       {b.is_universal ? 'All Classes' : `Class ${b.target_class || '—'}`}
                     </h3>
-                    <Badge variant={b.is_active ? 'default' : 'secondary'}>{b.is_active ? 'Active' : 'Inactive'}</Badge>
-                    <Badge variant="outline">Priority {b.priority}</Badge>
+                    <Badge
+                      variant={b.is_active ? 'default' : 'secondary'}
+                      className="text-[10px] px-1.5 py-0 h-4"
+                    >
+                      {b.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                      P{b.priority}
+                    </Badge>
                   </div>
                   {(b.start_date || b.end_date) && (
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">
                       {b.start_date ? format(new Date(b.start_date), 'MMM d') : '—'}
                       {' → '}
                       {b.end_date ? format(new Date(b.end_date), 'MMM d') : 'forever'}
                     </p>
                   )}
-                  {b.cta_link && <p className="text-xs text-muted-foreground truncate">→ {b.cta_link}</p>}
+                  {b.cta_link && (
+                    <p className="text-[11px] text-muted-foreground truncate">→ {b.cta_link}</p>
+                  )}
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <Switch checked={b.is_active} onCheckedChange={v => toggleActive.mutate({ id: b.id, active: v })} />
-                  <Button size="icon" variant="ghost" onClick={() => openEdit(b)}><Pencil className="w-4 h-4" /></Button>
-                  <Button size="icon" variant="ghost" className="text-destructive" onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(b.id); }}><Trash2 className="w-4 h-4" /></Button>
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8"
+                    onClick={() => toggleActive.mutate({ id: b.id, active: !b.is_active })}
+                    title={b.is_active ? 'Deactivate' : 'Activate'}
+                  >
+                    {b.is_active ? (
+                      <Eye className="w-4 h-4 text-primary" />
+                    ) : (
+                      <EyeOff className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8"
+                    onClick={() => openEdit(b)}
+                    title="Edit"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-destructive"
+                    onClick={() => { if (confirm('Delete this banner?')) deleteMutation.mutate(b.id); }}
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
