@@ -542,7 +542,10 @@ export type Database = {
           highlight_until: string | null
           id: string
           is_published: boolean
+          prize_description: string | null
           prize_pool: number | null
+          prize_type: string | null
+          prize_value: string | null
           results_published_at: string | null
           start_time: string | null
           subject: string
@@ -562,7 +565,10 @@ export type Database = {
           highlight_until?: string | null
           id?: string
           is_published?: boolean
+          prize_description?: string | null
           prize_pool?: number | null
+          prize_type?: string | null
+          prize_value?: string | null
           results_published_at?: string | null
           start_time?: string | null
           subject: string
@@ -582,7 +588,10 @@ export type Database = {
           highlight_until?: string | null
           id?: string
           is_published?: boolean
+          prize_description?: string | null
           prize_pool?: number | null
+          prize_type?: string | null
+          prize_value?: string | null
           results_published_at?: string | null
           start_time?: string | null
           subject?: string
