@@ -84,12 +84,12 @@ export function StatsGrid({ availableTests, completedTests, avgScore, streakDays
       {/* Study Streak */}
       <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
         <div className="flex items-start justify-between mb-2">
-          <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
-            <Flame className="w-5 h-5 text-orange-600" />
+          <div className={`w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center ${streakDays > 0 ? 'animate-pulse' : ''}`}>
+            <Flame className={`w-5 h-5 ${streakDays > 0 ? 'text-orange-600' : 'text-orange-400'}`} />
           </div>
         </div>
         <p className="text-2xl font-display font-bold text-foreground leading-none">
-          {streakDays}<span className="text-sm font-medium text-muted-foreground"> d</span>
+          {streakDays}<span className="text-sm font-medium text-muted-foreground"> {streakDays === 1 ? 'day' : 'days'}</span>
         </p>
         <p className="text-xs text-muted-foreground mt-1.5">Study Streak</p>
       </div>
