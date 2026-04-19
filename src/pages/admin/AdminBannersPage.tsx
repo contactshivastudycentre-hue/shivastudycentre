@@ -72,7 +72,6 @@ export default function AdminBannersPage() {
         description: null,
         cta_text: null,
         background_color: null,
-        event_id: null,
         template: 'image_only',
       };
       if (f.id) {
