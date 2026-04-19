@@ -136,15 +136,15 @@ export default function AdminBannersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-container space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-display font-bold text-foreground">Banners</h1>
-          <p className="text-muted-foreground">Upload banner images shown on student dashboard</p>
+          <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">Banners</h1>
+          <p className="text-sm text-muted-foreground">Upload banner images shown on student dashboard</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) resetForm(); setDialogOpen(o); }}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto"><Plus className="w-4 h-4 mr-2" />Upload Banner</Button>
+            <Button className="h-10 px-4 max-w-[200px] rounded-[10px] text-sm font-semibold self-start sm:self-auto"><Plus className="w-4 h-4 mr-1.5" />Upload Banner</Button>
           </DialogTrigger>
           <DialogContent
             className="w-[calc(100vw-2rem)] max-w-xl max-h-[90vh] overflow-y-auto"
