@@ -227,13 +227,26 @@ export default function AdminTestsPage() {
                       <TableCell>
                         <button
                           onClick={() => togglePublish(test)}
-                          className={`text-xs font-medium px-2 py-1 rounded-full cursor-pointer transition-colors ${
-                            test.is_published 
-                              ? 'bg-success/10 text-success hover:bg-success/20' 
+                          disabled={publishingId === test.id}
+                          className={`text-xs font-medium px-2 py-1 rounded-full cursor-pointer transition-all inline-flex items-center gap-1 disabled:opacity-70 ${
+                            test.is_published
+                              ? 'bg-success/10 text-success hover:bg-success/20'
                               : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                          }`}
+                          } ${justPublishedId === test.id ? 'animate-scale-in ring-2 ring-success/50' : ''}`}
                         >
-                          {test.is_published ? 'Published' : 'Draft'}
+                          {publishingId === test.id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              {test.is_published ? 'Publishing…' : 'Updating…'}
+                            </>
+                          ) : justPublishedId === test.id ? (
+                            <>
+                              <CheckCircle2 className="w-3 h-3" />
+                              Published!
+                            </>
+                          ) : (
+                            test.is_published ? 'Published' : 'Draft'
+                          )}
                         </button>
                       </TableCell>
                       <TableCell>
