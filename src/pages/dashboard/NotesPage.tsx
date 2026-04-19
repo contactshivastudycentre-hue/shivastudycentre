@@ -218,7 +218,7 @@ export default function NotesPage() {
                               }}>
                                 <Eye className="w-4 h-4 mr-1.5" /> View
                               </Button>
-                              <Button variant="outline" size="sm" className="flex-1 min-h-[44px]" onClick={() => handleDownload(note)}>
+                              <Button variant="outline" size="sm" className="touch-manipulation text-xs sm:text-sm min-h-[40px] w-full" onClick={() => handleDownload(note)}>
                                 <Download className="w-4 h-4 mr-1.5" /> Download
                               </Button>
                             </div>
