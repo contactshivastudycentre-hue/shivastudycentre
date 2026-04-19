@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Image as ImageIcon, CalendarIcon, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Image as ImageIcon, CalendarIcon, X, Eye, EyeOff } from 'lucide-react';
 import { FileUploader } from '@/components/admin/FileUploader';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
