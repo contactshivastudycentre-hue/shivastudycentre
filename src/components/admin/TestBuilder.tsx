@@ -83,7 +83,12 @@ interface Test {
   banner_image: string;
   test_type: 'standard' | 'sunday_special' | 'practice' | 'weekly' | 'mock' | 'surprise_quiz';
   prize_pool: number | null;
+  prize_type: string | null;
+  prize_value: string | null;
+  prize_description: string | null;
 }
+
+const PRIZE_TYPES = ['Money', 'Gift', 'Book', 'Bag', 'Certificate', 'Other'] as const;
 
 const questionTypeLabels: Record<QuestionType, string> = {
   mcq_single: 'MCQ (Single)',
