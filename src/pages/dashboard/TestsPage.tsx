@@ -114,7 +114,7 @@ export default function TestsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 animate-fade-in">
+      <div className="page-shell space-y-6 animate-fade-in">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Tests</h1>
           <p className="text-muted-foreground">Attempt MCQ tests and track your progress</p>
@@ -125,23 +125,23 @@ export default function TestsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="page-shell space-y-5 animate-fade-in">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Tests</h1>
         <p className="text-muted-foreground">Attempt MCQ tests and track your progress</p>
       </div>
 
       {activeAttempt && (
-        <div className="dashboard-card border-l-4 border-l-warning bg-warning/5 flex items-center justify-between gap-4">
-          <div className="flex items-start gap-3">
+        <div className="dashboard-card border-l-4 border-l-warning bg-warning/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 sm:p-6">
+          <div className="flex items-start gap-3 min-w-0">
             <Lock className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
-            <div>
+            <div className="min-w-0">
               <p className="font-semibold text-foreground text-sm">A test is in progress</p>
               <p className="text-xs text-muted-foreground">Finish or submit it before starting another test.</p>
             </div>
           </div>
-          <Link to={`/dashboard/tests/${activeAttempt.test_id}`}>
-            <Button size="sm">Resume</Button>
+          <Link to={`/dashboard/tests/${activeAttempt.test_id}`} className="w-full sm:w-auto">
+            <Button size="sm" className="w-full sm:w-auto">Resume</Button>
           </Link>
         </div>
       )}
@@ -167,26 +167,26 @@ export default function TestsPage() {
               : null;
 
             return (
-              <div key={test.id} className="dashboard-card">
+              <div key={test.id} className="dashboard-card p-4 sm:p-6">
                 {test.banner_image && (
-                  <img src={test.banner_image} alt="" className="w-full h-32 object-cover rounded-xl mb-3" loading="lazy" />
+                  <img src={test.banner_image} alt="" className="w-full h-28 sm:h-32 object-cover rounded-xl mb-3" loading="lazy" />
                 )}
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <span className="text-xs font-medium px-2 py-1 rounded-full bg-accent text-accent-foreground">{test.subject}</span>
                       <span className="text-xs font-medium px-2 py-1 rounded-full bg-secondary text-secondary-foreground">Class {test.class}</span>
                       {phaseBadge}
                     </div>
-                    <h3 className="text-lg font-semibold text-foreground mb-1">{test.title}</h3>
-                    {test.description && <p className="text-sm text-muted-foreground mb-3">{test.description}</p>}
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                      <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{test.duration_minutes} minutes</span>
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground mb-1 break-words">{test.title}</h3>
+                    {test.description && <p className="text-sm text-muted-foreground mb-3 break-words">{test.description}</p>}
+                    <div className="flex items-center gap-3 text-xs sm:text-sm text-muted-foreground flex-wrap">
+                      <span className="flex items-center gap-1"><Clock className="w-4 h-4 shrink-0" />{test.duration_minutes} minutes</span>
                       {testPrize(test) ? (
-                        <span className="flex items-center gap-1 font-semibold text-amber-600"><Trophy className="w-4 h-4" />Prize: {testPrize(test)}</span>
+                        <span className="flex items-center gap-1 font-semibold text-amber-600 break-words"><Trophy className="w-4 h-4 shrink-0" />Prize: {testPrize(test)}</span>
                       ) : null}
                       {test.start_time && phase !== 'always' && (
-                        <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{new Date(test.start_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</span>
+                        <span className="flex items-center gap-1 break-words"><Calendar className="w-4 h-4 shrink-0" />{new Date(test.start_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</span>
                       )}
                       {isCompleted && (
                         <span className="flex items-center gap-1 text-success">
