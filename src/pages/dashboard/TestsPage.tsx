@@ -198,20 +198,20 @@ export default function TestsPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex justify-end shrink-0">
+                  <div className="mobile-action-row sm:justify-end sm:w-auto shrink-0">
                     {isCompleted ? (
-                      <Link to={`/dashboard/results/${attempt?.id}`}>
-                        <Button size="sm" variant="outline" className="h-9 px-3 text-xs gap-1.5 w-auto"><Eye className="w-3.5 h-3.5" />View Result</Button>
+                      <Link to={`/dashboard/results/${attempt?.id}`} className="w-full sm:w-auto">
+                        <Button size="sm" variant="outline" className="touch-manipulation h-10 w-full sm:w-auto px-3 text-xs sm:text-sm gap-1.5"><Eye className="w-3.5 h-3.5" />View Result</Button>
                       </Link>
                     ) : phase === 'upcoming' ? (
-                      <Button size="sm" variant="outline" disabled className="h-9 px-3 text-xs gap-1.5 w-auto opacity-60"><Calendar className="w-3.5 h-3.5" />Upcoming</Button>
+                      <Button size="sm" variant="outline" disabled className="touch-manipulation h-10 w-full sm:w-auto px-3 text-xs sm:text-sm gap-1.5 opacity-60"><Calendar className="w-3.5 h-3.5" />Upcoming</Button>
                     ) : phase === 'closed' ? (
-                      <Button size="sm" variant="outline" disabled className="h-9 px-3 text-xs gap-1.5 w-auto opacity-60"><Lock className="w-3.5 h-3.5" />Closed</Button>
+                      <Button size="sm" variant="outline" disabled className="touch-manipulation h-10 w-full sm:w-auto px-3 text-xs sm:text-sm gap-1.5 opacity-60"><Lock className="w-3.5 h-3.5" />Closed</Button>
                     ) : activeAttempt && activeAttempt.test_id !== test.id ? (
-                      <Button size="sm" variant="outline" disabled className="h-9 px-3 text-xs gap-1.5 w-auto opacity-60"><Lock className="w-3.5 h-3.5" />Locked</Button>
+                      <Button size="sm" variant="outline" disabled className="touch-manipulation h-10 w-full sm:w-auto px-3 text-xs sm:text-sm gap-1.5 opacity-60"><Lock className="w-3.5 h-3.5" />Locked</Button>
                     ) : (
-                      <Link to={`/dashboard/tests/${test.id}`}>
-                        <Button size="sm" className="h-9 px-3 text-xs gap-1 w-auto">{attempt ? 'Continue' : 'Start Test'}<ArrowRight className="w-3.5 h-3.5" /></Button>
+                      <Link to={`/dashboard/tests/${test.id}`} className="w-full sm:w-auto">
+                        <Button size="sm" className="touch-manipulation h-10 w-full sm:w-auto px-3 text-xs sm:text-sm gap-1">{attempt ? 'Continue' : 'Start Test'}<ArrowRight className="w-3.5 h-3.5" /></Button>
                       </Link>
                     )}
                   </div>
