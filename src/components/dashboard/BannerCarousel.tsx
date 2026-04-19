@@ -86,6 +86,7 @@ export function BannerCarousel() {
   const qc = useQueryClient();
   const [current, setCurrent] = useState(0);
   const [now, setNow] = useState(new Date());
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   // tick once a second so countdowns + sort stay live
   useEffect(() => {
@@ -185,19 +186,22 @@ export function BannerCarousel() {
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-2xl bg-muted shadow-sm aspect-[2/1]"
+      className="banner-frame relative"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* Background image */}
-      <img
-        src={banner.image_url!}
-        alt={banner.title || ''}
-        loading="eager"
-        decoding="async"
-        fetchPriority="high"
-        className="absolute inset-0 w-full h-full object-cover object-center"
-      />
+      {!failedImages[banner.id] && banner.image_url ? (
+        <img
+          src={banner.image_url}
+          alt={banner.title || ''}
+          loading="eager"
+          decoding="async"
+          onError={() => setFailedImages((prev) => ({ ...prev, [banner.id]: true }))}
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+      ) : (
+        <div className="absolute inset-0 hero-gradient" />
+      )}
       {/* Shimmer sweep — draws eye to Sunday/Special test banner */}
       {isTest && meta?.test_type === 'sunday_special' && (
         <div
