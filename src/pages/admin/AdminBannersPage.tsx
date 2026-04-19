@@ -169,7 +169,7 @@ export default function AdminBannersPage() {
 
               {form.image_url && (
                 <div className="rounded-xl overflow-hidden border border-border bg-muted">
-                  <img src={form.image_url} alt="Preview" className="w-full h-auto block" style={{ aspectRatio: '3 / 1', objectFit: 'cover' }} />
+                  <img src={form.image_url} alt="Preview" className="w-full max-h-[140px] object-cover block" />
                 </div>
               )}
 
