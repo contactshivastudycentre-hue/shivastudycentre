@@ -147,118 +147,120 @@ export default function AdminBannersPage() {
             <Button className="h-10 px-4 max-w-[200px] rounded-[10px] text-sm font-semibold self-start sm:self-auto"><Plus className="w-4 h-4 mr-1.5" />Upload Banner</Button>
           </DialogTrigger>
           <DialogContent
-            className="w-[calc(100vw-2rem)] max-w-xl max-h-[90vh] overflow-y-auto"
+            className="w-[calc(100vw-1.5rem)] max-w-md rounded-2xl p-0 max-h-[88vh] overflow-y-auto"
             onInteractOutside={(e) => e.preventDefault()}
             onPointerDownOutside={(e) => e.preventDefault()}
           >
-            <DialogHeader><DialogTitle>{editing ? 'Edit Banner' : 'Upload Banner'}</DialogTitle></DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate({ ...form, id: editing?.id }); }} className="space-y-5">
-
-              <div className="space-y-2">
-                <Label>Banner Image *</Label>
-                <FileUploader
-                  bucket="banner-images"
-                  accept="image/*"
-                  maxSizeMB={5}
-                  isImage
-                  existingUrl={form.image_url}
-                  onUploadComplete={(url) => setForm(p => ({ ...p, image_url: url }))}
-                />
-                <p className="text-xs text-muted-foreground">Recommended size: 1200×400 (3:1 ratio). PNG, JPG, or WEBP.</p>
-              </div>
-
-              {form.image_url && (
-                <div className="rounded-xl overflow-hidden border border-border bg-muted">
-                  <img src={form.image_url} alt="Preview" className="w-full max-h-[140px] object-cover block" />
+            <div className="banner-upload-card rounded-2xl border-0 shadow-none">
+              <DialogHeader className="space-y-1 pb-3">
+                <DialogTitle className="text-lg">{editing ? 'Edit Banner' : 'Upload Banner'}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate({ ...form, id: editing?.id }); }} className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm">Banner Image *</Label>
+                  <FileUploader
+                    bucket="banner-images"
+                    accept="image/*"
+                    maxSizeMB={5}
+                    isImage
+                    existingUrl={form.image_url}
+                    onUploadComplete={(url) => setForm(p => ({ ...p, image_url: url }))}
+                  />
+                  <p className="text-xs text-muted-foreground">Recommended size: 1200×600. PNG, JPG, or WEBP.</p>
                 </div>
-              )}
 
-              <div>
-                <Label>Click Link (optional)</Label>
-                <Input
-                  value={form.cta_link}
-                  onChange={e => setForm(p => ({ ...p, cta_link: e.target.value }))}
-                  placeholder="/dashboard/tests"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Where students go when they tap the banner.</p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label>Start Date (optional)</Label>
-                  <div className="flex items-center gap-1">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className={cn('flex-1 justify-start text-left font-normal', !form.start_date && 'text-muted-foreground')}>
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {form.start_date ? format(form.start_date, 'PPP') : 'Anytime'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={form.start_date ?? undefined} onSelect={(d) => setForm(p => ({ ...p, start_date: d ?? null }))} initialFocus className="p-3 pointer-events-auto" />
-                      </PopoverContent>
-                    </Popover>
-                    {form.start_date && (
-                      <Button type="button" size="icon" variant="ghost" onClick={() => setForm(p => ({ ...p, start_date: null }))}>
-                        <X className="w-4 h-4" />
-                      </Button>
-                    )}
+                {form.image_url && (
+                  <div className="rounded-xl overflow-hidden border border-border bg-muted">
+                    <img src={form.image_url} alt="Preview" className="w-full max-h-[120px] object-cover block" />
                   </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>End Date (optional)</Label>
-                  <div className="flex items-center gap-1">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button type="button" variant="outline" className={cn('flex-1 justify-start text-left font-normal', !form.end_date && 'text-muted-foreground')}>
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {form.end_date ? format(form.end_date, 'PPP') : 'Forever'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={form.end_date ?? undefined} onSelect={(d) => setForm(p => ({ ...p, end_date: d ?? null }))} initialFocus className="p-3 pointer-events-auto" />
-                      </PopoverContent>
-                    </Popover>
-                    {form.end_date && (
-                      <Button type="button" size="icon" variant="ghost" onClick={() => setForm(p => ({ ...p, end_date: null }))}>
-                        <X className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground -mt-2">Leave empty to show the banner indefinitely.</p>
-
-              <div className="flex items-center gap-4 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <Switch checked={form.is_universal} onCheckedChange={v => setForm(p => ({ ...p, is_universal: v, target_class: v ? NONE : p.target_class }))} />
-                  <Label>All Classes</Label>
-                </div>
-                {!form.is_universal && (
-                  <Select value={form.target_class} onValueChange={v => setForm(p => ({ ...p, target_class: v }))}>
-                    <SelectTrigger className="w-32"><SelectValue placeholder="Class" /></SelectTrigger>
-                    <SelectContent>{CLASSES.map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}</SelectContent>
-                  </Select>
                 )}
-              </div>
 
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Switch checked={form.is_active} onCheckedChange={v => setForm(p => ({ ...p, is_active: v }))} />
-                  <Label>Active</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Click Link</Label>
+                  <Input
+                    className="h-10 text-sm"
+                    value={form.cta_link}
+                    onChange={e => setForm(p => ({ ...p, cta_link: e.target.value }))}
+                    placeholder="/dashboard/tests"
+                  />
                 </div>
-                <div className="flex-1">
-                  <Label>Priority (higher = first)</Label>
-                  <Input type="number" value={form.priority} onChange={e => setForm(p => ({ ...p, priority: parseInt(e.target.value) || 0 }))} />
-                </div>
-              </div>
 
-              <div className="flex justify-end pt-1">
-                <Button type="submit" className="h-10 px-5 max-w-[220px] rounded-[10px] text-sm font-semibold" disabled={saveMutation.isPending || !form.image_url}>
-                  {saveMutation.isPending ? 'Saving...' : editing ? 'Update Banner' : 'Save Banner'}
-                </Button>
-              </div>
-            </form>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Start Date</Label>
+                    <div className="flex items-center gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" className={cn('h-10 flex-1 justify-start rounded-[10px] px-3 text-left text-sm font-normal', !form.start_date && 'text-muted-foreground')}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {form.start_date ? format(form.start_date, 'PPP') : 'Anytime'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={form.start_date ?? undefined} onSelect={(d) => setForm(p => ({ ...p, start_date: d ?? null }))} initialFocus className="p-3 pointer-events-auto" />
+                        </PopoverContent>
+                      </Popover>
+                      {form.start_date && (
+                        <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => setForm(p => ({ ...p, start_date: null }))}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">End Date</Label>
+                    <div className="flex items-center gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" className={cn('h-10 flex-1 justify-start rounded-[10px] px-3 text-left text-sm font-normal', !form.end_date && 'text-muted-foreground')}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {form.end_date ? format(form.end_date, 'PPP') : 'Forever'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={form.end_date ?? undefined} onSelect={(d) => setForm(p => ({ ...p, end_date: d ?? null }))} initialFocus className="p-3 pointer-events-auto" />
+                        </PopoverContent>
+                      </Popover>
+                      {form.end_date && (
+                        <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => setForm(p => ({ ...p, end_date: null }))}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={form.is_universal} onCheckedChange={v => setForm(p => ({ ...p, is_universal: v, target_class: v ? NONE : p.target_class }))} />
+                    <Label className="text-sm">All Classes</Label>
+                  </div>
+                  {!form.is_universal && (
+                    <Select value={form.target_class} onValueChange={v => setForm(p => ({ ...p, target_class: v }))}>
+                      <SelectTrigger className="h-10 w-[132px] rounded-[10px] text-sm"><SelectValue placeholder="Class" /></SelectTrigger>
+                      <SelectContent>{CLASSES.map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}</SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-[auto,1fr] items-end gap-3">
+                  <div className="flex items-center gap-2 pb-2">
+                    <Switch checked={form.is_active} onCheckedChange={v => setForm(p => ({ ...p, is_active: v }))} />
+                    <Label className="text-sm">Active</Label>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Priority</Label>
+                    <Input className="h-10 text-sm" type="number" value={form.priority} onChange={e => setForm(p => ({ ...p, priority: parseInt(e.target.value) || 0 }))} />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <Button type="submit" className="h-10 px-4 max-w-[180px] rounded-[10px] text-sm font-semibold" disabled={saveMutation.isPending || !form.image_url}>
+                    {saveMutation.isPending ? 'Saving...' : editing ? 'Update Banner' : 'Save Banner'}
+                  </Button>
+                </div>
+              </form>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -268,20 +270,20 @@ export default function AdminBannersPage() {
       ) : !banners?.length ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">No banners yet. Upload one to get started.</CardContent></Card>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-2.5">
           {banners.map((b: any) => (
             <Card key={b.id}>
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="w-16 h-12 sm:w-20 sm:h-14 rounded-md flex-shrink-0 bg-muted overflow-hidden flex items-center justify-center">
+              <CardContent className="p-2.5 flex items-center gap-2.5">
+                <div className="w-14 h-10 sm:w-16 sm:h-12 rounded-md flex-shrink-0 bg-muted overflow-hidden flex items-center justify-center">
                   {b.image_url ? (
                     <img src={b.image_url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                    <ImageIcon className="w-4 h-4 text-muted-foreground" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <h3 className="font-semibold text-foreground text-sm truncate">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <h3 className="font-semibold text-foreground text-xs sm:text-sm truncate">
                       {b.is_universal ? 'All Classes' : `Class ${b.target_class || '—'}`}
                     </h3>
                     <Badge
@@ -295,47 +297,46 @@ export default function AdminBannersPage() {
                     </Badge>
                   </div>
                   {(b.start_date || b.end_date) && (
-                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate mt-0.5">
                       {b.start_date ? format(new Date(b.start_date), 'MMM d') : '—'}
                       {' → '}
                       {b.end_date ? format(new Date(b.end_date), 'MMM d') : 'forever'}
                     </p>
                   )}
                   {b.cta_link && (
-                    <p className="text-[11px] text-muted-foreground truncate">→ {b.cta_link}</p>
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate">→ {b.cta_link}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-0.5 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
+                    type="button"
+                    variant="outline"
+                    className="h-8 px-2.5 rounded-lg text-[11px] font-medium"
                     onClick={() => toggleActive.mutate({ id: b.id, active: !b.is_active })}
                     title={b.is_active ? 'Deactivate' : 'Activate'}
                   >
-                    {b.is_active ? (
-                      <Eye className="w-4 h-4 text-primary" />
-                    ) : (
-                      <EyeOff className="w-4 h-4 text-muted-foreground" />
-                    )}
+                    {b.is_active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    <span className="hidden sm:inline">{b.is_active ? 'Hide' : 'Show'}</span>
                   </Button>
                   <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
+                    type="button"
+                    variant="outline"
+                    className="h-8 px-2.5 rounded-lg text-[11px] font-medium"
                     onClick={() => openEdit(b)}
                     title="Edit"
                   >
-                    <Pencil className="w-4 h-4" />
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Edit</span>
                   </Button>
                   <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-destructive"
+                    type="button"
+                    variant="outline"
+                    className="h-8 px-2.5 rounded-lg text-[11px] font-medium text-destructive"
                     onClick={() => { if (confirm('Delete this banner?')) deleteMutation.mutate(b.id); }}
                     title="Delete"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Delete</span>
                   </Button>
                 </div>
               </CardContent>

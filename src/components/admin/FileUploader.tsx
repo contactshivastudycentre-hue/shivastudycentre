@@ -175,11 +175,11 @@ export function FileUploader({
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); inputRef.current?.click(); }}
-          className="w-full border-2 border-dashed border-border rounded-xl p-6 flex flex-col items-center gap-3 hover:border-primary/50 hover:bg-accent/30 transition-colors active:scale-[0.98]"
+          className="w-full border border-dashed border-border rounded-xl p-4 flex flex-col items-center gap-2 hover:border-primary/50 hover:bg-accent/30 transition-colors active:scale-[0.98]"
         >
-          <Upload className="w-10 h-10 text-muted-foreground" />
-          <span className="text-sm font-medium text-foreground">Tap to select {fileLabel}</span>
-          <span className="text-xs text-muted-foreground">Max {maxSizeMB}MB</span>
+          <Upload className="w-7 h-7 text-muted-foreground" />
+          <span className="text-sm font-medium text-foreground">Select {fileLabel}</span>
+          <span className="text-[11px] text-muted-foreground">Max {maxSizeMB}MB</span>
         </button>
       </div>
     );
@@ -187,24 +187,24 @@ export function FileUploader({
 
   if (status === 'selected') {
     return (
-      <div className="space-y-3 w-full">
+      <div className="space-y-2.5 w-full">
         {fileInput}
-        <div className="border rounded-xl p-4 bg-muted/50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Icon className="w-5 h-5 text-primary" />
+        <div className="border rounded-xl p-3 bg-muted/50">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Icon className="w-4 h-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-foreground text-sm truncate">{fileName}</p>
-              <p className="text-xs text-muted-foreground">{(fileSize / (1024 * 1024)).toFixed(2)} MB</p>
+              <p className="text-[11px] text-muted-foreground">{(fileSize / (1024 * 1024)).toFixed(2)} MB</p>
             </div>
-            <Button type="button" variant="ghost" size="icon" onClick={handleClear} className="shrink-0">
+            <Button type="button" variant="ghost" size="icon" onClick={handleClear} className="h-8 w-8 shrink-0">
               <X className="w-4 h-4" />
             </Button>
           </div>
         </div>
-        <Button type="button" className="w-full min-h-[48px] text-base" onClick={handleUpload}>
-          <Upload className="w-4 h-4 mr-2" /> Upload {fileLabel}
+        <Button type="button" className="h-10 px-4 max-w-[170px] rounded-[10px] text-sm font-semibold" onClick={handleUpload}>
+          <Upload className="w-4 h-4 mr-1.5" /> Upload
         </Button>
       </div>
     );
@@ -212,17 +212,17 @@ export function FileUploader({
 
   if (status === 'uploading') {
     return (
-      <div className="space-y-3 w-full">
+      <div className="space-y-2.5 w-full">
         {fileInput}
-        <div className="border rounded-xl p-4 bg-muted/50 space-y-3">
-          <div className="flex items-center gap-3">
-            <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
+        <div className="border rounded-xl p-3 bg-muted/50 space-y-2.5">
+          <div className="flex items-center gap-2.5">
+            <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="font-medium text-foreground text-sm truncate">{fileName}</p>
-              <p className="text-xs text-muted-foreground">Uploading… {Math.round(progress)}%</p>
+              <p className="text-[11px] text-muted-foreground">Uploading… {Math.round(progress)}%</p>
             </div>
           </div>
-          <Progress value={progress} className="h-2.5" />
+          <Progress value={progress} className="h-2" />
         </div>
       </div>
     );
@@ -232,18 +232,18 @@ export function FileUploader({
     return (
       <div className="space-y-2 w-full">
         {fileInput}
-        <div className="border rounded-xl p-4 bg-green-500/5 border-green-500/20">
-          <div className="flex items-center gap-3">
+        <div className="border rounded-xl p-3 bg-green-500/5 border-green-500/20">
+          <div className="flex items-center gap-2.5">
             {isImage && existingUrl ? (
-              <img src={existingUrl} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+              <img src={existingUrl} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
             ) : (
-              <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
+              <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
             )}
             <div className="flex-1 min-w-0">
               <p className="font-medium text-foreground text-sm">Uploaded ✅</p>
-              <p className="text-xs text-muted-foreground truncate">{fileName || 'Existing file'}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{fileName || 'Existing file'}</p>
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={handleClear}>Replace</Button>
+            <Button type="button" variant="outline" size="sm" className="h-8 px-2.5 text-[11px] rounded-lg" onClick={handleClear}>Replace</Button>
           </div>
         </div>
       </div>
@@ -251,18 +251,18 @@ export function FileUploader({
   }
 
   return (
-    <div className="space-y-3 w-full">
+    <div className="space-y-2.5 w-full">
       {fileInput}
       <div className="flex items-start gap-2 text-destructive text-sm bg-destructive/5 p-3 rounded-lg">
         <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
         <span>{errorMsg}</span>
       </div>
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" className="flex-1 min-h-[44px]" onClick={handleClear}>
+      <div className="flex gap-2 flex-wrap">
+        <Button type="button" variant="outline" className="h-10 px-3 rounded-[10px] text-sm" onClick={handleClear}>
           Choose Another
         </Button>
         {(fileRef.current || selectedFile) && (
-          <Button type="button" className="flex-1 min-h-[44px]" onClick={handleRetry}>
+          <Button type="button" className="h-10 px-3 rounded-[10px] text-sm" onClick={handleRetry}>
             Retry Upload
           </Button>
         )}
