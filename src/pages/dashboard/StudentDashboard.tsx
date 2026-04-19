@@ -80,65 +80,67 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="space-y-4 max-w-3xl mx-auto">
-      {/* Unified hero banner slider — includes admin banners, topper banners,
-          and live/upcoming test banners (SSC Special, Weekly, Surprise Quiz) */}
-      <motion.div {...fadeInUp}>
-        <BannerCarousel />
-      </motion.div>
-
-      {/* Resume Learning */}
-      <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.05 }}>
-        <ResumeLearning />
-      </motion.div>
-
-      {/* Stats Grid */}
-      {stats && (
-        <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.1 }}>
-          <StatsGrid
-            availableTests={stats.availableTests}
-            completedTests={stats.completedTests}
-            avgScore={stats.avgScore}
-            streakDays={stats.streak}
-          />
+    <div className="page-shell">
+      <div className="space-y-4 w-full max-w-[420px] md:max-w-3xl mx-auto">
+        {/* Unified hero banner slider — includes admin banners, topper banners,
+            and live/upcoming test banners (SSC Special, Weekly, Surprise Quiz) */}
+        <motion.div {...fadeInUp}>
+          <BannerCarousel />
         </motion.div>
-      )}
 
-      {/* Quick Access */}
-      <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.15 }}>
-        <h2 className="text-sm font-display font-bold text-foreground mb-2 px-1">
-          Quick Access
-        </h2>
-        <div className="grid grid-cols-4 gap-2">
-          {quickLinks.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className="bg-card rounded-xl border border-border p-2.5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col items-center text-center active:scale-95"
-            >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-1.5 ${link.color}`}>
-                <link.icon className="w-5 h-5" />
-              </div>
-              <span className="text-[11px] font-display font-semibold text-foreground leading-tight">{link.name}</span>
-            </Link>
-          ))}
-        </div>
-      </motion.div>
+        {/* Resume Learning */}
+        <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.05 }}>
+          <ResumeLearning />
+        </motion.div>
 
-      {/* Recent Winners slider (cross-class, last 7 days) */}
-      <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.18 }}>
-        <WinnersSlider />
-      </motion.div>
+        {/* Stats Grid */}
+        {stats && (
+          <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.1 }}>
+            <StatsGrid
+              availableTests={stats.availableTests}
+              completedTests={stats.completedTests}
+              avgScore={stats.avgScore}
+              streakDays={stats.streak}
+            />
+          </motion.div>
+        )}
 
-      {/* Trending Content */}
-      <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.22 }}>
-        <TrendingContent />
-      </motion.div>
+        {/* Quick Access */}
+        <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.15 }}>
+          <h2 className="text-sm font-display font-bold text-foreground mb-2 px-1">
+            Quick Access
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {quickLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className="bg-card rounded-xl border border-border p-2.5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col items-center text-center active:scale-95"
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-1.5 ${link.color}`}>
+                  <link.icon className="w-5 h-5" />
+                </div>
+                <span className="text-[11px] font-display font-semibold text-foreground leading-tight">{link.name}</span>
+              </Link>
+            ))}
+          </div>
+        </motion.div>
 
-      {/* LeadPe Promotional Ad */}
-      <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.26 }}>
-        <LeadPeAd variant="card" />
-      </motion.div>
+        {/* Recent Winners slider (cross-class, last 7 days) */}
+        <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.18 }}>
+          <WinnersSlider />
+        </motion.div>
+
+        {/* Trending Content */}
+        <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.22 }}>
+          <TrendingContent />
+        </motion.div>
+
+        {/* LeadPe Promotional Ad */}
+        <motion.div {...fadeInUp} transition={{ duration: 0.35, delay: 0.26 }}>
+          <LeadPeAd variant="card" />
+        </motion.div>
+      </div>
     </div>
   );
 }

@@ -99,7 +99,7 @@ export function DashboardLayout() {
 
   return (
     <DesktopBlockGuard>
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen max-w-full overflow-x-hidden bg-background">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex-col">
         {/* Logo */}
@@ -166,8 +166,8 @@ export function DashboardLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="md:ml-64 pt-[60px] md:pt-0 pb-20 md:pb-0 min-h-screen">
-        <div className="p-3 md:p-8">
+      <main className="md:ml-64 pt-[60px] md:pt-0 pb-20 md:pb-0 min-h-screen max-w-full overflow-x-hidden">
+        <div className="page-shell p-3 md:p-8">
           <Outlet />
         </div>
       </main>
