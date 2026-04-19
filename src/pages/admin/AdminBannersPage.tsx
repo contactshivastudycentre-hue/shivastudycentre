@@ -253,9 +253,11 @@ export default function AdminBannersPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full min-h-[48px]" disabled={saveMutation.isPending || !form.image_url}>
-                {saveMutation.isPending ? 'Saving...' : editing ? 'Update Banner' : 'Save Banner'}
-              </Button>
+              <div className="flex justify-end pt-1">
+                <Button type="submit" className="h-10 px-5 max-w-[220px] rounded-[10px] text-sm font-semibold" disabled={saveMutation.isPending || !form.image_url}>
+                  {saveMutation.isPending ? 'Saving...' : editing ? 'Update Banner' : 'Save Banner'}
+                </Button>
+              </div>
             </form>
           </DialogContent>
         </Dialog>
