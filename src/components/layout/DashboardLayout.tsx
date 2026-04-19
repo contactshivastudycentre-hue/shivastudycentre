@@ -166,8 +166,8 @@ export function DashboardLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="md:ml-64 pt-16 md:pt-0 pb-20 md:pb-0 min-h-screen">
-        <div className="p-4 md:p-8">
+      <main className="md:ml-64 pt-[60px] md:pt-0 pb-20 md:pb-0 min-h-screen">
+        <div className="p-3 md:p-8">
           <Outlet />
         </div>
       </main>
