@@ -189,19 +189,28 @@ export function BannerCarousel() {
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-2xl bg-muted shadow-sm"
+      className="relative w-full overflow-hidden rounded-2xl bg-muted shadow-sm aspect-[2/1]"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      style={{ aspectRatio: '16 / 9' }}
     >
       {/* Background image */}
       <img
         src={banner.image_url!}
         alt={banner.title || ''}
-        loading="lazy"
+        loading="eager"
         decoding="async"
+        fetchPriority="high"
         className="absolute inset-0 w-full h-full object-cover object-center"
       />
+      {/* Shimmer sweep — draws eye to Sunday/Special test banner */}
+      {isTest && meta?.test_type === 'sunday_special' && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-[5] overflow-hidden"
+        >
+          <div className="absolute -inset-y-2 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 animate-banner-shimmer" />
+        </div>
+      )}
 
       {isTest ? (
         <>
