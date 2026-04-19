@@ -166,7 +166,7 @@ export default function AdminTestResultsPage() {
         <Link to="/admin/tests"><Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5" /></Button></Link>
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-display font-bold text-foreground truncate">{test.title}</h1>
-          <p className="text-sm text-muted-foreground">Class {test.class} • {test.subject} • {test.test_type === 'sunday_special' ? '🔥 Sunday Special' : test.test_type}</p>
+          <p className="text-sm text-muted-foreground">Class {test.class} • {test.subject} • {test.test_type === 'sunday_special' ? '🔥 SSC Special Test' : test.test_type}</p>
         </div>
         {isPublished ? (
           <Button variant="outline" className="gap-2 text-amber-700 border-amber-300" onClick={() => unpublishMutation.mutate()} disabled={unpublishMutation.isPending}>

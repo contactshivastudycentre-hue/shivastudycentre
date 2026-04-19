@@ -616,7 +616,7 @@ export default function TestBuilder() {
               <Select value={test.test_type} onValueChange={(v) => setTest({ ...test, test_type: v as Test['test_type'] })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sunday_special">🔥 Sunday Special</SelectItem>
+                  <SelectItem value="sunday_special">🔥 SSC Special Test</SelectItem>
                   <SelectItem value="weekly">📅 Weekly Test</SelectItem>
                   <SelectItem value="surprise_quiz">⚡ Surprise Quiz</SelectItem>
                   <SelectItem value="mock">📝 Mock Test</SelectItem>
