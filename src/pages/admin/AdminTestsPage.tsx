@@ -33,7 +33,15 @@ interface Test {
   end_time: string | null;
   results_published_at: string | null;
   submission_count: number;
+  class_group?: 'single' | 'junior' | 'senior' | 'custom';
 }
+
+const audienceLabel = (t: Test): string => {
+  if (t.class_group === 'junior') return 'Junior (6–7)';
+  if (t.class_group === 'senior') return 'Senior (8–10)';
+  if (t.class_group === 'custom') return 'Custom';
+  return `Class ${t.class}`;
+};
 
 const TYPE_LABELS: Record<string, { label: string; className: string }> = {
   sunday_special: { label: '🔥 SSC Special', className: 'bg-amber-100 text-amber-800' },
@@ -190,7 +198,7 @@ export default function AdminTestsPage() {
                 <TableRow>
                   <TableHead>Title</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Class</TableHead>
+                  <TableHead>Audience</TableHead>
                   <TableHead>Duration</TableHead>
                   <TableHead>Submissions</TableHead>
                   <TableHead>Status</TableHead>
@@ -214,7 +222,11 @@ export default function AdminTestsPage() {
                           {typeInfo.label}
                         </span>
                       </TableCell>
-                      <TableCell>{test.class}</TableCell>
+                      <TableCell>
+                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-secondary text-secondary-foreground whitespace-nowrap">
+                          {audienceLabel(test)}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <span className="flex items-center gap-1 text-muted-foreground text-sm">
                           <Clock className="w-3.5 h-3.5" />
