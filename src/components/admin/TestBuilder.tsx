@@ -440,6 +440,7 @@ export default function TestBuilder() {
             prize_type: test.prize_type ?? null,
             prize_value: test.prize_value ?? null,
             prize_description: test.prize_description ?? null,
+            class_group: test.class_group,
           } as any)
           .select()
           .single();
@@ -466,6 +467,7 @@ export default function TestBuilder() {
             prize_type: test.prize_type ?? null,
             prize_value: test.prize_value ?? null,
             prize_description: test.prize_description ?? null,
+            class_group: test.class_group,
           } as any)
           .eq('id', test.id);
 
