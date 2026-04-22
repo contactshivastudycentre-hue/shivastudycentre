@@ -87,16 +87,28 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Hide splash screen when app loads
-      window.addEventListener('load', () => {
-        setTimeout(() => {
-          const splash = document.getElementById('pwa-splash');
+      // Hide the splash only AFTER React has signaled that the auth state
+      // has resolved (event 'app-ready'). This prevents a flash of the
+      // public LandingPage on PWA cold-start when the student is already
+      // logged in. We keep a hard 4s safety fallback so the splash can
+      // never get stuck in case of a script error.
+      (function() {
+        var hidden = false;
+        function hideSplash() {
+          if (hidden) return;
+          hidden = true;
+          var splash = document.getElementById('pwa-splash');
           if (splash) {
             splash.classList.add('fade-out');
-            setTimeout(() => splash.remove(), 300);
+            setTimeout(function() { splash.remove(); }, 300);
           }
-        }, 500);
-      });
+        }
+        window.addEventListener('app-ready', hideSplash);
+        // Hard safety net
+        window.addEventListener('load', function() {
+          setTimeout(hideSplash, 4000);
+        });
+      })();
       
       // Register service worker for PWA — only in production, not in preview/iframe
       if ('serviceWorker' in navigator) {
