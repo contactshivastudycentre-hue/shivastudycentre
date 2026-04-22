@@ -150,7 +150,19 @@ export default function AdminTestResultsPage() {
   const [luckyPrize, setLuckyPrize] = useState<string>('');
   const [luckyPicks, setLuckyPicks] = useState<PickedLuckyWinner[]>([]);
 
-  // Hydrate top picks from leaderboard or saved winners
+  // Mark test ended on page open (server-side flag)
+  useEffect(() => {
+    if (!testId) return;
+    supabase.rpc('mark_test_ended' as any, { p_test_id: testId }).then(() => {});
+  }, [testId]);
+
+  // Detect if test naturally ended (end_time passed)
+  const testEnded = useMemo(() => {
+    if (!test?.end_time) return false;
+    return new Date(test.end_time).getTime() < Date.now();
+  }, [test?.end_time]);
+
+  // Hydrate top picks from leaderboard or saved winners; auto-suggest lucky if test ended
   useEffect(() => {
     if (winners && winners.length > 0) {
       const tops = winners.filter((w) => w.category === 'top').sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
@@ -164,9 +176,20 @@ export default function AdminTestResultsPage() {
       if (luckys[0]?.prize_text) setLuckyPrize(luckys[0].prize_text);
     } else if (eligible.length) {
       setTopPicks([0, 1, 2].map((i) => ({ user_id: eligible[i]?.user_id || '', prize_text: '' })));
+      // Auto-suggest 3 lucky winners if test ended and not yet published
+      if (testEnded && !test?.results_published_at && eligible.length > 3) {
+        const top3Ids = new Set(eligible.slice(0, 3).map((e) => e.user_id));
+        const pool = eligible.filter((e) => !top3Ids.has(e.user_id));
+        const target = Math.min(3, pool.length);
+        if (target > 0) {
+          const shuffled = [...pool].sort(() => Math.random() - 0.5);
+          setLuckyCount(target);
+          setLuckyPicks(shuffled.slice(0, target).map((e) => ({ user_id: e.user_id, prize_text: '' })));
+        }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [winners, leaderboard]);
+  }, [winners, leaderboard, testEnded]);
 
   const studentName = (uid: string) => eligible.find((e) => e.user_id === uid)?.full_name || '—';
   const studentScore = (uid: string) => eligible.find((e) => e.user_id === uid)?.effective_score ?? 0;
