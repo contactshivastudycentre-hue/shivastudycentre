@@ -9,14 +9,16 @@ interface Winner {
   test_class: string;
   test_type: string;
   results_published_at: string;
-  rank: number;
+  rank: number | null;
   user_id: string;
   full_name: string;
   score: number;
   prize_text: string | null;
+  category?: string;
 }
 
-const rankStyle = (rank: number) => {
+const rankStyle = (rank: number | null, category?: string) => {
+  if (category === 'lucky') return { emoji: '🎁', color: 'text-purple-200', label: 'Lucky' };
   if (rank === 1) return { emoji: '🏆', color: 'text-yellow-300', label: '1st' };
   if (rank === 2) return { emoji: '🥈', color: 'text-gray-200', label: '2nd' };
   return { emoji: '🥉', color: 'text-orange-300', label: '3rd' };
@@ -63,10 +65,10 @@ export function WinnersSlider() {
           style={{ width: 'max-content' }}
         >
           {looped.map((w, idx) => {
-            const r = rankStyle(w.rank);
+            const r = rankStyle(w.rank, w.category);
             return (
               <div
-                key={`${w.test_id}-${w.rank}-${idx}`}
+                key={`${w.test_id}-${w.rank ?? 'lucky'}-${idx}`}
                 className="flex items-center gap-2 text-white text-sm font-medium px-2"
               >
                 <span className={`text-lg ${r.color}`}>{r.emoji}</span>
