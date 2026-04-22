@@ -352,6 +352,12 @@ export default function AdminTestResultsPage() {
         )}
       </div>
 
+      {!isPublished && testEnded && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          ✅ <strong>Test ended</strong> — Top 1/2/3 and lucky winners auto-suggested. Review prizes and publish.
+        </div>
+      )}
+
       {!isPublished ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           <strong>Draft:</strong> Pick your Top 1/2/3 and any lucky winners below, then click <strong>Publish Results & Winners</strong>.
@@ -412,6 +418,7 @@ export default function AdminTestResultsPage() {
             <div className="space-y-1">
               <Label className="text-xs">How many?</Label>
               <Input type="number" min={0} max={20} value={luckyCount} onChange={(e) => setLuckyCount(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))} />
+              <p className="text-[11px] text-muted-foreground">Pool size: {Math.max(0, eligible.length - topPicks.filter(t => t.user_id).length)} students</p>
             </div>
             <div className="space-y-1 sm:col-span-2">
               <Label className="text-xs">Default prize for all lucky winners</Label>
