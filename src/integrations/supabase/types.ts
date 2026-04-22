@@ -572,6 +572,7 @@ export type Database = {
           description: string | null
           duration_minutes: number
           end_time: string | null
+          ended_at: string | null
           highlight_until: string | null
           id: string
           is_published: boolean
@@ -596,6 +597,7 @@ export type Database = {
           description?: string | null
           duration_minutes?: number
           end_time?: string | null
+          ended_at?: string | null
           highlight_until?: string | null
           id?: string
           is_published?: boolean
@@ -620,6 +622,7 @@ export type Database = {
           description?: string | null
           duration_minutes?: number
           end_time?: string | null
+          ended_at?: string | null
           highlight_until?: string | null
           id?: string
           is_published?: boolean
@@ -818,6 +821,7 @@ export type Database = {
         Args: { check_user_id?: string }
         Returns: boolean
       }
+      mark_test_ended: { Args: { p_test_id: string }; Returns: undefined }
       notify_class: {
         Args: {
           p_body?: string
