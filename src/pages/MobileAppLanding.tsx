@@ -2,11 +2,10 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ClipboardList, FileText, Play, Users, UserCircle, Shield, BookOpen, Target, Award, ExternalLink } from 'lucide-react';
+import { ClipboardList, FileText, Play, UserCircle, Shield, Target, BookOpen, ClipboardCheck, Trophy, Sparkles } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { SmallPWAButton } from '@/components/pwa/SmallPWAButton';
 import ChallengeBanner from '@/components/ChallengeBanner';
-import swaritImage from '@/assets/swarit-roy.jpg';
 
 const features = [
   {
