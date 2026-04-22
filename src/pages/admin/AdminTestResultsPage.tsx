@@ -277,6 +277,9 @@ export default function AdminTestResultsPage() {
 
       // Validate Lucky winners — exclude Top 3 and require prize per row
       const topUserIds = new Set(topIds as string[]);
+      if (luckyPicks.length > maxLucky) {
+        throw new Error(`Too many lucky winners (${luckyPicks.length}). Pool only has ${maxLucky} students after excluding Top 1/2/3.`);
+      }
       for (const l of luckyPicks) {
         if (!l.user_id) continue;
         if (topUserIds.has(l.user_id)) {
