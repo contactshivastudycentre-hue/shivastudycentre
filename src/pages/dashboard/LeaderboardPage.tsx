@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Crown, Medal, Award, Sparkles } from 'lucide-react';
+import { Trophy, Crown, Medal, Award, Sparkles, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const CLASSES = ['4', '5', '6', '7', '8', '9', '10', '11', '12'];
@@ -15,6 +15,12 @@ const TYPE_LABELS: Record<string, string> = {
   standard: 'Standard',
   practice: 'Practice',
 };
+const GROUP_LABELS: Record<string, string> = {
+  all: 'All Groups',
+  junior: 'Junior (6–7)',
+  senior: 'Senior (8–10)',
+  single: 'Single Class',
+};
 
 interface PublishedTest {
   id: string;
@@ -22,6 +28,7 @@ interface PublishedTest {
   class: string;
   subject: string;
   test_type: string;
+  class_group: string;
   results_published_at: string;
 }
 
@@ -31,6 +38,16 @@ interface LbRow {
   full_name: string;
   score: number;
   time_seconds: number;
+}
+
+interface WinnerRow {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  rank: number | null;
+  score: number | null;
+  prize_text: string | null;
+  category: string;
 }
 
 export default function LeaderboardPage() {
