@@ -130,7 +130,13 @@ export default function LeaderboardPage() {
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Select value={groupFilter} onValueChange={setGroupFilter}>
+          <SelectTrigger><SelectValue placeholder="Group" /></SelectTrigger>
+          <SelectContent>
+            {Object.entries(GROUP_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Select value={classFilter} onValueChange={setClassFilter}>
           <SelectTrigger><SelectValue placeholder="Class" /></SelectTrigger>
           <SelectContent>
