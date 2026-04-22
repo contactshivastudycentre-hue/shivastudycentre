@@ -176,19 +176,25 @@ export default function AdminTestResultsPage() {
   };
 
   const autoPickLucky = () => {
+    if (!luckyPrize.trim()) {
+      toast({ title: 'Prize required', description: 'Set a default prize for lucky winners before picking.', variant: 'destructive' });
+      return;
+    }
+    // Always exclude Top 1/2/3 picks from lucky winner pool
     const excluded = new Set(topPicks.map((t) => t.user_id).filter(Boolean));
     const pool = eligible.filter((e) => !excluded.has(e.user_id));
     if (luckyCount > pool.length) {
-      toast({ title: 'Not enough students', description: `Only ${pool.length} students available after excluding top picks.`, variant: 'destructive' });
+      toast({ title: 'Not enough students', description: `Only ${pool.length} students available after excluding Top 1/2/3.`, variant: 'destructive' });
       return;
     }
     const shuffled = [...pool].sort(() => Math.random() - 0.5);
-    const picks = shuffled.slice(0, luckyCount).map((e) => ({ user_id: e.user_id, prize_text: luckyPrize }));
+    const picks = shuffled.slice(0, luckyCount).map((e) => ({ user_id: e.user_id, prize_text: luckyPrize.trim() }));
     setLuckyPicks(picks);
-    toast({ title: '🎲 Lucky winners picked', description: `${picks.length} random winner${picks.length !== 1 ? 's' : ''} selected.` });
+    toast({ title: '🎲 Lucky winners picked', description: `${picks.length} random winner${picks.length !== 1 ? 's' : ''} selected (Top 3 excluded).` });
   };
 
   const rerollLucky = (idx: number) => {
+    // Always exclude Top 1/2/3 + currently picked lucky winners
     const excluded = new Set([
       ...topPicks.map((t) => t.user_id).filter(Boolean),
       ...luckyPicks.map((p) => p.user_id),
@@ -207,28 +213,57 @@ export default function AdminTestResultsPage() {
   const publishMutation = useMutation({
     mutationFn: async () => {
       const payload: Array<Record<string, unknown>> = [];
-      topPicks.forEach((t, i) => {
-        if (!t.user_id) return;
+      const ALLOWED_CATEGORIES = ['top', 'lucky'] as const;
+
+      // Validate Top winners — prize_text required for any picked top winner
+      for (let i = 0; i < topPicks.length; i++) {
+        const t = topPicks[i];
+        if (!t.user_id) continue;
+        const prize = (t.prize_text || '').trim();
+        if (!prize) {
+          throw new Error(`Top ${i + 1} winner needs a prize. Please fill in the prize field.`);
+        }
+        const cat: typeof ALLOWED_CATEGORIES[number] = 'top';
+        if (!ALLOWED_CATEGORIES.includes(cat)) throw new Error('Invalid category');
         payload.push({
           user_id: t.user_id,
           full_name: studentName(t.user_id),
           score: studentScore(t.user_id),
           rank: i + 1,
-          prize_text: t.prize_text || null,
-          category: 'top',
+          prize_text: prize,
+          category: cat,
         });
-      });
-      luckyPicks.forEach((l) => {
-        if (!l.user_id) return;
+      }
+
+      // Block duplicate user_ids across Top picks
+      const topIds = payload.filter(p => p.category === 'top').map(p => p.user_id);
+      if (new Set(topIds).size !== topIds.length) {
+        throw new Error('A student is selected in more than one Top slot. Please pick distinct winners.');
+      }
+
+      // Validate Lucky winners — exclude Top 3 and require prize per row
+      const topUserIds = new Set(topIds as string[]);
+      for (const l of luckyPicks) {
+        if (!l.user_id) continue;
+        if (topUserIds.has(l.user_id)) {
+          throw new Error('A lucky winner is also in Top 1/2/3. Remove the duplicate before publishing.');
+        }
+        const prize = (l.prize_text || luckyPrize || '').trim();
+        if (!prize) {
+          throw new Error('Every lucky winner needs a prize. Set a default prize or fill each row.');
+        }
+        const cat: typeof ALLOWED_CATEGORIES[number] = 'lucky';
+        if (!ALLOWED_CATEGORIES.includes(cat)) throw new Error('Invalid category');
         payload.push({
           user_id: l.user_id,
           full_name: studentName(l.user_id),
           score: studentScore(l.user_id),
           rank: null,
-          prize_text: l.prize_text || luckyPrize || null,
-          category: 'lucky',
+          prize_text: prize,
+          category: cat,
         });
-      });
+      }
+
       if (!payload.length) throw new Error('Pick at least one winner before publishing.');
 
       const { error } = await supabase.rpc('publish_test_winners' as any, {
