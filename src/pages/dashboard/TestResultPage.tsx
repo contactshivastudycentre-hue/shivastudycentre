@@ -18,6 +18,17 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import ChallengeFriendButton from '@/components/ChallengeFriendButton';
+import { Trophy, Gift } from 'lucide-react';
+
+interface WinnerRow {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  rank: number | null;
+  score: number | null;
+  prize_text: string | null;
+  category: string;
+}
 
 type QuestionType = 'mcq_single' | 'mcq_multiple' | 'true_false' | 'short_answer' | 'long_answer';
 
@@ -64,6 +75,7 @@ export default function TestResultPage() {
   const [attempt, setAttempt] = useState<TestAttempt | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
+  const [winners, setWinners] = useState<WinnerRow[]>([]);
 
   useEffect(() => {
     if (attemptId && user) {
