@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Crown, Medal, Award, Sparkles } from 'lucide-react';
+import { Trophy, Crown, Medal, Award, Sparkles, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const CLASSES = ['4', '5', '6', '7', '8', '9', '10', '11', '12'];
@@ -15,6 +15,12 @@ const TYPE_LABELS: Record<string, string> = {
   standard: 'Standard',
   practice: 'Practice',
 };
+const GROUP_LABELS: Record<string, string> = {
+  all: 'All Groups',
+  junior: 'Junior (6–7)',
+  senior: 'Senior (8–10)',
+  single: 'Single Class',
+};
 
 interface PublishedTest {
   id: string;
@@ -22,6 +28,7 @@ interface PublishedTest {
   class: string;
   subject: string;
   test_type: string;
+  class_group: string;
   results_published_at: string;
 }
 
@@ -33,10 +40,21 @@ interface LbRow {
   time_seconds: number;
 }
 
+interface WinnerRow {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  rank: number | null;
+  score: number | null;
+  prize_text: string | null;
+  category: string;
+}
+
 export default function LeaderboardPage() {
   const { user, profile } = useAuth();
   const [classFilter, setClassFilter] = useState<string>(profile?.class || 'all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [groupFilter, setGroupFilter] = useState<string>('all');
   const [selectedTest, setSelectedTest] = useState<string>('');
 
   // Pull all tests with published results that this student can see (RLS handles class scope)
@@ -45,7 +63,7 @@ export default function LeaderboardPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from('tests')
-        .select('id, title, class, subject, test_type, results_published_at')
+        .select('id, title, class, subject, test_type, class_group, results_published_at')
         .not('results_published_at', 'is', null)
         .order('results_published_at', { ascending: false });
       return ((data as any) || []) as PublishedTest[];
@@ -56,8 +74,9 @@ export default function LeaderboardPage() {
     let list = tests || [];
     if (classFilter !== 'all') list = list.filter(t => t.class === classFilter);
     if (typeFilter !== 'all') list = list.filter(t => t.test_type === typeFilter);
+    if (groupFilter !== 'all') list = list.filter(t => t.class_group === groupFilter);
     return list;
-  }, [tests, classFilter, typeFilter]);
+  }, [tests, classFilter, typeFilter, groupFilter]);
 
   useEffect(() => {
     if (filteredTests.length && !filteredTests.find(t => t.id === selectedTest)) {
@@ -81,6 +100,23 @@ export default function LeaderboardPage() {
     enabled: !!selectedTest,
   });
 
+  const { data: winners } = useQuery({
+    queryKey: ['student-test-winners', selectedTest],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('test_winners')
+        .select('id, user_id, full_name, rank, score, prize_text, category')
+        .eq('test_id', selectedTest)
+        .order('category', { ascending: true })
+        .order('rank', { ascending: true, nullsFirst: false });
+      return (data || []) as WinnerRow[];
+    },
+    enabled: !!selectedTest,
+  });
+
+  const topWinners = (winners || []).filter(w => w.category === 'top');
+  const luckyWinners = (winners || []).filter(w => w.category === 'lucky');
+
   const activeTest = filteredTests.find(t => t.id === selectedTest);
   const fmt = (s: number) => `${Math.floor(s / 60)}m ${s % 60}s`;
 
@@ -94,7 +130,13 @@ export default function LeaderboardPage() {
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Select value={groupFilter} onValueChange={setGroupFilter}>
+          <SelectTrigger><SelectValue placeholder="Group" /></SelectTrigger>
+          <SelectContent>
+            {Object.entries(GROUP_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Select value={classFilter} onValueChange={setClassFilter}>
           <SelectTrigger><SelectValue placeholder="Class" /></SelectTrigger>
           <SelectContent>
@@ -138,6 +180,66 @@ export default function LeaderboardPage() {
               </div>
               <h2 className="font-display text-xl font-bold">{activeTest.title}</h2>
               <p className="text-sm opacity-90">{activeTest.subject}</p>
+            </div>
+          )}
+
+          {/* Winners (Top + Lucky) — only if admin published winners */}
+          {(topWinners.length > 0 || luckyWinners.length > 0) && (
+            <div className="space-y-3">
+              {topWinners.length > 0 && (
+                <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-yellow-50 p-4">
+                  <h3 className="text-sm font-display font-bold flex items-center gap-2 mb-3 text-amber-900">
+                    <Trophy className="w-4 h-4 text-amber-600" /> Top Winners
+                  </h3>
+                  <div className="space-y-2">
+                    {topWinners.map(w => {
+                      const emoji = w.rank === 1 ? '🥇' : w.rank === 2 ? '🥈' : '🥉';
+                      const isMe = w.user_id === user?.id;
+                      return (
+                        <div key={w.id} className={`flex items-center gap-3 p-2 rounded-lg ${isMe ? 'bg-primary/10 ring-2 ring-primary' : 'bg-white/70'}`}>
+                          <span className="text-2xl">{emoji}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-bold text-sm truncate ${isMe ? 'text-primary' : 'text-foreground'}`}>
+                              {w.full_name} {isMe && '(You)'}
+                            </p>
+                            {w.prize_text && (
+                              <p className="text-xs text-amber-700 font-semibold">🎁 {w.prize_text}</p>
+                            )}
+                          </div>
+                          {w.score !== null && (
+                            <Badge variant="outline" className="font-bold bg-white">{w.score}</Badge>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {luckyWinners.length > 0 && (
+                <div className="rounded-2xl border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-pink-50 p-4">
+                  <h3 className="text-sm font-display font-bold flex items-center gap-2 mb-3 text-purple-900">
+                    <Gift className="w-4 h-4 text-purple-600" /> Lucky Winners
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {luckyWinners.map(w => {
+                      const isMe = w.user_id === user?.id;
+                      return (
+                        <div key={w.id} className={`flex items-center gap-2 p-2 rounded-lg ${isMe ? 'bg-primary/10 ring-2 ring-primary' : 'bg-white/70'}`}>
+                          <span className="text-xl">🎁</span>
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-semibold text-sm truncate ${isMe ? 'text-primary' : 'text-foreground'}`}>
+                              {w.full_name} {isMe && '(You)'}
+                            </p>
+                            {w.prize_text && (
+                              <p className="text-[11px] text-purple-700">{w.prize_text}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

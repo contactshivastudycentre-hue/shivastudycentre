@@ -18,6 +18,17 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import ChallengeFriendButton from '@/components/ChallengeFriendButton';
+import { Trophy, Gift } from 'lucide-react';
+
+interface WinnerRow {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  rank: number | null;
+  score: number | null;
+  prize_text: string | null;
+  category: string;
+}
 
 type QuestionType = 'mcq_single' | 'mcq_multiple' | 'true_false' | 'short_answer' | 'long_answer';
 
@@ -64,6 +75,7 @@ export default function TestResultPage() {
   const [attempt, setAttempt] = useState<TestAttempt | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
+  const [winners, setWinners] = useState<WinnerRow[]>([]);
 
   useEffect(() => {
     if (attemptId && user) {
@@ -134,6 +146,14 @@ export default function TestResultPage() {
         // Expand all by default for easy viewing
         setExpandedQuestions(new Set(parsedQuestions.map((q) => q.id)));
       }
+      // Fetch winners (top + lucky) — RLS allows when results_published_at is set
+      const { data: winnersData } = await supabase
+        .from('test_winners')
+        .select('id, user_id, full_name, rank, score, prize_text, category')
+        .eq('test_id', attemptData.test_id)
+        .order('category', { ascending: true })
+        .order('rank', { ascending: true, nullsFirst: false });
+      if (winnersData) setWinners(winnersData as WinnerRow[]);
     } catch (error) {
       console.error('Error fetching result:', error);
     } finally {
@@ -326,6 +346,74 @@ export default function TestResultPage() {
           </div>
         )}
       </div>
+
+      {/* Winners Section */}
+      {winners.length > 0 && (
+        <div className="mb-6 space-y-4">
+          {(() => {
+            const topWinners = winners.filter(w => w.category === 'top').sort((a,b) => (a.rank ?? 99) - (b.rank ?? 99));
+            const luckyWinners = winners.filter(w => w.category === 'lucky');
+            return (
+              <>
+                {topWinners.length > 0 && (
+                  <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-yellow-50 p-4">
+                    <h3 className="text-base font-display font-bold flex items-center gap-2 mb-3 text-amber-900">
+                      <Trophy className="w-5 h-5 text-amber-600" /> Top Winners
+                    </h3>
+                    <div className="space-y-2">
+                      {topWinners.map(w => {
+                        const emoji = w.rank === 1 ? '🥇' : w.rank === 2 ? '🥈' : '🥉';
+                        const isMe = w.user_id === user?.id;
+                        return (
+                          <div key={w.id} className={`flex items-center gap-3 p-2 rounded-lg ${isMe ? 'bg-primary/10 ring-2 ring-primary' : 'bg-white/70'}`}>
+                            <span className="text-2xl">{emoji}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className={`font-bold text-sm truncate ${isMe ? 'text-primary' : 'text-foreground'}`}>
+                                {w.full_name} {isMe && '(You)'}
+                              </p>
+                              {w.prize_text && (
+                                <p className="text-xs text-amber-700 font-semibold">🎁 {w.prize_text}</p>
+                              )}
+                            </div>
+                            {w.score !== null && (
+                              <Badge variant="outline" className="font-bold bg-white">{w.score}</Badge>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {luckyWinners.length > 0 && (
+                  <div className="rounded-2xl border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-pink-50 p-4">
+                    <h3 className="text-base font-display font-bold flex items-center gap-2 mb-3 text-purple-900">
+                      <Gift className="w-5 h-5 text-purple-600" /> Lucky Winners
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {luckyWinners.map(w => {
+                        const isMe = w.user_id === user?.id;
+                        return (
+                          <div key={w.id} className={`flex items-center gap-2 p-2 rounded-lg ${isMe ? 'bg-primary/10 ring-2 ring-primary' : 'bg-white/70'}`}>
+                            <span className="text-xl">🎁</span>
+                            <div className="flex-1 min-w-0">
+                              <p className={`font-semibold text-sm truncate ${isMe ? 'text-primary' : 'text-foreground'}`}>
+                                {w.full_name} {isMe && '(You)'}
+                              </p>
+                              {w.prize_text && (
+                                <p className="text-[11px] text-purple-700">{w.prize_text}</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Question-by-Question Analysis */}
       <div className="space-y-3">
