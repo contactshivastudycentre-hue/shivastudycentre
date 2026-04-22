@@ -448,13 +448,13 @@ export default function LandingPage() {
             </div>
             <div className="mt-8 flex justify-center">
               <a
-                href="https://leadpe.tech?utm_source=ssc&utm_medium=landing&utm_campaign=brand"
+                href="https://leadpe.online?utm_source=ssc&utm_medium=landing&utm_campaign=brand"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-colors text-sm font-medium"
               >
                 <Sparkles className="w-4 h-4 text-yellow-300" />
-                Built by LeadPe.tech — Build apps faster
+                Built by Lead<span className="text-[#4ADE80]">Pe</span>.online — Build apps faster
                 <ExternalLink className="w-3.5 h-3.5 opacity-70" />
               </a>
             </div>
@@ -516,8 +516,8 @@ export default function LandingPage() {
                    </div>
 
                    {/* CTA */}
-                   <a href="https://leadpe.tech" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[#16A34A] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#15803d] transition-colors">
-                     Visit LeadPe
+                   <a href="https://leadpe.online" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[#16A34A] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#15803d] transition-colors">
+                     Visit Lead<span className="text-white font-semibold">Pe</span>.online
                      <ExternalLink className="w-4 h-4" />
                    </a>
                 </div>

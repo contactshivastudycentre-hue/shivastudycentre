@@ -87,15 +87,15 @@ export function Footer() {
           <div className="flex gap-4 items-center text-xs text-muted-foreground">
             <Link to="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link>
             <span className="text-border">|</span>
-            <a href="https://leadpe.tech" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-               Powered by LeadPe
+            <a href="https://leadpe.online" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+               Powered by Lead<span className="text-[#16A34A]">Pe</span>
              </a>
           </div>
         </div>
         <p className="text-center mt-4" style={{ fontSize: '12px', color: '#999999' }}>
-          Built with LeadPe 🌱 — Get your free website at{' '}
-          <a href="https://leadpe.tech" target="_blank" rel="noopener noreferrer" style={{ color: '#999999', textDecoration: 'underline' }}>
-            leadpe.tech
+          Built with Lead<span style={{ color: '#16A34A' }}>Pe</span> 🌱 — Get your free website at{' '}
+          <a href="https://leadpe.online" target="_blank" rel="noopener noreferrer" style={{ color: '#999999', textDecoration: 'underline' }}>
+            leadpe.online
           </a>
         </p>
       </div>

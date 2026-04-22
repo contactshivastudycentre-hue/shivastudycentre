@@ -191,12 +191,12 @@ export default function MobileAppLanding() {
           </div>
 
           <a
-            href="https://leadpe.tech"
+            href="https://leadpe.online"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 w-full bg-[#16A34A] text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-[#15803d] transition-colors"
           >
-            Visit LeadPe
+            Visit Lead<span className="text-white font-semibold">Pe</span>.online
             <ExternalLink className="w-4 h-4" />
           </a>
         </div>
