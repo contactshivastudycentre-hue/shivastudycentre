@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,10 +52,24 @@ interface WinnerRow {
 
 export default function LeaderboardPage() {
   const { user, profile } = useAuth();
+  const qc = useQueryClient();
   const [classFilter, setClassFilter] = useState<string>(profile?.class || 'all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [selectedTest, setSelectedTest] = useState<string>('');
+
+  // Realtime: refresh winners + leaderboard when admin publishes
+  useEffect(() => {
+    if (!selectedTest) return;
+    const channel = supabase
+      .channel(`winners-${selectedTest}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'test_winners', filter: `test_id=eq.${selectedTest}` }, () => {
+        qc.invalidateQueries({ queryKey: ['student-test-winners', selectedTest] });
+        qc.invalidateQueries({ queryKey: ['student-test-leaderboard', selectedTest] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedTest, qc]);
 
   // Pull all tests with published results that this student can see (RLS handles class scope)
   const { data: tests } = useQuery({
