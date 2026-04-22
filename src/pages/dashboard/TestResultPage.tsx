@@ -146,6 +146,14 @@ export default function TestResultPage() {
         // Expand all by default for easy viewing
         setExpandedQuestions(new Set(parsedQuestions.map((q) => q.id)));
       }
+      // Fetch winners (top + lucky) — RLS allows when results_published_at is set
+      const { data: winnersData } = await supabase
+        .from('test_winners')
+        .select('id, user_id, full_name, rank, score, prize_text, category')
+        .eq('test_id', attemptData.test_id)
+        .order('category', { ascending: true })
+        .order('rank', { ascending: true, nullsFirst: false });
+      if (winnersData) setWinners(winnersData as WinnerRow[]);
     } catch (error) {
       console.error('Error fetching result:', error);
     } finally {
