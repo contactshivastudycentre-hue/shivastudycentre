@@ -1,7 +1,9 @@
-// Minimal SW: network-first for navigation (so PWA never serves a stale blank shell),
-// cache-first for static icons/manifest. No SPA pre-cache that could go stale.
-const CACHE_NAME = 'ssc-static-v6';
+// Hardened SW: pre-cache SPA shell so deep-link refreshes never 404.
+// Network-first for navigation; only fall back to cached '/' if the network
+// truly rejects (offline). Static assets cached cache-first.
+const CACHE_NAME = 'ssc-static-v7';
 const STATIC_ASSETS = [
+  '/',
   '/manifest.json',
   '/pwa-icon-192.svg',
   '/pwa-icon-512.svg',
@@ -11,7 +13,13 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(STATIC_ASSETS))
+      .then((cache) => Promise.all(
+        STATIC_ASSETS.map((url) =>
+          fetch(url, { cache: 'reload' })
+            .then((res) => (res && res.ok ? cache.put(url, res) : null))
+            .catch(() => null),
+        ),
+      ))
       .then(() => self.skipWaiting()),
   );
 });
@@ -40,11 +48,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests: always go to network so we never serve a stale SPA shell.
-  // Fall back to '/' from cache only if offline.
+  // Navigation requests: network-first, fall back to cached '/' ONLY if
+  // the network rejects (offline / DNS failure). Non-2xx responses are
+  // passed through so the host (Lovable) handles routing/SPA fallback.
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req).catch(() => caches.match('/').then((r) => r || new Response('Offline', { status: 503 }))),
+      fetch(req).catch(() =>
+        caches.match('/').then((r) => r || new Response(
+          '<!doctype html><meta charset="utf-8"><title>Offline</title><body style="font-family:system-ui;padding:2rem;text-align:center"><h1>Offline</h1><p>Please check your connection and try again.</p></body>',
+          { status: 200, headers: { 'Content-Type': 'text/html' } },
+        )),
+      ),
     );
     return;
   }
@@ -55,8 +69,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else: network only (no aggressive caching that could cause stale builds)
-  // The browser HTTP cache + Vite hashed filenames already handle this efficiently.
+  // Everything else: pass through to network (browser HTTP cache + hashed
+  // Vite filenames handle this efficiently).
 });
 
 self.addEventListener('message', (event) => {

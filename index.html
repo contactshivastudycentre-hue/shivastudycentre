@@ -122,6 +122,30 @@
             regs.forEach(function(r) { r.unregister(); });
           });
         } else {
+          // Self-heal: nuke old broken SW caches (anything before v7) so
+          // students stuck on a buggy install recover automatically without
+          // needing to reinstall the PWA.
+          (function selfHeal() {
+            if (!('caches' in window)) return;
+            caches.keys().then(function(names) {
+              var stale = names.filter(function(n) {
+                return n.indexOf('ssc-static-') === 0 && n !== 'ssc-static-v7';
+              });
+              if (stale.length === 0) return;
+              Promise.all(stale.map(function(n) { return caches.delete(n); })).then(function() {
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  Promise.all(regs.map(function(r) { return r.unregister(); })).then(function() {
+                    // Reload once to pick up the fresh SW + shell
+                    if (!sessionStorage.getItem('ssc-sw-healed')) {
+                      sessionStorage.setItem('ssc-sw-healed', '1');
+                      location.reload();
+                    }
+                  });
+                });
+              });
+            });
+          })();
+
           window.addEventListener('load', function() {
             navigator.serviceWorker.register('/sw.js')
               .then(function(registration) {
