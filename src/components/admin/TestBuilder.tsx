@@ -233,6 +233,15 @@ export default function TestBuilder() {
 
     const td: any = testData;
     const toLocal = (iso?: string | null) => (iso ? iso.slice(0, 16) : '');
+    const group = ((td.class_group as Test['class_group']) || 'single');
+
+    // Fetch eligible classes from the mapping table
+    const { data: ecRows } = await supabase
+      .from('test_eligible_classes' as any)
+      .select('class')
+      .eq('test_id', testId!);
+    const eligible = ((ecRows as any[]) || []).map((r: any) => r.class as string);
+
     setTest({
       id: testData.id,
       title: testData.title,
@@ -250,6 +259,8 @@ export default function TestBuilder() {
       prize_type: td.prize_type ?? null,
       prize_value: td.prize_value ?? null,
       prize_description: td.prize_description ?? null,
+      class_group: group,
+      eligible_classes: eligible,
     });
 
     const { data: questionsData } = await supabase
