@@ -2,11 +2,10 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ClipboardList, FileText, Play, Users, UserCircle, Shield, BookOpen, Target, Award, ExternalLink } from 'lucide-react';
+import { ClipboardList, FileText, Play, UserCircle, Shield, Target, BookOpen, ClipboardCheck, Trophy, Sparkles } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { SmallPWAButton } from '@/components/pwa/SmallPWAButton';
 import ChallengeBanner from '@/components/ChallengeBanner';
-import swaritImage from '@/assets/swarit-roy.jpg';
 
 const features = [
   {
@@ -142,7 +141,7 @@ export default function MobileAppLanding() {
         </div>
       </motion.div>
 
-      {/* About the Platform & Creator (mobile-compact) */}
+      {/* Why Choose Shiva Study Center */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -151,55 +150,54 @@ export default function MobileAppLanding() {
         className="px-6 pt-6 pb-8"
       >
         <div className="text-center mb-4">
-          <span className="inline-block text-[11px] font-semibold text-primary tracking-wider uppercase mb-1">
-            Technology Partner
-          </span>
           <h2 className="text-lg font-display font-bold text-foreground">
-            About the Platform & Creator
+            Why Choose Shiva Study Center
           </h2>
         </div>
 
-        <div className="bg-card rounded-2xl p-5 border border-border shadow-sm">
-          <div className="flex items-start gap-4 mb-4">
-            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-muted flex-shrink-0">
-              <img
-                src={swaritImage}
-                alt="Swarit Roy - Founder, LeadPe"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-xs font-medium text-primary">Founder – LeadPe</span>
-              <h3 className="text-base font-display font-bold text-foreground leading-tight">
-                Swarit Roy
-              </h3>
-            </div>
+        <div className="bg-card rounded-2xl p-4 border border-border" style={{ boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+          <ul className="space-y-3">
+            {[
+              { icon: BookOpen, title: 'Concept-Based Learning', desc: 'Strong focus on clear understanding, not rote learning' },
+              { icon: ClipboardCheck, title: 'Weekly Tests & Practice', desc: 'Regular tests to improve performance and confidence' },
+              { icon: Trophy, title: 'Competitive Environment', desc: 'Leaderboards and prize tests to motivate students' },
+              { icon: Target, title: 'Result-Oriented Guidance', desc: 'Personal attention for better results' },
+            ].map((item) => (
+              <li key={item.title} className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <item.icon className="w-5 h-5 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-foreground leading-tight">{item.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{item.desc}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex justify-center mt-5">
+            <Link to="/student-login">
+              <button
+                className="inline-flex items-center justify-center gap-1.5 text-white transition-colors hover:opacity-90"
+                style={{
+                  height: '42px',
+                  padding: '0 16px',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  background: '#4F46E5',
+                }}
+              >
+                <Sparkles className="w-4 h-4" />
+                Start Learning
+              </button>
+            </Link>
           </div>
-
-          <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-            Swarit Roy is the creator of LeadPe — a platform that helps businesses build modern
-            websites that capture real customer leads via WhatsApp, calls, and smart contact forms.
-          </p>
-
-          <div className="bg-accent/50 rounded-xl p-3 mb-4">
-            <p className="text-xs text-foreground font-medium mb-1">
-              Powered by <span className="text-[#111827]">Lead</span><span className="text-[#16A34A]">Pe</span>
-            </p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Each website is optimized for WhatsApp leads, phone calls, and smart contact forms.
-            </p>
-          </div>
-
-          <a
-            href="https://leadpe.online"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 w-full bg-[#16A34A] text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-[#15803d] transition-colors"
-          >
-            Visit Lead<span className="text-white font-semibold">Pe</span>.online
-            <ExternalLink className="w-4 h-4" />
-          </a>
         </div>
+
+        <p className="text-center mt-2.5" style={{ fontSize: '11px', color: '#9CA3AF' }}>
+          Powered by LeadPe
+        </p>
       </motion.section>
     </div>
   );
