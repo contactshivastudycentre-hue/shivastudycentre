@@ -172,6 +172,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Signal index.html to hide the PWA splash exactly once auth has resolved.
+  const appReadyDispatchedRef = useRef(false);
+  useEffect(() => {
+    if (appReadyDispatchedRef.current) return;
+    if (isLoading) return;
+    // If a user is signed in, also wait for their profile lookup to complete
+    // so guards can immediately route them to the right place — no flash.
+    if (user && !profileLoaded) return;
+    appReadyDispatchedRef.current = true;
+    try { window.dispatchEvent(new CustomEvent('app-ready')); } catch { /* noop */ }
+  }, [isLoading, user, profileLoaded]);
+
   useEffect(() => {
     let mounted = true;
 
