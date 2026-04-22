@@ -360,6 +360,31 @@ export function BannerCarousel() {
             </div>
           </div>
         </>
+      ) : banner.template === 'results_announcement' ? (
+        <>
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-600/90 via-orange-600/80 to-rose-600/70" />
+          <div className="relative z-10 h-full flex flex-col justify-between p-3 sm:p-4 text-white">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-white/25 backdrop-blur rounded-full px-2 py-0.5">
+                <Trophy className="w-3 h-3" /> Results
+              </span>
+            </div>
+            <div className="flex-1 flex flex-col justify-center min-h-0">
+              <h2 className="font-display text-base sm:text-xl font-bold leading-tight line-clamp-2">
+                {banner.subtitle || banner.title}
+              </h2>
+            </div>
+            {banner.cta_link && (
+              <div className="flex justify-start">
+                <Link to={banner.cta_link}>
+                  <Button size="sm" className="h-7 px-3 text-xs bg-white text-orange-600 hover:bg-white/90 font-bold gap-1">
+                    {banner.cta_text || 'View Winners'} <ArrowRight className="w-3 h-3" />
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        </>
       ) : (
         // Plain admin/topper banner — keep image only, with optional click-through
         banner.cta_link && (

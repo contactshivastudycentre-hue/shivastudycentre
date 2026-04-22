@@ -83,6 +83,20 @@ export default function TestResultPage() {
     }
   }, [attemptId, user]);
 
+  // Realtime: refresh winners section when admin publishes
+  useEffect(() => {
+    const testId = (attempt as any)?.test_id;
+    if (!testId) return;
+    const channel = supabase
+      .channel(`result-winners-${testId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'test_winners', filter: `test_id=eq.${testId}` }, () => {
+        fetchResultData();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(attempt as any)?.test_id]);
+
   const fetchResultData = async () => {
     try {
       // Fetch attempt with test info
