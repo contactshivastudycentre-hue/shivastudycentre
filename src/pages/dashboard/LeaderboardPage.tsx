@@ -100,6 +100,23 @@ export default function LeaderboardPage() {
     enabled: !!selectedTest,
   });
 
+  const { data: winners } = useQuery({
+    queryKey: ['student-test-winners', selectedTest],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('test_winners')
+        .select('id, user_id, full_name, rank, score, prize_text, category')
+        .eq('test_id', selectedTest)
+        .order('category', { ascending: true })
+        .order('rank', { ascending: true, nullsFirst: false });
+      return (data || []) as WinnerRow[];
+    },
+    enabled: !!selectedTest,
+  });
+
+  const topWinners = (winners || []).filter(w => w.category === 'top');
+  const luckyWinners = (winners || []).filter(w => w.category === 'lucky');
+
   const activeTest = filteredTests.find(t => t.id === selectedTest);
   const fmt = (s: number) => `${Math.floor(s / 60)}m ${s % 60}s`;
 
