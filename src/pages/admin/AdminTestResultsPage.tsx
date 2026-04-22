@@ -496,7 +496,13 @@ export default function AdminTestResultsPage() {
           size="lg"
           className="gap-2 bg-emerald-600 hover:bg-emerald-700"
           onClick={() => publishMutation.mutate()}
-          disabled={publishMutation.isPending || eligible.length === 0}
+          disabled={
+            publishMutation.isPending ||
+            eligible.length === 0 ||
+            luckyPicks.length > maxLucky ||
+            luckyPicks.some((l) => l.user_id && !(l.prize_text || luckyPrize).trim()) ||
+            topPicks.some((t) => t.user_id && !(t.prize_text || '').trim())
+          }
         >
           {publishMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
           {isPublished ? 'Re-publish Results & Winners' : 'Publish Results & Winners'}
