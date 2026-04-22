@@ -663,9 +663,74 @@ export default function TestBuilder() {
               <Label htmlFor="title">Test Name *</Label>
               <Input id="title" value={test.title} onChange={(e) => setTest({ ...test, title: e.target.value })} placeholder="e.g., Chapter 1 - Motion and Force" className="text-lg" />
             </div>
+
+            {/* Audience selector */}
+            <div className="space-y-3 md:col-span-2 rounded-xl border border-border bg-muted/30 p-4">
+              <Label className="text-sm font-semibold">Audience *</Label>
+              <RadioGroup
+                value={test.class_group}
+                onValueChange={(v) => setTest({ ...test, class_group: v as Test['class_group'] })}
+                className="grid grid-cols-2 sm:grid-cols-4 gap-2"
+              >
+                {([
+                  { v: 'single', label: 'Single class' },
+                  { v: 'junior', label: 'Junior (6–7)' },
+                  { v: 'senior', label: 'Senior (8–10)' },
+                  { v: 'custom', label: 'Custom' },
+                ] as const).map((opt) => (
+                  <label
+                    key={opt.v}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer text-sm transition ${
+                      test.class_group === opt.v ? 'border-primary bg-primary/5 text-primary font-semibold' : 'border-border bg-background text-foreground'
+                    }`}
+                  >
+                    <RadioGroupItem value={opt.v} />
+                    {opt.label}
+                  </label>
+                ))}
+              </RadioGroup>
+
+              {test.class_group === 'junior' && (
+                <p className="text-xs text-muted-foreground">Visible to <strong>Class 6 & 7</strong> students.</p>
+              )}
+              {test.class_group === 'senior' && (
+                <p className="text-xs text-muted-foreground">Visible to <strong>Class 8, 9, 10</strong> students.</p>
+              )}
+              {test.class_group === 'custom' && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Pick the classes that should see this test:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {CLASSES.map((c) => {
+                      const selected = test.eligible_classes.includes(c);
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setTest({
+                            ...test,
+                            eligible_classes: selected
+                              ? test.eligible_classes.filter((x) => x !== c)
+                              : [...test.eligible_classes, c],
+                          })}
+                          className={`text-xs font-medium px-3 py-1.5 rounded-full border transition ${
+                            selected ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-foreground border-border hover:bg-muted'
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
-              <Label>Class *</Label>
+              <Label>{test.class_group === 'custom' || test.class_group === 'single' ? 'Class *' : 'Primary class *'}</Label>
               <ClassSelect value={test.class} onChange={(value) => setTest({ ...test, class: value })} disabled={!isNew && test.is_published} />
+              {(test.class_group === 'junior' || test.class_group === 'senior') && (
+                <p className="text-xs text-muted-foreground">Used as the test's primary class label; all eligible classes will see it.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Subject *</Label>
