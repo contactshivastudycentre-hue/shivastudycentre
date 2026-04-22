@@ -50,7 +50,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth';
-import { ClassSelect } from '@/components/ClassSelect';
+import { ClassSelect, CLASSES } from '@/components/ClassSelect';
 import { SubjectSelect } from '@/components/SubjectSelect';
 import { BulkQuestionParser } from '@/components/admin/BulkQuestionParser';
 import { FileUploader } from '@/components/admin/FileUploader';
@@ -86,9 +86,27 @@ interface Test {
   prize_type: string | null;
   prize_value: string | null;
   prize_description: string | null;
+  class_group: 'single' | 'junior' | 'senior' | 'custom';
+  eligible_classes: string[];
 }
 
 const PRIZE_TYPES = ['Money', 'Gift', 'Book', 'Bag', 'Certificate', 'Other'] as const;
+const JUNIOR_CLASSES = ['Class 6', 'Class 7'];
+const SENIOR_CLASSES = ['Class 8', 'Class 9', 'Class 10'];
+
+function classesForGroup(group: Test['class_group'], primaryClass: string, custom: string[]): string[] {
+  if (group === 'junior') return JUNIOR_CLASSES;
+  if (group === 'senior') return SENIOR_CLASSES;
+  if (group === 'custom') return custom;
+  return primaryClass ? [primaryClass] : [];
+}
+
+function audienceLabel(group: Test['class_group'], list: string[]): string {
+  if (group === 'junior') return 'Junior (6–7)';
+  if (group === 'senior') return 'Senior (8–10)';
+  if (group === 'custom') return list.length ? `Custom: ${list.join(', ')}` : 'Custom';
+  return list[0] || '';
+}
 
 const questionTypeLabels: Record<QuestionType, string> = {
   mcq_single: 'MCQ (Single)',
@@ -146,6 +164,8 @@ export default function TestBuilder() {
     prize_type: null,
     prize_value: null,
     prize_description: null,
+    class_group: 'single',
+    eligible_classes: [],
   });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
@@ -213,6 +233,15 @@ export default function TestBuilder() {
 
     const td: any = testData;
     const toLocal = (iso?: string | null) => (iso ? iso.slice(0, 16) : '');
+    const group = ((td.class_group as Test['class_group']) || 'single');
+
+    // Fetch eligible classes from the mapping table
+    const { data: ecRows } = await supabase
+      .from('test_eligible_classes' as any)
+      .select('class')
+      .eq('test_id', testId!);
+    const eligible = ((ecRows as any[]) || []).map((r: any) => r.class as string);
+
     setTest({
       id: testData.id,
       title: testData.title,
@@ -230,6 +259,8 @@ export default function TestBuilder() {
       prize_type: td.prize_type ?? null,
       prize_value: td.prize_value ?? null,
       prize_description: td.prize_description ?? null,
+      class_group: group,
+      eligible_classes: eligible,
     });
 
     const { data: questionsData } = await supabase
@@ -409,6 +440,7 @@ export default function TestBuilder() {
             prize_type: test.prize_type ?? null,
             prize_value: test.prize_value ?? null,
             prize_description: test.prize_description ?? null,
+            class_group: test.class_group,
           } as any)
           .select()
           .single();
@@ -435,10 +467,21 @@ export default function TestBuilder() {
             prize_type: test.prize_type ?? null,
             prize_value: test.prize_value ?? null,
             prize_description: test.prize_description ?? null,
+            class_group: test.class_group,
           } as any)
           .eq('id', test.id);
 
         if (testError) throw testError;
+      }
+
+      // Sync eligible classes for 'custom' group (other groups handled by trigger)
+      if (savedTestId && test.class_group === 'custom') {
+        await supabase.from('test_eligible_classes' as any).delete().eq('test_id', savedTestId);
+        if (test.eligible_classes.length > 0) {
+          await supabase.from('test_eligible_classes' as any).insert(
+            test.eligible_classes.map((c) => ({ test_id: savedTestId, class: c }))
+          );
+        }
       }
 
       // Handle questions
@@ -620,9 +663,74 @@ export default function TestBuilder() {
               <Label htmlFor="title">Test Name *</Label>
               <Input id="title" value={test.title} onChange={(e) => setTest({ ...test, title: e.target.value })} placeholder="e.g., Chapter 1 - Motion and Force" className="text-lg" />
             </div>
+
+            {/* Audience selector */}
+            <div className="space-y-3 md:col-span-2 rounded-xl border border-border bg-muted/30 p-4">
+              <Label className="text-sm font-semibold">Audience *</Label>
+              <RadioGroup
+                value={test.class_group}
+                onValueChange={(v) => setTest({ ...test, class_group: v as Test['class_group'] })}
+                className="grid grid-cols-2 sm:grid-cols-4 gap-2"
+              >
+                {([
+                  { v: 'single', label: 'Single class' },
+                  { v: 'junior', label: 'Junior (6–7)' },
+                  { v: 'senior', label: 'Senior (8–10)' },
+                  { v: 'custom', label: 'Custom' },
+                ] as const).map((opt) => (
+                  <label
+                    key={opt.v}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer text-sm transition ${
+                      test.class_group === opt.v ? 'border-primary bg-primary/5 text-primary font-semibold' : 'border-border bg-background text-foreground'
+                    }`}
+                  >
+                    <RadioGroupItem value={opt.v} />
+                    {opt.label}
+                  </label>
+                ))}
+              </RadioGroup>
+
+              {test.class_group === 'junior' && (
+                <p className="text-xs text-muted-foreground">Visible to <strong>Class 6 & 7</strong> students.</p>
+              )}
+              {test.class_group === 'senior' && (
+                <p className="text-xs text-muted-foreground">Visible to <strong>Class 8, 9, 10</strong> students.</p>
+              )}
+              {test.class_group === 'custom' && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Pick the classes that should see this test:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {CLASSES.map((c) => {
+                      const selected = test.eligible_classes.includes(c);
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setTest({
+                            ...test,
+                            eligible_classes: selected
+                              ? test.eligible_classes.filter((x) => x !== c)
+                              : [...test.eligible_classes, c],
+                          })}
+                          className={`text-xs font-medium px-3 py-1.5 rounded-full border transition ${
+                            selected ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-foreground border-border hover:bg-muted'
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
-              <Label>Class *</Label>
+              <Label>{test.class_group === 'custom' || test.class_group === 'single' ? 'Class *' : 'Primary class *'}</Label>
               <ClassSelect value={test.class} onChange={(value) => setTest({ ...test, class: value })} disabled={!isNew && test.is_published} />
+              {(test.class_group === 'junior' || test.class_group === 'senior') && (
+                <p className="text-xs text-muted-foreground">Used as the test's primary class label; all eligible classes will see it.</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Subject *</Label>

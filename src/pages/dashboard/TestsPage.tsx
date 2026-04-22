@@ -19,7 +19,15 @@ interface Test {
   prize_pool?: number | null;
   prize_type?: string | null;
   prize_value?: string | null;
+  class_group?: 'single' | 'junior' | 'senior' | 'custom';
 }
+
+const audienceBadge = (t: Test): string | null => {
+  if (t.class_group === 'junior') return 'Junior (6–7)';
+  if (t.class_group === 'senior') return 'Senior (8–10)';
+  if (t.class_group === 'custom') return 'Multi-class';
+  return null;
+};
 
 function testPrize(t: Test): string | null {
   if (t.prize_value) return t.prize_value;
@@ -176,6 +184,9 @@ export default function TestsPage() {
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <span className="text-xs font-medium px-2 py-1 rounded-full bg-accent text-accent-foreground">{test.subject}</span>
                       <span className="text-xs font-medium px-2 py-1 rounded-full bg-secondary text-secondary-foreground">Class {test.class}</span>
+                      {audienceBadge(test) && (
+                        <span className="text-xs font-bold px-2 py-1 rounded-full bg-primary/10 text-primary">{audienceBadge(test)}</span>
+                      )}
                       {phaseBadge}
                     </div>
                     <h3 className="text-base sm:text-lg font-semibold text-foreground mb-1 break-words">{test.title}</h3>

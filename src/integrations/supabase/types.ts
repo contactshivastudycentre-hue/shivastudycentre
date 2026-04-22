@@ -21,6 +21,7 @@ export type Database = {
           cta_link: string | null
           cta_text: string | null
           description: string | null
+          eligible_classes: string[] | null
           end_date: string | null
           id: string
           image_url: string | null
@@ -40,6 +41,7 @@ export type Database = {
           cta_link?: string | null
           cta_text?: string | null
           description?: string | null
+          eligible_classes?: string[] | null
           end_date?: string | null
           id?: string
           image_url?: string | null
@@ -59,6 +61,7 @@ export type Database = {
           cta_link?: string | null
           cta_text?: string | null
           description?: string | null
+          eligible_classes?: string[] | null
           end_date?: string | null
           id?: string
           image_url?: string | null
@@ -480,14 +483,41 @@ export type Database = {
           },
         ]
       }
+      test_eligible_classes: {
+        Row: {
+          class: string
+          created_at: string
+          test_id: string
+        }
+        Insert: {
+          class: string
+          created_at?: string
+          test_id: string
+        }
+        Update: {
+          class?: string
+          created_at?: string
+          test_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_eligible_classes_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       test_winners: {
         Row: {
           auto_calculated: boolean
+          category: string
           created_at: string
           full_name: string | null
           id: string
           prize_text: string | null
-          rank: number
+          rank: number | null
           score: number | null
           test_id: string
           time_seconds: number | null
@@ -496,11 +526,12 @@ export type Database = {
         }
         Insert: {
           auto_calculated?: boolean
+          category?: string
           created_at?: string
           full_name?: string | null
           id?: string
           prize_text?: string | null
-          rank: number
+          rank?: number | null
           score?: number | null
           test_id: string
           time_seconds?: number | null
@@ -509,11 +540,12 @@ export type Database = {
         }
         Update: {
           auto_calculated?: boolean
+          category?: string
           created_at?: string
           full_name?: string | null
           id?: string
           prize_text?: string | null
-          rank?: number
+          rank?: number | null
           score?: number | null
           test_id?: string
           time_seconds?: number | null
@@ -534,6 +566,7 @@ export type Database = {
         Row: {
           banner_image: string | null
           class: string
+          class_group: Database["public"]["Enums"]["class_group_enum"]
           created_at: string
           created_by: string | null
           description: string | null
@@ -557,6 +590,7 @@ export type Database = {
         Insert: {
           banner_image?: string | null
           class: string
+          class_group?: Database["public"]["Enums"]["class_group_enum"]
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -580,6 +614,7 @@ export type Database = {
         Update: {
           banner_image?: string | null
           class?: string
+          class_group?: Database["public"]["Enums"]["class_group_enum"]
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -750,6 +785,7 @@ export type Database = {
       get_recent_winners: {
         Args: { p_days?: number }
         Returns: {
+          category: string
           full_name: string
           prize_text: string
           rank: number
@@ -810,6 +846,10 @@ export type Database = {
         Returns: number
       }
       publish_test_results: { Args: { p_test_id: string }; Returns: Json }
+      publish_test_winners: {
+        Args: { p_test_id: string; p_winners: Json }
+        Returns: Json
+      }
       set_student_verified: {
         Args: { is_verified: boolean; target_user_id: string }
         Returns: boolean
@@ -850,6 +890,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "student"
+      class_group_enum: "single" | "junior" | "senior" | "custom"
       question_type:
         | "mcq_single"
         | "mcq_multiple"
@@ -992,6 +1033,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "student"],
+      class_group_enum: ["single", "junior", "senior", "custom"],
       question_type: [
         "mcq_single",
         "mcq_multiple",
