@@ -233,6 +233,17 @@ export default function AdminTestResultsPage() {
 
   const removeLucky = (idx: number) => setLuckyPicks((prev) => prev.filter((_, i) => i !== idx));
 
+  // Max lucky winners available (after excluding filled Top 1/2/3 picks)
+  const filledTopCount = topPicks.filter((t) => t.user_id).length;
+  const maxLucky = Math.max(0, eligible.length - filledTopCount);
+
+  // Auto-clamp luckyCount whenever pool shrinks
+  useEffect(() => {
+    if (luckyCount > maxLucky) {
+      setLuckyCount(maxLucky);
+    }
+  }, [maxLucky, luckyCount]);
+
   const publishMutation = useMutation({
     mutationFn: async () => {
       const payload: Array<Record<string, unknown>> = [];
