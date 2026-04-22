@@ -50,7 +50,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth';
-import { ClassSelect } from '@/components/ClassSelect';
+import { ClassSelect, CLASSES } from '@/components/ClassSelect';
 import { SubjectSelect } from '@/components/SubjectSelect';
 import { BulkQuestionParser } from '@/components/admin/BulkQuestionParser';
 import { FileUploader } from '@/components/admin/FileUploader';
@@ -86,9 +86,27 @@ interface Test {
   prize_type: string | null;
   prize_value: string | null;
   prize_description: string | null;
+  class_group: 'single' | 'junior' | 'senior' | 'custom';
+  eligible_classes: string[];
 }
 
 const PRIZE_TYPES = ['Money', 'Gift', 'Book', 'Bag', 'Certificate', 'Other'] as const;
+const JUNIOR_CLASSES = ['Class 6', 'Class 7'];
+const SENIOR_CLASSES = ['Class 8', 'Class 9', 'Class 10'];
+
+function classesForGroup(group: Test['class_group'], primaryClass: string, custom: string[]): string[] {
+  if (group === 'junior') return JUNIOR_CLASSES;
+  if (group === 'senior') return SENIOR_CLASSES;
+  if (group === 'custom') return custom;
+  return primaryClass ? [primaryClass] : [];
+}
+
+function audienceLabel(group: Test['class_group'], list: string[]): string {
+  if (group === 'junior') return 'Junior (6–7)';
+  if (group === 'senior') return 'Senior (8–10)';
+  if (group === 'custom') return list.length ? `Custom: ${list.join(', ')}` : 'Custom';
+  return list[0] || '';
+}
 
 const questionTypeLabels: Record<QuestionType, string> = {
   mcq_single: 'MCQ (Single)',
@@ -146,6 +164,8 @@ export default function TestBuilder() {
     prize_type: null,
     prize_value: null,
     prize_description: null,
+    class_group: 'single',
+    eligible_classes: [],
   });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
