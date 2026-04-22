@@ -1,78 +1,53 @@
 
 
 ## Goal
-Confirm that the teacher's described winner-selection flow (Top 1/2/3 dropdowns + N random Lucky Winners with prizes, auto-picked after the test ends, then published with banner + visible winners list) works end-to-end. Fix the gaps that are still missing from the current implementation.
+Two fixes:
+1. **Admin Lucky Winners** — add a “max available” helper that hard-caps `luckyCount` and disables rows beyond the real eligible pool so admins can never pick more lucky winners than exist after excluding Top 1/2/3.
+2. **404 / “Server down” on reload of the live site & PWA** — hardened service worker + boot script so a deep-link refresh (e.g. `/dashboard/tests/...`) or a stale install never blanks the app.
 
-## Current state (verified)
-- `AdminTestResultsPage` already has Top 1/2/3 dropdowns, prize fields, lucky count input, "Auto-pick lucky winners" button, exclusion of toppers from lucky pool, and a `publish_test_winners` RPC call.
-- `test_winners` table has `category` (`top` | `lucky`) and nullable `rank`.
-- `LeaderboardPage` and `TestResultPage` already render 🏆 Top + 🎁 Lucky sections.
-- `WinnersSlider` on the dashboard already shows lucky vs top.
+(Note: the site is hosted on **Lovable**, not Vercel. Lovable already does SPA fallback automatically. The 404 you’re seeing is caused by our own `sw.js`, not the host — fixing it there is the correct fix.)
 
-## Gaps to fix
+---
 
-### 1. Auto-trigger when the test ends
-Currently the admin has to remember to open the page and click Auto-pick. Add an automatic "test ended" signal:
-- New DB function `auto_finalize_ended_tests()` that, for every test where `end_time < now()` and `results_published_at IS NULL`, marks a server-side flag `tests.ended_at = end_time` (new nullable column).
-- When admin opens `AdminTestResultsPage`, if `end_time` has passed and no winners exist yet, **auto-run the lucky pick suggestion** (default 3 lucky winners) and pre-fill Top 1/2/3 from the leaderboard so the admin only needs to confirm prizes and click Publish.
-- Show a clear banner at top: "✅ Test ended — winners suggested. Review prizes and publish."
+## 1. Admin: Lucky-winner pool guardrails
 
-### 2. Force prize entry before publish (already partially done — verify)
-- Block Publish if any selected winner is missing `prize_text`. Show inline red errors per row. (Already implemented — keep as is.)
+File: `src/pages/admin/AdminTestResultsPage.tsx`
 
-### 3. Banner auto-creation on publish
-On successful publish, insert/update a banner row:
-- `template = 'results_announcement'`
-- `title = "🏆 {test.title} — Winners Announced!"`
-- `cta_link = /dashboard/tests/{id}/leaderboard`
-- `eligible_classes = test_eligible_classes` for the test
-- `is_active = true`, `end_date = now() + 7 days`
-This makes the "results banner" appear on student dashboards instantly.
+- Compute `maxLucky = max(0, eligible.length - count(filled top picks))`.
+- Show a clear helper line under the count input:  
+  `“Max lucky winners available: X (after excluding Top 1/2/3)”`  
+  Turn red when `luckyCount > maxLucky`.
+- Auto-clamp `luckyCount` whenever Top picks change so it never exceeds `maxLucky`.
+- Set `<Input max={maxLucky}>` and disable the input entirely when `maxLucky === 0`.
+- Disable the **Auto-pick** button when `luckyCount === 0 || luckyCount > maxLucky || !luckyPrize.trim()`.
+- For each rendered lucky-pick row beyond `maxLucky`, show a red “Pool exhausted — remove” badge and disable the re-roll button (only the remove button stays active).
+- Strengthen the publish button `disabled` condition: also disable when `luckyPicks.length > maxLucky` or any lucky row has no `prize_text` (default or per-row).
+- Validation in `publishMutation` already throws on missing prize / duplicates — keep, but add explicit guard: `if (luckyPicks.length > maxLucky) throw …`.
 
-### 4. Realtime push of winners
-- Ensure `test_winners` and `tests` tables are in `supabase_realtime` publication so `LeaderboardPage` / `TestResultPage` / `WinnersSlider` update without refresh.
+---
 
-### 5. UI polish on Admin Results page
-- Group dropdowns visually: "🥇 Top Winners" card with 3 rows; "🎁 Lucky Winners" card with count selector + auto-pick + per-row re-roll + per-row prize input.
-- Show "Pool size: X students submitted" so admin knows how many lucky winners are possible.
-- Disable Publish button until: all 3 top slots filled, all prizes filled, all lucky rows have a name + prize.
+## 2. PWA / live-site reload returning 404 / “server down”
 
-## Technical details
+Root cause: our `public/sw.js` intercepts navigation, tries the network, and on failure does `caches.match('/')` — but `/` was never added to the cache. Result on flaky networks or after a stale SW install: blank page / `503 Offline` / browser-rendered “site can’t be reached” that students read as a 404.
 
-### Migration
-```sql
--- 1. Track when a test naturally ended
-ALTER TABLE tests ADD COLUMN ended_at timestamptz;
+Fixes (all in `public/sw.js` + `index.html`):
 
--- 2. Auto-finalize trigger / function called from frontend on page open
-CREATE OR REPLACE FUNCTION mark_test_ended(p_test_id uuid)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  UPDATE tests SET ended_at = COALESCE(ended_at, now())
-  WHERE id = p_test_id AND end_time IS NOT NULL AND end_time < now();
-END $$;
+**a. Pre-cache the SPA shell.** During `install`, also fetch and cache `/` so the offline fallback actually has something to serve.
 
--- 3. Update publish_test_winners to also create the banner
--- inside the existing RPC: after inserting winners and setting
--- results_published_at, INSERT INTO banners (...) with template
--- 'results_announcement' and eligible_classes from test_eligible_classes.
+**b. Stop hijacking navigations on the live site.** Change the `fetch` handler so that for `req.mode === 'navigate'` we do a plain `fetch(req)` and only fall back to the cached `/` if the fetch *rejects* (true offline). Do NOT treat non-2xx responses as failures — let the host serve them. This kills the false-404 path.
 
--- 4. Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE test_winners;
-ALTER PUBLICATION supabase_realtime ADD TABLE tests;
-```
+**c. Bump cache version + skip waiting + clients.claim** so existing installs (including the home-screen PWA) immediately replace the broken SW on next visit. New name: `ssc-static-v7`.
 
-### Files to edit
-- `supabase/migrations/<new>.sql` — column, `mark_test_ended`, updated `publish_test_winners`, realtime.
-- `src/pages/admin/AdminTestResultsPage.tsx` — call `mark_test_ended`, auto-suggest top + lucky on first load if ended, pool-size display, stricter Publish disable logic.
-- `src/pages/dashboard/LeaderboardPage.tsx` — subscribe to `test_winners` realtime channel.
-- `src/pages/dashboard/TestResultPage.tsx` — subscribe to `test_winners` realtime channel.
-- `src/components/dashboard/BannerCarousel.tsx` — render `results_announcement` template (link → leaderboard).
+**d. Self-heal old broken installs.** In `index.html`, add a one-time check: if a controlling SW exists and its script URL contains an old cache version OR the page failed to load, force `registration.unregister()` + `caches.keys().then(delete)` then `location.reload()`. This recovers students whose PWA is stuck on the buggy SW *without* them having to reinstall.
 
-## Result flow
-1. Teacher creates test, sets `end_time`.
-2. Test ends → admin opens **Results & Winners** → page auto-suggests Top 1/2/3 from scores and pre-picks 3 lucky winners.
-3. Teacher edits dropdowns/prizes if needed → clicks **Publish Results & Winners**.
-4. RPC saves winners + creates a results banner targeted to eligible classes + sets `results_published_at`.
-5. Students instantly see the banner on dashboard, full 🏆 Top + 🎁 Lucky lists on the leaderboard, and the WinnersSlider updates live.
+**e. Defensive 404 page.** Update `src/pages/NotFound.tsx` so that if the React app *does* mount on a deep route the router doesn’t know, the message is clear (“Page not found — go to Dashboard”) instead of looking like a server error. Add a button to `/dashboard`.
+
+**f. Confirm Lovable hosting handles deep-link refreshes.** No config file needed; Lovable's SPA fallback is built-in. (We will NOT add `vercel.json` / `_redirects` — they do nothing on Lovable.)
+
+---
+
+## Result
+- Teacher can pick prize + count of lucky winners and the form physically can’t exceed the real eligible pool — no failed publishes.
+- A student refreshing `https://shivastudycentre.lovable.app/dashboard/tests/abc/leaderboard` (in browser or installed PWA) gets the dashboard, not a 404.
+- Students whose PWA was stuck on the broken cached SW will auto-recover on their next open — no manual reinstall.
 
