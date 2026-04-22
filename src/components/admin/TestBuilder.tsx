@@ -474,6 +474,16 @@ export default function TestBuilder() {
         if (testError) throw testError;
       }
 
+      // Sync eligible classes for 'custom' group (other groups handled by trigger)
+      if (savedTestId && test.class_group === 'custom') {
+        await supabase.from('test_eligible_classes' as any).delete().eq('test_id', savedTestId);
+        if (test.eligible_classes.length > 0) {
+          await supabase.from('test_eligible_classes' as any).insert(
+            test.eligible_classes.map((c) => ({ test_id: savedTestId, class: c }))
+          );
+        }
+      }
+
       // Handle questions
       const existingQuestionIds = questions.filter(q => !q.id.startsWith('temp-')).map(q => q.id);
       
