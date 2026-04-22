@@ -1,11 +1,17 @@
 import { ExternalLink, Sparkles, Zap } from 'lucide-react';
 
-const LEADPE_URL = 'https://leadpe.tech?utm_source=ssc&utm_medium=app&utm_campaign=brand';
+const LEADPE_URL = 'https://leadpe.online?utm_source=ssc&utm_medium=app&utm_campaign=brand';
 
 interface LeadPeAdProps {
   variant?: 'card' | 'inline' | 'footer-line';
   className?: string;
 }
+
+const BrandName = ({ className = '' }: { className?: string }) => (
+  <span className={className}>
+    Lead<span className="text-[#16A34A]">Pe</span>.online
+  </span>
+);
 
 export function LeadPeAd({ variant = 'card', className = '' }: LeadPeAdProps) {
   if (variant === 'footer-line') {
@@ -16,9 +22,9 @@ export function LeadPeAd({ variant = 'card', className = '' }: LeadPeAdProps) {
           href={LEADPE_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-primary font-semibold hover:underline"
+          className="font-semibold hover:underline"
         >
-          LeadPe.tech
+          <BrandName />
         </a>{' '}
         — Build apps faster.
       </p>
@@ -34,7 +40,7 @@ export function LeadPeAd({ variant = 'card', className = '' }: LeadPeAdProps) {
         className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-colors text-sm font-medium ${className}`}
       >
         <Zap className="w-4 h-4 text-yellow-400" />
-        Built by LeadPe
+        Built by Lead<span className="text-[#16A34A]">Pe</span>
         <ExternalLink className="w-3.5 h-3.5 opacity-70" />
       </a>
     );
@@ -56,7 +62,7 @@ export function LeadPeAd({ variant = 'card', className = '' }: LeadPeAdProps) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-display font-bold text-white truncate flex items-center gap-1.5">
-            LeadPe.tech
+            Lead<span className="text-[#16A34A]">Pe</span>.online
             <ExternalLink className="w-3 h-3 opacity-60" />
           </p>
           <p className="text-xs text-slate-300 truncate">
