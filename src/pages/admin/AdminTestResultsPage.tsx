@@ -233,6 +233,17 @@ export default function AdminTestResultsPage() {
 
   const removeLucky = (idx: number) => setLuckyPicks((prev) => prev.filter((_, i) => i !== idx));
 
+  // Max lucky winners available (after excluding filled Top 1/2/3 picks)
+  const filledTopCount = topPicks.filter((t) => t.user_id).length;
+  const maxLucky = Math.max(0, eligible.length - filledTopCount);
+
+  // Auto-clamp luckyCount whenever pool shrinks
+  useEffect(() => {
+    if (luckyCount > maxLucky) {
+      setLuckyCount(maxLucky);
+    }
+  }, [maxLucky, luckyCount]);
+
   const publishMutation = useMutation({
     mutationFn: async () => {
       const payload: Array<Record<string, unknown>> = [];
@@ -266,6 +277,9 @@ export default function AdminTestResultsPage() {
 
       // Validate Lucky winners — exclude Top 3 and require prize per row
       const topUserIds = new Set(topIds as string[]);
+      if (luckyPicks.length > maxLucky) {
+        throw new Error(`Too many lucky winners (${luckyPicks.length}). Pool only has ${maxLucky} students after excluding Top 1/2/3.`);
+      }
       for (const l of luckyPicks) {
         if (!l.user_id) continue;
         if (topUserIds.has(l.user_id)) {
@@ -417,8 +431,20 @@ export default function AdminTestResultsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">How many?</Label>
-              <Input type="number" min={0} max={20} value={luckyCount} onChange={(e) => setLuckyCount(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))} />
-              <p className="text-[11px] text-muted-foreground">Pool size: {Math.max(0, eligible.length - topPicks.filter(t => t.user_id).length)} students</p>
+              <Input
+                type="number"
+                min={0}
+                max={maxLucky}
+                value={luckyCount}
+                disabled={maxLucky === 0}
+                onChange={(e) => setLuckyCount(Math.max(0, Math.min(maxLucky, parseInt(e.target.value) || 0)))}
+              />
+              <p className={`text-[11px] ${luckyCount > maxLucky ? 'text-destructive font-semibold' : 'text-muted-foreground'}`}>
+                Max lucky winners available: {maxLucky} (after excluding Top 1/2/3)
+              </p>
+              {maxLucky === 0 && (
+                <p className="text-[11px] text-destructive">Pool exhausted — fill or clear Top 1/2/3 first.</p>
+              )}
             </div>
             <div className="space-y-1 sm:col-span-2">
               <Label className="text-xs">Default prize for all lucky winners</Label>
@@ -428,7 +454,7 @@ export default function AdminTestResultsPage() {
           <Button
             type="button"
             onClick={autoPickLucky}
-            disabled={luckyCount === 0 || eligible.length === 0}
+            disabled={luckyCount === 0 || luckyCount > maxLucky || !luckyPrize.trim() || eligible.length === 0}
             className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
           >
             <Dice5 className="w-4 h-4" /> Auto-pick {luckyCount || ''} lucky winner{luckyCount !== 1 ? 's' : ''}
@@ -437,20 +463,27 @@ export default function AdminTestResultsPage() {
           <AnimatePresence>
             {luckyPicks.length > 0 && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2">
-                {luckyPicks.map((lp, idx) => (
-                  <div key={`${lp.user_id}-${idx}`} className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-2 bg-muted/30">
-                    <Gift className="w-4 h-4 text-purple-500" />
-                    <span className="font-medium text-sm flex-1 min-w-[120px] truncate">{studentName(lp.user_id)}</span>
-                    <Input
-                      className="h-8 max-w-[180px] text-xs"
-                      value={lp.prize_text}
-                      onChange={(e) => setLuckyPicks((prev) => prev.map((p, i) => (i === idx ? { ...p, prize_text: e.target.value } : p)))}
-                      placeholder="Prize"
-                    />
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => rerollLucky(idx)} title="Re-roll"><RefreshCw className="w-3.5 h-3.5" /></Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeLucky(idx)} title="Remove"><X className="w-3.5 h-3.5" /></Button>
-                  </div>
-                ))}
+                {luckyPicks.map((lp, idx) => {
+                  const beyondPool = idx >= maxLucky;
+                  const missingPrize = !(lp.prize_text || luckyPrize).trim();
+                  return (
+                    <div key={`${lp.user_id}-${idx}`} className={`flex flex-wrap items-center gap-2 rounded-lg border p-2 ${beyondPool ? 'border-destructive bg-destructive/5' : 'border-border bg-muted/30'}`}>
+                      <Gift className="w-4 h-4 text-purple-500" />
+                      <span className="font-medium text-sm flex-1 min-w-[120px] truncate">{studentName(lp.user_id)}</span>
+                      {beyondPool && (
+                        <span className="text-[10px] font-semibold text-destructive uppercase">Pool exhausted — remove</span>
+                      )}
+                      <Input
+                        className={`h-8 max-w-[180px] text-xs ${missingPrize ? 'border-destructive' : ''}`}
+                        value={lp.prize_text}
+                        onChange={(e) => setLuckyPicks((prev) => prev.map((p, i) => (i === idx ? { ...p, prize_text: e.target.value } : p)))}
+                        placeholder="Prize (required)"
+                      />
+                      <Button size="icon" variant="ghost" className="h-7 w-7" disabled={beyondPool} onClick={() => rerollLucky(idx)} title="Re-roll"><RefreshCw className="w-3.5 h-3.5" /></Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeLucky(idx)} title="Remove"><X className="w-3.5 h-3.5" /></Button>
+                    </div>
+                  );
+                })}
               </motion.div>
             )}
           </AnimatePresence>
@@ -463,7 +496,13 @@ export default function AdminTestResultsPage() {
           size="lg"
           className="gap-2 bg-emerald-600 hover:bg-emerald-700"
           onClick={() => publishMutation.mutate()}
-          disabled={publishMutation.isPending || eligible.length === 0}
+          disabled={
+            publishMutation.isPending ||
+            eligible.length === 0 ||
+            luckyPicks.length > maxLucky ||
+            luckyPicks.some((l) => l.user_id && !(l.prize_text || luckyPrize).trim()) ||
+            topPicks.some((t) => t.user_id && !(t.prize_text || '').trim())
+          }
         >
           {publishMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
           {isPublished ? 'Re-publish Results & Winners' : 'Publish Results & Winners'}
