@@ -54,6 +54,7 @@ export default function LeaderboardPage() {
   const { user, profile } = useAuth();
   const [classFilter, setClassFilter] = useState<string>(profile?.class || 'all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [groupFilter, setGroupFilter] = useState<string>('all');
   const [selectedTest, setSelectedTest] = useState<string>('');
 
   // Pull all tests with published results that this student can see (RLS handles class scope)
@@ -62,7 +63,7 @@ export default function LeaderboardPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from('tests')
-        .select('id, title, class, subject, test_type, results_published_at')
+        .select('id, title, class, subject, test_type, class_group, results_published_at')
         .not('results_published_at', 'is', null)
         .order('results_published_at', { ascending: false });
       return ((data as any) || []) as PublishedTest[];
@@ -73,8 +74,9 @@ export default function LeaderboardPage() {
     let list = tests || [];
     if (classFilter !== 'all') list = list.filter(t => t.class === classFilter);
     if (typeFilter !== 'all') list = list.filter(t => t.test_type === typeFilter);
+    if (groupFilter !== 'all') list = list.filter(t => t.class_group === groupFilter);
     return list;
-  }, [tests, classFilter, typeFilter]);
+  }, [tests, classFilter, typeFilter, groupFilter]);
 
   useEffect(() => {
     if (filteredTests.length && !filteredTests.find(t => t.id === selectedTest)) {
