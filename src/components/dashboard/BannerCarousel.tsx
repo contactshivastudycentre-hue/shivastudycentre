@@ -157,6 +157,7 @@ export function BannerCarousel() {
           start_time: test.start_time,
           end_time: test.end_time,
           description: test.description,
+          lucky_winner_count: test.lucky_winner_count ?? 0,
         };
 
         return {
