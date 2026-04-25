@@ -175,19 +175,21 @@ export function BannerCarousel() {
         } satisfies BannerRow;
       });
 
-      const merged = [...adminBanners];
-      const existingTestIds = new Set(
-        adminBanners
-          .map((banner) => parseTestMeta(banner)?.test_id)
-          .filter((id): id is string => Boolean(id)),
-      );
-
-      testBanners.forEach((banner) => {
-        const testId = parseTestMeta(banner)?.test_id;
-        if (!testId || existingTestIds.has(testId)) return;
-        merged.push(banner);
-      });
-
+      // Dedupe: by banner id (primary) AND by linked test_id (suppress
+      // auto test-banner if admin already uploaded one for that test).
+      const seenIds = new Set<string>();
+      const seenTestIds = new Set<string>();
+      const merged: BannerRow[] = [];
+      const pushUnique = (b: BannerRow) => {
+        if (seenIds.has(b.id)) return;
+        const tId = parseTestMeta(b)?.test_id;
+        if (tId && seenTestIds.has(tId)) return;
+        seenIds.add(b.id);
+        if (tId) seenTestIds.add(tId);
+        merged.push(b);
+      };
+      adminBanners.forEach(pushUnique);
+      testBanners.forEach(pushUnique);
       return merged;
     },
     enabled: !!profile,
