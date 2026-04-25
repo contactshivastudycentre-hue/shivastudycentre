@@ -180,7 +180,10 @@ export default function TestBuilder() {
     prize_description: null,
     class_group: 'single',
     eligible_classes: [],
+    lucky_winner_count: 0,
+    lucky_selection_method: 'random',
   });
+  const [prizes, setPrizes] = useState<PrizesState>({});
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
