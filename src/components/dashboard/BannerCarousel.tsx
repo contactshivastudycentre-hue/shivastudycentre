@@ -35,6 +35,7 @@ type TestBannerRow = {
   prize_description: string | null;
   description: string | null;
   test_type: string;
+  lucky_winner_count: number | null;
 };
 
 type TestMeta = {
