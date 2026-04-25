@@ -509,6 +509,44 @@ export type Database = {
           },
         ]
       }
+      test_prizes: {
+        Row: {
+          created_at: string
+          id: string
+          prize_type: string
+          prize_value: string
+          rank_position: string
+          test_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          prize_type: string
+          prize_value: string
+          rank_position: string
+          test_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          prize_type?: string
+          prize_value?: string
+          rank_position?: string
+          test_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_prizes_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       test_winners: {
         Row: {
           auto_calculated: boolean
@@ -576,6 +614,8 @@ export type Database = {
           highlight_until: string | null
           id: string
           is_published: boolean
+          lucky_selection_method: string
+          lucky_winner_count: number
           prize_description: string | null
           prize_pool: number | null
           prize_type: string | null
@@ -601,6 +641,8 @@ export type Database = {
           highlight_until?: string | null
           id?: string
           is_published?: boolean
+          lucky_selection_method?: string
+          lucky_winner_count?: number
           prize_description?: string | null
           prize_pool?: number | null
           prize_type?: string | null
@@ -626,6 +668,8 @@ export type Database = {
           highlight_until?: string | null
           id?: string
           is_published?: boolean
+          lucky_selection_method?: string
+          lucky_winner_count?: number
           prize_description?: string | null
           prize_pool?: number | null
           prize_type?: string | null
