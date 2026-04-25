@@ -18,12 +18,16 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const CLASSES = ['4', '5', '6', '7', '8', '9', '10', '11', '12'];
-const NONE = '__none__';
+const PRESETS: { label: string; classes: string[] }[] = [
+  { label: 'Junior 6-7', classes: ['6', '7'] },
+  { label: 'Senior 8-10', classes: ['8', '9', '10'] },
+  { label: 'Higher 11-12', classes: ['11', '12'] },
+];
 
 type FormState = {
   image_url: string;
   cta_link: string;
-  target_class: string;
+  eligible_classes: string[];
   is_universal: boolean;
   is_active: boolean;
   priority: number;
@@ -32,7 +36,7 @@ type FormState = {
 };
 
 const INITIAL: FormState = {
-  image_url: '', cta_link: '', target_class: NONE, is_universal: true, is_active: true, priority: 0,
+  image_url: '', cta_link: '', eligible_classes: [], is_universal: true, is_active: true, priority: 0,
   start_date: null, end_date: null,
 };
 
