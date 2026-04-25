@@ -344,11 +344,50 @@ export function BannerCarousel() {
                 {meta!.class} • {meta!.subject} • {meta!.duration_minutes} min
               </p>
               <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                {prizeText(meta) ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 rounded-full px-2 py-0.5 shadow-sm">
-                    <Trophy className="w-3 h-3" /> Prize: {prizeText(meta)}
-                  </span>
-                ) : null}
+              {(() => {
+                const prizes = meta?.test_id ? (prizesByTest?.[meta.test_id] || []) : [];
+                const r1 = prizes.find(p => p.rank_position === 'rank1');
+                const r2 = prizes.find(p => p.rank_position === 'rank2');
+                const r3 = prizes.find(p => p.rank_position === 'rank3');
+                const lk = prizes.find(p => p.rank_position === 'lucky');
+                const luckyN = meta?.lucky_winner_count || 0;
+                if (r1 || r2 || r3 || lk) {
+                  return (
+                    <div className="mt-1.5 inline-flex flex-wrap gap-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-200">Win Prizes:</span>
+                      {r1 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 rounded-full px-2 py-0.5 shadow-sm">
+                          {PRIZE_ICON[r1.prize_type] || '🏆'} {r1.prize_value}
+                        </span>
+                      )}
+                      {r2 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-white/90 text-foreground rounded-full px-2 py-0.5">
+                          🥈 {r2.prize_value}
+                        </span>
+                      )}
+                      {r3 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-white/90 text-foreground rounded-full px-2 py-0.5">
+                          🥉 {r3.prize_value}
+                        </span>
+                      )}
+                      {lk && luckyN > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-rose-500/90 text-white rounded-full px-2 py-0.5">
+                          🎁 +{luckyN} Lucky × {lk.prize_value}
+                        </span>
+                      )}
+                    </div>
+                  );
+                }
+                const legacy = legacyPrizeText(meta);
+                if (legacy) {
+                  return (
+                    <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 rounded-full px-2 py-0.5 shadow-sm">
+                      <Trophy className="w-3 h-3" /> Prize: {legacy}
+                    </span>
+                  );
+                }
+                return null;
+              })()}
                 {phase === 'upcoming' && start && (
                   <>
                     <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-white/20 backdrop-blur rounded-full px-2 py-0.5">
