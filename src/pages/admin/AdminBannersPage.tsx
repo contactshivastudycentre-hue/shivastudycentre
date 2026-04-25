@@ -61,17 +61,19 @@ export default function AdminBannersPage() {
   const saveMutation = useMutation({
     mutationFn: async (f: FormState & { id?: string }) => {
       if (!f.image_url) throw new Error('Please upload a banner image');
+      const classes = f.is_universal ? [] : f.eligible_classes;
       const payload = {
         title: 'banner',
         image_url: f.image_url.trim(),
         cta_link: f.cta_link?.trim() || null,
-        target_class: f.is_universal || !f.target_class || f.target_class === NONE ? null : f.target_class,
+        eligible_classes: classes.length ? classes : null,
+        // legacy single-class field kept in sync for back-compat
+        target_class: classes.length ? classes[0] : null,
         is_universal: f.is_universal,
         is_active: f.is_active,
         priority: f.priority,
         start_date: f.start_date ? f.start_date.toISOString() : null,
         end_date: f.end_date ? f.end_date.toISOString() : null,
-        // Clear legacy text fields so nothing is overlaid
         subtitle: null,
         description: null,
         cta_text: null,
@@ -125,10 +127,12 @@ export default function AdminBannersPage() {
   }
 
   function openEdit(b: any) {
+    const fromArr: string[] = Array.isArray(b.eligible_classes) ? b.eligible_classes.map(String) : [];
+    const fallback: string[] = b.target_class ? [String(b.target_class)] : [];
     setForm({
       image_url: b.image_url || '',
       cta_link: b.cta_link || '',
-      target_class: b.target_class || NONE,
+      eligible_classes: fromArr.length ? fromArr : fallback,
       is_universal: b.is_universal,
       is_active: b.is_active,
       priority: b.priority,
