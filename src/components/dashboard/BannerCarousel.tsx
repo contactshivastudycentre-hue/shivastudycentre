@@ -133,7 +133,7 @@ export function BannerCarousel() {
           .limit(12),
         supabase
           .from('tests')
-          .select('id, title, class, subject, duration_minutes, banner_image, start_time, end_time, prize_pool, prize_type, prize_value, prize_description, description, test_type')
+          .select('id, title, class, subject, duration_minutes, banner_image, start_time, end_time, prize_pool, prize_type, prize_value, prize_description, description, test_type, lucky_winner_count')
           .eq('is_published', true)
           .in('test_type', ['sunday_special', 'weekly', 'surprise_quiz'])
           .not('banner_image', 'is', null)
