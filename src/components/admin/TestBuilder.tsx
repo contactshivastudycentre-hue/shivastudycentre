@@ -471,6 +471,8 @@ export default function TestBuilder() {
             prize_value: test.prize_value ?? null,
             prize_description: test.prize_description ?? null,
             class_group: test.class_group,
+            lucky_winner_count: test.lucky_winner_count,
+            lucky_selection_method: test.lucky_selection_method,
           } as any)
           .select()
           .single();
