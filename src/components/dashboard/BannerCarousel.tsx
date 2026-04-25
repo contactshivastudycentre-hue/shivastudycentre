@@ -50,9 +50,16 @@ type TestMeta = {
   start_time?: string | null;
   end_time?: string | null;
   description?: string | null;
+  lucky_winner_count?: number;
 };
 
-function prizeText(meta: TestMeta | null): string | null {
+type PrizeRow = { test_id: string; rank_position: 'rank1' | 'rank2' | 'rank3' | 'lucky'; prize_type: string; prize_value: string };
+
+const PRIZE_ICON: Record<string, string> = {
+  trophy: '🏆', cash: '💰', gift: '🎁', books: '📚', certificate: '🏅', other: '✨',
+};
+
+function legacyPrizeText(meta: TestMeta | null): string | null {
   if (!meta) return null;
   if (meta.prize_value) return meta.prize_value;
   if (meta.prize_pool) return `₹${meta.prize_pool}`;
