@@ -156,6 +156,25 @@ export default function AdminTestResultsPage() {
     supabase.rpc('mark_test_ended' as any, { p_test_id: testId }).then(() => {});
   }, [testId]);
 
+  // Pre-fill prize defaults from test_prizes (admin-configured per-rank prizes)
+  useEffect(() => {
+    if (!testId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('test_prizes' as any)
+        .select('rank_position, prize_value')
+        .eq('test_id', testId);
+      const map: Record<string, string> = {};
+      ((data as any[]) || []).forEach((r: any) => { map[r.rank_position] = r.prize_value; });
+      setTopPicks((prev) => prev.map((p, i) => {
+        const key = i === 0 ? 'rank1' : i === 1 ? 'rank2' : 'rank3';
+        return p.prize_text ? p : { ...p, prize_text: map[key] || '' };
+      }));
+      if (map.lucky && !luckyPrize) setLuckyPrize(map.lucky);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testId]);
+
   // Detect if test naturally ended (end_time passed)
   const testEnded = useMemo(() => {
     if (!test?.end_time) return false;

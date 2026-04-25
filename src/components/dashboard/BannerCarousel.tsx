@@ -35,6 +35,7 @@ type TestBannerRow = {
   prize_description: string | null;
   description: string | null;
   test_type: string;
+  lucky_winner_count: number | null;
 };
 
 type TestMeta = {
@@ -50,9 +51,16 @@ type TestMeta = {
   start_time?: string | null;
   end_time?: string | null;
   description?: string | null;
+  lucky_winner_count?: number;
 };
 
-function prizeText(meta: TestMeta | null): string | null {
+type PrizeRow = { test_id: string; rank_position: 'rank1' | 'rank2' | 'rank3' | 'lucky'; prize_type: string; prize_value: string };
+
+const PRIZE_ICON: Record<string, string> = {
+  trophy: '🏆', cash: '💰', gift: '🎁', books: '📚', certificate: '🏅', other: '✨',
+};
+
+function legacyPrizeText(meta: TestMeta | null): string | null {
   if (!meta) return null;
   if (meta.prize_value) return meta.prize_value;
   if (meta.prize_pool) return `₹${meta.prize_pool}`;
@@ -125,7 +133,7 @@ export function BannerCarousel() {
           .limit(12),
         supabase
           .from('tests')
-          .select('id, title, class, subject, duration_minutes, banner_image, start_time, end_time, prize_pool, prize_type, prize_value, prize_description, description, test_type')
+          .select('id, title, class, subject, duration_minutes, banner_image, start_time, end_time, prize_pool, prize_type, prize_value, prize_description, description, test_type, lucky_winner_count')
           .eq('is_published', true)
           .in('test_type', ['sunday_special', 'weekly', 'surprise_quiz'])
           .not('banner_image', 'is', null)
@@ -149,6 +157,7 @@ export function BannerCarousel() {
           start_time: test.start_time,
           end_time: test.end_time,
           description: test.description,
+          lucky_winner_count: test.lucky_winner_count ?? 0,
         };
 
         return {
@@ -184,6 +193,30 @@ export function BannerCarousel() {
     enabled: !!profile,
     refetchInterval: 60000,
     refetchOnWindowFocus: true,
+  });
+
+  // Test IDs that appear as test-announcement banners → fetch their prize configs
+  const testIds = useMemo(() => {
+    return (rawBanners || [])
+      .map((b) => parseTestMeta(b)?.test_id)
+      .filter((id): id is string => Boolean(id));
+  }, [rawBanners]);
+
+  const { data: prizesByTest } = useQuery({
+    queryKey: ['banner-test-prizes', testIds.join(',')],
+    queryFn: async () => {
+      if (!testIds.length) return {} as Record<string, PrizeRow[]>;
+      const { data } = await supabase
+        .from('test_prizes' as any)
+        .select('test_id, rank_position, prize_type, prize_value')
+        .in('test_id', testIds);
+      const map: Record<string, PrizeRow[]> = {};
+      ((data as any[]) || []).forEach((r: any) => {
+        (map[r.test_id] ||= []).push(r as PrizeRow);
+      });
+      return map;
+    },
+    enabled: testIds.length > 0,
   });
 
   // Sort by priority bucket (live > upcoming > topper > admin), then DB priority
@@ -311,11 +344,50 @@ export function BannerCarousel() {
                 {meta!.class} • {meta!.subject} • {meta!.duration_minutes} min
               </p>
               <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                {prizeText(meta) ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 rounded-full px-2 py-0.5 shadow-sm">
-                    <Trophy className="w-3 h-3" /> Prize: {prizeText(meta)}
-                  </span>
-                ) : null}
+              {(() => {
+                const prizes = meta?.test_id ? (prizesByTest?.[meta.test_id] || []) : [];
+                const r1 = prizes.find(p => p.rank_position === 'rank1');
+                const r2 = prizes.find(p => p.rank_position === 'rank2');
+                const r3 = prizes.find(p => p.rank_position === 'rank3');
+                const lk = prizes.find(p => p.rank_position === 'lucky');
+                const luckyN = meta?.lucky_winner_count || 0;
+                if (r1 || r2 || r3 || lk) {
+                  return (
+                    <div className="mt-1.5 inline-flex flex-wrap gap-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-200">Win Prizes:</span>
+                      {r1 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 rounded-full px-2 py-0.5 shadow-sm">
+                          {PRIZE_ICON[r1.prize_type] || '🏆'} {r1.prize_value}
+                        </span>
+                      )}
+                      {r2 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-white/90 text-foreground rounded-full px-2 py-0.5">
+                          🥈 {r2.prize_value}
+                        </span>
+                      )}
+                      {r3 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-white/90 text-foreground rounded-full px-2 py-0.5">
+                          🥉 {r3.prize_value}
+                        </span>
+                      )}
+                      {lk && luckyN > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-rose-500/90 text-white rounded-full px-2 py-0.5">
+                          🎁 +{luckyN} Lucky × {lk.prize_value}
+                        </span>
+                      )}
+                    </div>
+                  );
+                }
+                const legacy = legacyPrizeText(meta);
+                if (legacy) {
+                  return (
+                    <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 rounded-full px-2 py-0.5 shadow-sm">
+                      <Trophy className="w-3 h-3" /> Prize: {legacy}
+                    </span>
+                  );
+                }
+                return null;
+              })()}
                 {phase === 'upcoming' && start && (
                   <>
                     <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-white/20 backdrop-blur rounded-full px-2 py-0.5">

@@ -88,9 +88,23 @@ interface Test {
   prize_description: string | null;
   class_group: 'single' | 'junior' | 'senior' | 'custom';
   eligible_classes: string[];
+  lucky_winner_count: number;
+  lucky_selection_method: 'random' | 'manual';
 }
 
-const PRIZE_TYPES = ['Money', 'Gift', 'Book', 'Bag', 'Certificate', 'Other'] as const;
+type RankKey = 'rank1' | 'rank2' | 'rank3' | 'lucky';
+type PrizeType = 'trophy' | 'cash' | 'gift' | 'books' | 'certificate' | 'other';
+interface PrizeRow { prize_type: PrizeType; prize_value: string; }
+type PrizesState = Partial<Record<RankKey, PrizeRow>>;
+
+const RANK1_TYPES: PrizeType[] = ['trophy', 'cash', 'gift', 'books', 'certificate', 'other'];
+const OTHER_RANK_TYPES: PrizeType[] = ['cash', 'gift', 'books', 'certificate', 'other'];
+const LUCKY_TYPES: PrizeType[] = ['cash', 'gift', 'books', 'certificate', 'other'];
+const PRIZE_TYPE_LABELS: Record<PrizeType, string> = {
+  trophy: '🏆 Trophy', cash: '💰 Cash', gift: '🎁 Gift',
+  books: '📚 Books', certificate: '🏅 Certificate', other: '✨ Other',
+};
+
 const JUNIOR_CLASSES = ['Class 6', 'Class 7'];
 const SENIOR_CLASSES = ['Class 8', 'Class 9', 'Class 10'];
 
@@ -166,7 +180,10 @@ export default function TestBuilder() {
     prize_description: null,
     class_group: 'single',
     eligible_classes: [],
+    lucky_winner_count: 0,
+    lucky_selection_method: 'random',
   });
+  const [prizes, setPrizes] = useState<PrizesState>({});
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
@@ -261,7 +278,20 @@ export default function TestBuilder() {
       prize_description: td.prize_description ?? null,
       class_group: group,
       eligible_classes: eligible,
+      lucky_winner_count: td.lucky_winner_count ?? 0,
+      lucky_selection_method: (td.lucky_selection_method as 'random' | 'manual') || 'random',
     });
+
+    // Load prize configuration
+    const { data: prizeRows } = await supabase
+      .from('test_prizes' as any)
+      .select('rank_position, prize_type, prize_value')
+      .eq('test_id', testId!);
+    const prizeMap: PrizesState = {};
+    ((prizeRows as any[]) || []).forEach((r: any) => {
+      prizeMap[r.rank_position as RankKey] = { prize_type: r.prize_type, prize_value: r.prize_value };
+    });
+    setPrizes(prizeMap);
 
     const { data: questionsData } = await supabase
       .from('questions')
@@ -441,6 +471,8 @@ export default function TestBuilder() {
             prize_value: test.prize_value ?? null,
             prize_description: test.prize_description ?? null,
             class_group: test.class_group,
+            lucky_winner_count: test.lucky_winner_count,
+            lucky_selection_method: test.lucky_selection_method,
           } as any)
           .select()
           .single();
@@ -468,6 +500,8 @@ export default function TestBuilder() {
             prize_value: test.prize_value ?? null,
             prize_description: test.prize_description ?? null,
             class_group: test.class_group,
+            lucky_winner_count: test.lucky_winner_count,
+            lucky_selection_method: test.lucky_selection_method,
           } as any)
           .eq('id', test.id);
 
@@ -481,6 +515,24 @@ export default function TestBuilder() {
           await supabase.from('test_eligible_classes' as any).insert(
             test.eligible_classes.map((c) => ({ test_id: savedTestId, class: c }))
           );
+        }
+      }
+
+      // Sync per-rank prize configuration
+      if (savedTestId) {
+        await supabase.from('test_prizes' as any).delete().eq('test_id', savedTestId);
+        const rows: { test_id: string; rank_position: RankKey; prize_type: PrizeType; prize_value: string }[] = [];
+        (['rank1', 'rank2', 'rank3'] as const).forEach((rk) => {
+          const r = prizes[rk];
+          if (r && r.prize_type && r.prize_value.trim()) {
+            rows.push({ test_id: savedTestId, rank_position: rk, prize_type: r.prize_type, prize_value: r.prize_value.trim() });
+          }
+        });
+        if (test.lucky_winner_count > 0 && prizes.lucky?.prize_type && prizes.lucky?.prize_value.trim()) {
+          rows.push({ test_id: savedTestId, rank_position: 'lucky', prize_type: prizes.lucky.prize_type, prize_value: prizes.lucky.prize_value.trim() });
+        }
+        if (rows.length) {
+          await supabase.from('test_prizes' as any).insert(rows);
         }
       }
 
@@ -757,63 +809,116 @@ export default function TestBuilder() {
               <Label htmlFor="duration">Duration (minutes) *</Label>
               <Input id="duration" type="number" min="5" max="180" value={test.duration_minutes} onChange={(e) => setTest({ ...test, duration_minutes: parseInt(e.target.value) || 30 })} />
             </div>
-            <div className="space-y-2">
-              <Label>Prize Type</Label>
-              <Select
-                value={test.prize_type ?? 'none'}
-                onValueChange={(v) =>
-                  setTest({
-                    ...test,
-                    prize_type: v === 'none' ? null : v,
-                    prize_value: v === 'none' ? null : test.prize_value,
-                    prize_pool: v === 'Money' ? test.prize_pool : null,
-                  })
-                }
-              >
-                <SelectTrigger><SelectValue placeholder="No prize" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No prize</SelectItem>
-                  {PRIZE_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t === 'Money' ? '💰 Money' : t === 'Gift' ? '🎁 Gift' : t === 'Book' ? '📚 Book' : t === 'Bag' ? '🎒 Bag' : t === 'Certificate' ? '🏅 Certificate' : '🏆 Other'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {test.prize_type && (
-              <div className="space-y-2">
-                <Label htmlFor="prize_value">
-                  {test.prize_type === 'Money' ? 'Prize Amount (₹) *' : `${test.prize_type} Name / Value *`}
-                </Label>
-                <Input
-                  id="prize_value"
-                  type={test.prize_type === 'Money' ? 'number' : 'text'}
-                  min={test.prize_type === 'Money' ? '0' : undefined}
-                  step={test.prize_type === 'Money' ? '50' : undefined}
-                  placeholder={test.prize_type === 'Money' ? '500' : 'e.g. School Bag, NCERT Set'}
-                  value={
-                    test.prize_type === 'Money'
-                      ? (test.prize_pool ?? '')
-                      : (test.prize_value ?? '')
-                  }
-                  onChange={(e) => {
-                    const v = e.target.value.trim();
-                    if (test.prize_type === 'Money') {
-                      const amt = v === '' ? null : Math.max(0, parseInt(v) || 0);
-                      setTest({
-                        ...test,
-                        prize_pool: amt,
-                        prize_value: amt !== null ? `₹${amt}` : null,
-                      });
-                    } else {
-                      setTest({ ...test, prize_value: v || null, prize_pool: null });
-                    }
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">Shown on banner & test card with a 🏆 badge.</p>
+            <div className="md:col-span-2 space-y-3 p-4 rounded-lg border border-border bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-foreground">🏆 Prize Distribution</h3>
+                  <p className="text-xs text-muted-foreground">Configure prizes independently for each rank.</p>
+                </div>
               </div>
-            )}
+
+              {(['rank1', 'rank2', 'rank3'] as const).map((rk, idx) => {
+                const labelMap = { rank1: '🥇 1st Prize', rank2: '🥈 2nd Prize', rank3: '🥉 3rd Prize' } as const;
+                const placeholderMap = { rank1: 'e.g. SSC Trophy', rank2: 'e.g. ₹100', rank3: 'e.g. ₹50' } as const;
+                const allowedTypes = idx === 0 ? RANK1_TYPES : OTHER_RANK_TYPES;
+                const row = prizes[rk];
+                return (
+                  <div key={rk} className="grid grid-cols-1 md:grid-cols-[140px_1fr_2fr_auto] gap-2 items-end">
+                    <Label className="text-sm">{labelMap[rk]}</Label>
+                    <Select
+                      value={row?.prize_type ?? ''}
+                      onValueChange={(v) => setPrizes((p) => ({ ...p, [rk]: { prize_type: v as PrizeType, prize_value: p[rk]?.prize_value ?? '' } }))}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
+                      <SelectContent>
+                        {allowedTypes.map((t) => (
+                          <SelectItem key={t} value={t}>{PRIZE_TYPE_LABELS[t]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      placeholder={placeholderMap[rk]}
+                      value={row?.prize_value ?? ''}
+                      onChange={(e) => setPrizes((p) => ({ ...p, [rk]: { prize_type: p[rk]?.prize_type ?? (idx === 0 ? 'trophy' : 'cash'), prize_value: e.target.value } }))}
+                    />
+                    {row && (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => setPrizes((p) => { const n = { ...p }; delete n[rk]; return n; })} title="Clear">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+
+              <div className="border-t border-border pt-3 mt-2 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="lucky_count">🎁 Lucky Winner Count</Label>
+                    <Input
+                      id="lucky_count"
+                      type="number"
+                      min="0"
+                      max="50"
+                      value={test.lucky_winner_count}
+                      onChange={(e) => {
+                        const n = Math.max(0, Math.min(50, parseInt(e.target.value) || 0));
+                        setTest({ ...test, lucky_winner_count: n });
+                        if (n === 0) setPrizes((p) => { const x = { ...p }; delete x.lucky; return x; });
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">0 = no lucky winners. e.g. 3 = three lucky winners.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Lucky Selection Method</Label>
+                    <Select
+                      value={test.lucky_selection_method}
+                      onValueChange={(v) => setTest({ ...test, lucky_selection_method: v as 'random' | 'manual' })}
+                      disabled={test.lucky_winner_count === 0}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="random">🎲 Random (auto-pick)</SelectItem>
+                        <SelectItem value="manual">✋ Manual (admin chooses)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {test.lucky_winner_count > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_2fr] gap-2 items-end">
+                    <Label className="text-sm">Lucky Prize</Label>
+                    <Select
+                      value={prizes.lucky?.prize_type ?? ''}
+                      onValueChange={(v) => setPrizes((p) => ({ ...p, lucky: { prize_type: v as PrizeType, prize_value: p.lucky?.prize_value ?? '' } }))}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
+                      <SelectContent>
+                        {LUCKY_TYPES.map((t) => (
+                          <SelectItem key={t} value={t}>{PRIZE_TYPE_LABELS[t]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      placeholder="e.g. ₹50 each"
+                      value={prizes.lucky?.prize_value ?? ''}
+                      onChange={(e) => setPrizes((p) => ({ ...p, lucky: { prize_type: p.lucky?.prize_type ?? 'cash', prize_value: e.target.value } }))}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {(prizes.rank1 || prizes.rank2 || prizes.rank3 || prizes.lucky) && (
+                <div className="mt-2 p-3 rounded-md bg-background border border-border text-sm space-y-1">
+                  <div className="font-medium text-foreground mb-1">Preview</div>
+                  {prizes.rank1?.prize_value && <div>🥇 1st → {prizes.rank1.prize_value}</div>}
+                  {prizes.rank2?.prize_value && <div>🥈 2nd → {prizes.rank2.prize_value}</div>}
+                  {prizes.rank3?.prize_value && <div>🥉 3rd → {prizes.rank3.prize_value}</div>}
+                  {test.lucky_winner_count > 0 && prizes.lucky?.prize_value && (
+                    <div>🎁 {test.lucky_winner_count} Lucky Winner{test.lucky_winner_count > 1 ? 's' : ''} → {prizes.lucky.prize_value} each</div>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="start_time">Start Time *</Label>
               <Input id="start_time" type="datetime-local" value={test.start_time} onChange={(e) => setTest({ ...test, start_time: e.target.value })} />
