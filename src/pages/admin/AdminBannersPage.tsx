@@ -238,16 +238,74 @@ export default function AdminBannersPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 flex-wrap">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Switch checked={form.is_universal} onCheckedChange={v => setForm(p => ({ ...p, is_universal: v, target_class: v ? NONE : p.target_class }))} />
-                    <Label className="text-sm">All Classes</Label>
+                    <Switch
+                      checked={form.is_universal}
+                      onCheckedChange={v => setForm(p => ({ ...p, is_universal: v, eligible_classes: v ? [] : p.eligible_classes }))}
+                    />
+                    <Label className="text-sm">Show to all classes</Label>
                   </div>
+
                   {!form.is_universal && (
-                    <Select value={form.target_class} onValueChange={v => setForm(p => ({ ...p, target_class: v }))}>
-                      <SelectTrigger className="h-10 w-[132px] rounded-[10px] text-sm"><SelectValue placeholder="Class" /></SelectTrigger>
-                      <SelectContent>{CLASSES.map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <div className="space-y-2 rounded-[10px] border border-border p-2.5 bg-muted/30">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <Label className="text-xs font-semibold">Target classes</Label>
+                        <div className="flex gap-1 flex-wrap">
+                          {PRESETS.map((p) => (
+                            <Button
+                              key={p.label}
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-[11px] rounded-md"
+                              onClick={() => setForm((s) => ({ ...s, eligible_classes: p.classes }))}
+                            >
+                              {p.label}
+                            </Button>
+                          ))}
+                          {form.eligible_classes.length > 0 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-[11px] text-destructive"
+                              onClick={() => setForm((s) => ({ ...s, eligible_classes: [] }))}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {CLASSES.map((c) => {
+                          const active = form.eligible_classes.includes(c);
+                          return (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setForm((s) => ({
+                                ...s,
+                                eligible_classes: active
+                                  ? s.eligible_classes.filter((x) => x !== c)
+                                  : [...s.eligible_classes, c].sort((a, b) => Number(a) - Number(b)),
+                              }))}
+                              className={cn(
+                                'h-8 min-w-[44px] px-2 rounded-md text-xs font-medium border transition-colors',
+                                active
+                                  ? 'bg-primary text-primary-foreground border-primary'
+                                  : 'bg-background text-foreground border-border hover:bg-muted',
+                              )}
+                            >
+                              Class {c}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {form.eligible_classes.length === 0 && (
+                        <p className="text-[11px] text-destructive">Select at least one class.</p>
+                      )}
+                    </div>
                   )}
                 </div>
 
