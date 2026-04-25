@@ -88,9 +88,23 @@ interface Test {
   prize_description: string | null;
   class_group: 'single' | 'junior' | 'senior' | 'custom';
   eligible_classes: string[];
+  lucky_winner_count: number;
+  lucky_selection_method: 'random' | 'manual';
 }
 
-const PRIZE_TYPES = ['Money', 'Gift', 'Book', 'Bag', 'Certificate', 'Other'] as const;
+type RankKey = 'rank1' | 'rank2' | 'rank3' | 'lucky';
+type PrizeType = 'trophy' | 'cash' | 'gift' | 'books' | 'certificate' | 'other';
+interface PrizeRow { prize_type: PrizeType; prize_value: string; }
+type PrizesState = Partial<Record<RankKey, PrizeRow>>;
+
+const RANK1_TYPES: PrizeType[] = ['trophy', 'cash', 'gift', 'books', 'certificate', 'other'];
+const OTHER_RANK_TYPES: PrizeType[] = ['cash', 'gift', 'books', 'certificate', 'other'];
+const LUCKY_TYPES: PrizeType[] = ['cash', 'gift', 'books', 'certificate', 'other'];
+const PRIZE_TYPE_LABELS: Record<PrizeType, string> = {
+  trophy: '🏆 Trophy', cash: '💰 Cash', gift: '🎁 Gift',
+  books: '📚 Books', certificate: '🏅 Certificate', other: '✨ Other',
+};
+
 const JUNIOR_CLASSES = ['Class 6', 'Class 7'];
 const SENIOR_CLASSES = ['Class 8', 'Class 9', 'Class 10'];
 
