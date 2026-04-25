@@ -321,7 +321,7 @@ export default function AdminBannersPage() {
                 </div>
 
                 <div className="flex justify-end pt-1">
-                  <Button type="submit" className="h-10 px-4 max-w-[180px] rounded-[10px] text-sm font-semibold" disabled={saveMutation.isPending || !form.image_url}>
+                  <Button type="submit" className="h-10 px-4 max-w-[180px] rounded-[10px] text-sm font-semibold" disabled={saveMutation.isPending || !form.image_url || (!form.is_universal && form.eligible_classes.length === 0)}>
                     {saveMutation.isPending ? 'Saving...' : editing ? 'Update Banner' : 'Save Banner'}
                   </Button>
                 </div>
@@ -350,7 +350,13 @@ export default function AdminBannersPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1 flex-wrap">
                     <h3 className="font-semibold text-foreground text-xs sm:text-sm truncate">
-                      {b.is_universal ? 'All Classes' : `Class ${b.target_class || '—'}`}
+                      {b.is_universal
+                        ? 'All Classes'
+                        : Array.isArray(b.eligible_classes) && b.eligible_classes.length
+                        ? `Classes ${[...b.eligible_classes].sort((a: string, z: string) => Number(a) - Number(z)).join(', ')}`
+                        : b.target_class
+                        ? `Class ${b.target_class}`
+                        : '—'}
                     </h3>
                     <Badge
                       variant={b.is_active ? 'default' : 'secondary'}
