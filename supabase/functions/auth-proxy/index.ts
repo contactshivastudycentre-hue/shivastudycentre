@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error("auth-proxy error:", err);
     return new Response(
-      JSON.stringify({ error: { message: err.message || "Internal error" } }),
+      JSON.stringify({ error: { message: (err as Error)?.message || "Internal error" } }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
