@@ -518,6 +518,24 @@ export default function TestBuilder() {
         }
       }
 
+      // Sync per-rank prize configuration
+      if (savedTestId) {
+        await supabase.from('test_prizes' as any).delete().eq('test_id', savedTestId);
+        const rows: { test_id: string; rank_position: RankKey; prize_type: PrizeType; prize_value: string }[] = [];
+        (['rank1', 'rank2', 'rank3'] as const).forEach((rk) => {
+          const r = prizes[rk];
+          if (r && r.prize_type && r.prize_value.trim()) {
+            rows.push({ test_id: savedTestId, rank_position: rk, prize_type: r.prize_type, prize_value: r.prize_value.trim() });
+          }
+        });
+        if (test.lucky_winner_count > 0 && prizes.lucky?.prize_type && prizes.lucky?.prize_value.trim()) {
+          rows.push({ test_id: savedTestId, rank_position: 'lucky', prize_type: prizes.lucky.prize_type, prize_value: prizes.lucky.prize_value.trim() });
+        }
+        if (rows.length) {
+          await supabase.from('test_prizes' as any).insert(rows);
+        }
+      }
+
       // Handle questions
       const existingQuestionIds = questions.filter(q => !q.id.startsWith('temp-')).map(q => q.id);
       
