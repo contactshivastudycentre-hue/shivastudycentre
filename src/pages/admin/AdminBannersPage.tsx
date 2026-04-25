@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Select removed: replaced with multi-class chip picker
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -18,12 +18,16 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const CLASSES = ['4', '5', '6', '7', '8', '9', '10', '11', '12'];
-const NONE = '__none__';
+const PRESETS: { label: string; classes: string[] }[] = [
+  { label: 'Junior 6-7', classes: ['6', '7'] },
+  { label: 'Senior 8-10', classes: ['8', '9', '10'] },
+  { label: 'Higher 11-12', classes: ['11', '12'] },
+];
 
 type FormState = {
   image_url: string;
   cta_link: string;
-  target_class: string;
+  eligible_classes: string[];
   is_universal: boolean;
   is_active: boolean;
   priority: number;
@@ -32,7 +36,7 @@ type FormState = {
 };
 
 const INITIAL: FormState = {
-  image_url: '', cta_link: '', target_class: NONE, is_universal: true, is_active: true, priority: 0,
+  image_url: '', cta_link: '', eligible_classes: [], is_universal: true, is_active: true, priority: 0,
   start_date: null, end_date: null,
 };
 
@@ -57,17 +61,19 @@ export default function AdminBannersPage() {
   const saveMutation = useMutation({
     mutationFn: async (f: FormState & { id?: string }) => {
       if (!f.image_url) throw new Error('Please upload a banner image');
+      const classes = f.is_universal ? [] : f.eligible_classes;
       const payload = {
         title: 'banner',
         image_url: f.image_url.trim(),
         cta_link: f.cta_link?.trim() || null,
-        target_class: f.is_universal || !f.target_class || f.target_class === NONE ? null : f.target_class,
+        eligible_classes: classes.length ? classes : null,
+        // legacy single-class field kept in sync for back-compat
+        target_class: classes.length ? classes[0] : null,
         is_universal: f.is_universal,
         is_active: f.is_active,
         priority: f.priority,
         start_date: f.start_date ? f.start_date.toISOString() : null,
         end_date: f.end_date ? f.end_date.toISOString() : null,
-        // Clear legacy text fields so nothing is overlaid
         subtitle: null,
         description: null,
         cta_text: null,
@@ -121,10 +127,12 @@ export default function AdminBannersPage() {
   }
 
   function openEdit(b: any) {
+    const fromArr: string[] = Array.isArray(b.eligible_classes) ? b.eligible_classes.map(String) : [];
+    const fallback: string[] = b.target_class ? [String(b.target_class)] : [];
     setForm({
       image_url: b.image_url || '',
       cta_link: b.cta_link || '',
-      target_class: b.target_class || NONE,
+      eligible_classes: fromArr.length ? fromArr : fallback,
       is_universal: b.is_universal,
       is_active: b.is_active,
       priority: b.priority,
@@ -230,16 +238,74 @@ export default function AdminBannersPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 flex-wrap">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Switch checked={form.is_universal} onCheckedChange={v => setForm(p => ({ ...p, is_universal: v, target_class: v ? NONE : p.target_class }))} />
-                    <Label className="text-sm">All Classes</Label>
+                    <Switch
+                      checked={form.is_universal}
+                      onCheckedChange={v => setForm(p => ({ ...p, is_universal: v, eligible_classes: v ? [] : p.eligible_classes }))}
+                    />
+                    <Label className="text-sm">Show to all classes</Label>
                   </div>
+
                   {!form.is_universal && (
-                    <Select value={form.target_class} onValueChange={v => setForm(p => ({ ...p, target_class: v }))}>
-                      <SelectTrigger className="h-10 w-[132px] rounded-[10px] text-sm"><SelectValue placeholder="Class" /></SelectTrigger>
-                      <SelectContent>{CLASSES.map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <div className="space-y-2 rounded-[10px] border border-border p-2.5 bg-muted/30">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <Label className="text-xs font-semibold">Target classes</Label>
+                        <div className="flex gap-1 flex-wrap">
+                          {PRESETS.map((p) => (
+                            <Button
+                              key={p.label}
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-[11px] rounded-md"
+                              onClick={() => setForm((s) => ({ ...s, eligible_classes: p.classes }))}
+                            >
+                              {p.label}
+                            </Button>
+                          ))}
+                          {form.eligible_classes.length > 0 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-[11px] text-destructive"
+                              onClick={() => setForm((s) => ({ ...s, eligible_classes: [] }))}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {CLASSES.map((c) => {
+                          const active = form.eligible_classes.includes(c);
+                          return (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setForm((s) => ({
+                                ...s,
+                                eligible_classes: active
+                                  ? s.eligible_classes.filter((x) => x !== c)
+                                  : [...s.eligible_classes, c].sort((a, b) => Number(a) - Number(b)),
+                              }))}
+                              className={cn(
+                                'h-8 min-w-[44px] px-2 rounded-md text-xs font-medium border transition-colors',
+                                active
+                                  ? 'bg-primary text-primary-foreground border-primary'
+                                  : 'bg-background text-foreground border-border hover:bg-muted',
+                              )}
+                            >
+                              Class {c}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {form.eligible_classes.length === 0 && (
+                        <p className="text-[11px] text-destructive">Select at least one class.</p>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -255,7 +321,7 @@ export default function AdminBannersPage() {
                 </div>
 
                 <div className="flex justify-end pt-1">
-                  <Button type="submit" className="h-10 px-4 max-w-[180px] rounded-[10px] text-sm font-semibold" disabled={saveMutation.isPending || !form.image_url}>
+                  <Button type="submit" className="h-10 px-4 max-w-[180px] rounded-[10px] text-sm font-semibold" disabled={saveMutation.isPending || !form.image_url || (!form.is_universal && form.eligible_classes.length === 0)}>
                     {saveMutation.isPending ? 'Saving...' : editing ? 'Update Banner' : 'Save Banner'}
                   </Button>
                 </div>
@@ -284,7 +350,13 @@ export default function AdminBannersPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1 flex-wrap">
                     <h3 className="font-semibold text-foreground text-xs sm:text-sm truncate">
-                      {b.is_universal ? 'All Classes' : `Class ${b.target_class || '—'}`}
+                      {b.is_universal
+                        ? 'All Classes'
+                        : Array.isArray(b.eligible_classes) && b.eligible_classes.length
+                        ? `Classes ${[...b.eligible_classes].sort((a: string, z: string) => Number(a) - Number(z)).join(', ')}`
+                        : b.target_class
+                        ? `Class ${b.target_class}`
+                        : '—'}
                     </h3>
                     <Badge
                       variant={b.is_active ? 'default' : 'secondary'}
