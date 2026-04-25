@@ -278,7 +278,20 @@ export default function TestBuilder() {
       prize_description: td.prize_description ?? null,
       class_group: group,
       eligible_classes: eligible,
+      lucky_winner_count: td.lucky_winner_count ?? 0,
+      lucky_selection_method: (td.lucky_selection_method as 'random' | 'manual') || 'random',
     });
+
+    // Load prize configuration
+    const { data: prizeRows } = await supabase
+      .from('test_prizes' as any)
+      .select('rank_position, prize_type, prize_value')
+      .eq('test_id', testId!);
+    const prizeMap: PrizesState = {};
+    ((prizeRows as any[]) || []).forEach((r: any) => {
+      prizeMap[r.rank_position as RankKey] = { prize_type: r.prize_type, prize_value: r.prize_value };
+    });
+    setPrizes(prizeMap);
 
     const { data: questionsData } = await supabase
       .from('questions')
