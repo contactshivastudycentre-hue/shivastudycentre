@@ -195,6 +195,30 @@ export function BannerCarousel() {
     refetchOnWindowFocus: true,
   });
 
+  // Test IDs that appear as test-announcement banners → fetch their prize configs
+  const testIds = useMemo(() => {
+    return (rawBanners || [])
+      .map((b) => parseTestMeta(b)?.test_id)
+      .filter((id): id is string => Boolean(id));
+  }, [rawBanners]);
+
+  const { data: prizesByTest } = useQuery({
+    queryKey: ['banner-test-prizes', testIds.join(',')],
+    queryFn: async () => {
+      if (!testIds.length) return {} as Record<string, PrizeRow[]>;
+      const { data } = await supabase
+        .from('test_prizes' as any)
+        .select('test_id, rank_position, prize_type, prize_value')
+        .in('test_id', testIds);
+      const map: Record<string, PrizeRow[]> = {};
+      ((data as any[]) || []).forEach((r: any) => {
+        (map[r.test_id] ||= []).push(r as PrizeRow);
+      });
+      return map;
+    },
+    enabled: testIds.length > 0,
+  });
+
   // Sort by priority bucket (live > upcoming > topper > admin), then DB priority
   const banners = useMemo(() => {
     if (!rawBanners) return [] as BannerRow[];
